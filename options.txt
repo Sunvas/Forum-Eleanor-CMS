@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="cp1251"?>
+<eleanoroptions version="1"><group name="m_forum" protected="0" keyword="m_forum" onexists="ignore"><title><![CDATA[Форум]]></title></group><option name="trash" protected="0" position="1" group="m_forum" type="select" multilang="0" onexists="ignore"><title><![CDATA[Корзина]]></title><value><![CDATA[7]]></value><extra><![CDATA[array (
+  'callback' => function($co){ return include Eleanor::$root.'modules/forum/Misc/optionstrash.php'; },
+)]]></extra></option><option name="tpp" protected="0" position="2" group="m_forum" type="input" multilang="0" onexists="ignore"><title><![CDATA[Количество тем в форуме]]></title><value><![CDATA[30]]></value><default><![CDATA[30]]></default><extra><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></extra><evalsave><![CDATA[if($arr['multilang'])
+{
+	foreach($arr['value'] as &$v)
+		$v=abs((int)$v);
+	return $arr['value'];
+}
+return abs((int)$arr['value']);]]></evalsave></option><option name="ppp" protected="0" position="3" group="m_forum" type="input" multilang="0" onexists="ignore"><title><![CDATA[Количество постов в теме]]></title><value><![CDATA[20]]></value><default><![CDATA[20]]></default><extra><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></extra><evalsave><![CDATA[if($arr['multilang'])
+{
+	foreach($arr['value'] as &$v)
+		$v=abs((int)$v);
+	return $arr['value'];
+}
+return abs((int)$arr['value']);]]></evalsave></option><option name="r+" protected="0" position="4" group="m_forum" type="input" multilang="0" onexists="ignore"><title><english><![CDATA[The number of posts, after which it is possible to increase the reputation]]></english><russian><![CDATA[Число постов, после которого можно увеличивать репутацию]]></russian><ukrainian><![CDATA[Число постів, після якого можна збільшувати репутацію]]></ukrainian></title><serialized/><descr/><value><english><![CDATA[50]]></english><russian><![CDATA[50]]></russian><ukrainian><![CDATA[50]]></ukrainian></value><default><english><![CDATA[50]]></english><russian><![CDATA[50]]></russian><ukrainian><![CDATA[50]]></ukrainian></default><extra><english><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></english><russian><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></russian><ukrainian><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></ukrainian></extra><startgroup/><evalsave><![CDATA[if($arr['multilang'])
+{
+	foreach($arr['value'] as &$v)
+		$v=abs((int)$v);
+	return $arr['value'];
+}
+return abs((int)$arr['value']);]]></evalsave></option><option name="r-" protected="0" position="5" group="m_forum" type="input" multilang="0" onexists="ignore"><title><english><![CDATA[The number of posts, after which it is possible to decrease the reputation]]></english><russian><![CDATA[Число постов, после которого можно уменьшать репутацию]]></russian><ukrainian><![CDATA[Число постів, після якого можна зменшувати репутацію]]></ukrainian></title><serialized/><descr/><value><english><![CDATA[50]]></english><russian><![CDATA[50]]></russian><ukrainian><![CDATA[50]]></ukrainian></value><default><english><![CDATA[50]]></english><russian><![CDATA[50]]></russian><ukrainian><![CDATA[50]]></ukrainian></default><extra><english><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></english><russian><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></russian><ukrainian><![CDATA[array (
+  'addon' =>
+  array (
+  ),
+)]]></ukrainian></extra><startgroup/><evalsave><![CDATA[if($arr['multilang'])
+{
+	foreach($arr['value'] as &$v)
+		$v=abs((int)$v);
+	return $arr['value'];
+}
+return abs((int)$arr['value']);]]></evalsave></option></eleanoroptions>
