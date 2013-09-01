@@ -1,38 +1,50 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.su, http://eleanor-cms.com, http://eleanor-cms.net, http://eleanor.su
-	E-mail: support@eleanor-cms.ru, support@eleanor.su
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright В© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
-if(!defined('CMS'))die;
+defined('CMS')||die;
 global$Eleanor;
-$Eleanor->mconfig=include $Eleanor->module['path'].'config.php';
-if(Eleanor::$Cache->Get($Eleanor->mconfig['n'].'-runned')===false)
-{	Eleanor::$Cache->Put($Eleanor->mconfig['n'].'-runned',true,200);
-	Eleanor::LoadOptions(array('site',$Eleanor->mconfig['opts']));
-	include$Eleanor->module['path'].'base.php';
-	include$Eleanor->module['path'].'core.php';
-	$Eleanor->Forum=new ForumCore($Eleanor->mconfig);
 
-	#Вместо BeAs();
-	$Eleanor->Url->furl=Eleanor::$vars['furl'];
-	$Eleanor->Url->delimiter=Eleanor::$vars['url_static_delimiter'];
-	$Eleanor->Url->defis=Eleanor::$vars['url_static_defis'];
-	$Eleanor->Url->ending=Eleanor::$vars['url_static_ending'];
-	$Eleanor->Url->rep_space=Eleanor::$vars['url_rep_space'];
-	Eleanor::$Login=Eleanor::LoadLogin(Eleanor::$services['user']['login']);
-	$Eleanor->modules=$Eleanor->Modules->GetCache('user');
+$mc=include$Eleanor->module['path'].'config.php';
+include$Eleanor->module['path'].'forum.php';
+include$Eleanor->module['path'].'core.php';
+$F=new ForumCore($mc);
 
-	$r=$Eleanor->Forum->Subscriptions->SendForums() && $Eleanor->Forum->Subscriptions->SendTopics();
+if(isset($_GET['f']))
+{
+	$forum=is_array($_GET['f']) ? $_GET['f'] : explode(',',(string)$_GET['f']);
+	foreach($forum as &$v)
+		$v=(int)$v;
+	$F->Subscriptions->SendForums($forum);
+}
+
+if(isset($_GET['t']))
+{
+	$topic=is_array($_GET['t']) ? $_GET['t'] : explode(',',(string)$_GET['t']);
+	foreach($topic as &$v)
+		$v=(int)$v;
+	$F->Subscriptions->SendTopics($topic);
+}
+
+if(Eleanor::$Cache->Get($mc['n'].'-runned')===false)
+{
+	Eleanor::$Cache->Put($mc['n'].'-runned',true,200);
+
+	$d=date('Y-m-d H:i:s');
+	$r=$F->Subscriptions->SendForums() && $F->Subscriptions->SendTopics();
 	if($r)
-	{		$near=0;#ToDo? Ближайший запуск когда? Завтра?
-		$totomor=strtotime('+1 DAY',mktime(0,0,0));
-		Eleanor::$Cache->Put($Eleanor->mconfig['n'].'_nextrun',$near>0 ? min($near,$totomor) : $totomor);
+	{
+		$nextrun=strtotime('+1 DAY',mktime(0,0,0));
+		$R=Eleanor::$Db->Query('(SELECT UNIX_TIMESTAMP(`nextsend`) `nextsend` FROM `'.$mc['ts'].'` WHERE `sent`=0 AND `nextsend`>\''.$d.'\' ORDER BY `nextsend` ASC LIMIT 1)UNION ALL(SELECT UNIX_TIMESTAMP(`nextsend`) `nextsend` FROM `'.$mc['fs'].'` WHERE `sent`=0 AND `nextsend`>\''.$d.'\' ORDER BY `nextsend` ASC LIMIT 1)');
+		while($a=$R->fetch_row())
+			if($nextrun>$a[0])
+				$nextrun=$a[0];
+
+		Eleanor::$Cache->Put($mc['n'].'_nextrun',$nextrun);
 	}
-	Eleanor::$Cache->Delete($Eleanor->mconfig['n'].'-runned');
+	Eleanor::$Cache->Obsolete($mc['n'].'-runned');
 }
 Start();

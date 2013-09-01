@@ -1,43 +1,45 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright Â© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
 
 class ForumCore extends Forum
 {
 	public
-		$module,#Ïàðàìåòðû ìîäóëÿ
-		$vars,#Ìàññèâ íàñòðîåê
-		$ug,#Ñîäåðæèìîå Eleanor::GetUserGroups();
-		$ugr=array(#User groups rights
-			'shu'=>false,#Ôëàã âîçìîæíîñòè âèäåòü ñêðûòûõ ïîëüçîâàòåëåé
-			'supermod'=>false,#Ôëàã ñóïïåðìîäåðàòîðà
-			'moderate'=>true,#Ôëàã îáÿçàòåëüíîñòè ìîäåðèðîâàíèÿ íîâûõ ñîîáùåíèé
+		$vars=array(#ÐœÐ°ÑÑÐ¸Ð² Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐº
+			'trash'=>false,#Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ ÐºÐ¾Ñ€Ð·Ð¸Ð½Ñ‹
+			'tpp'=>30,#ÐšÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ‚ÐµÐ¼ Ð½Ð° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ñƒ Ð² Ñ„Ð¾Ñ€ÑƒÐ¼Ðµ
+			'ppp'=>20,#ÐšÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ð¿Ð¾ÑÑ‚Ð¾Ð² Ð½Ð° ÑÑ‚Ñ€Ð°Ð½Ð¸Ñ†Ñƒ Ð² Ñ‚ÐµÐ¼Ðµ
+			'r+'=>50,#Ð§Ð¸ÑÐ»Ð¾ Ð¿Ð¾ÑÑ‚Ð¾Ð², Ð¿Ð¾ÑÐ»Ðµ ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ð³Ð¾ Ð¼Ð¾Ð¶Ð½Ð¾ ÑƒÐ²ÐµÐ»Ð¸Ñ‡Ð¸Ð²Ð°Ñ‚ÑŒ Ñ€ÐµÐ¿ÑƒÑ‚Ð°Ñ†Ð¸ÑŽ
+			'r-'=>50,#Ð§Ð¸ÑÐ»Ð¾ Ð¿Ð¾ÑÑ‚Ð¾Ð², Ð¿Ð¾ÑÐ»Ðµ ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ð³Ð¾ Ð¼Ð¾Ð¶Ð½Ð¾ ÑƒÐ¼ÐµÐ½ÑŒÑˆÐ°Ñ‚ÑŒ Ñ€ÐµÐ¿ÑƒÑ‚Ð°Ñ†Ð¸ÑŽ
 		),
-		$user,#Ñìîòðè ôóíêöèþ LoadUser()
+		$ug=array(),#Ð¡Ð¾Ð´ÐµÑ€Ð¶Ð¸Ð¼Ð¾Ðµ Eleanor::GetUserGroups();
+		$ugr=array(#User groups rights
+			'shu'=>false,#Ð¤Ð»Ð°Ð³ Ð²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ÑÑ‚Ð¸ Ð²Ð¸Ð´ÐµÑ‚ÑŒ ÑÐºÑ€Ñ‹Ñ‚Ñ‹Ñ… Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¹
+			'supermod'=>false,#Ð¤Ð»Ð°Ð³ ÑÑƒÐ¿Ð¿ÐµÑ€Ð¼Ð¾Ð´ÐµÑ€Ð°Ñ‚Ð¾Ñ€Ð°
+			'moderate'=>true,#Ð¤Ð»Ð°Ð³ Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚Ð¸ Ð¼Ð¾Ð´ÐµÑ€Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ñ Ð½Ð¾Ð²Ñ‹Ñ… ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ð¹
+		),
+		$user,#Ð¡Ð¼Ð¾Ñ‚Ñ€Ð¸ Ñ„ÑƒÐ½ÐºÑ†Ð¸ÑŽ LoadUser()
+		$language,#Ð¯Ð·Ñ‹Ðº, Ð² ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ð¼ Ñ€Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ñ„Ð¾Ñ€ÑƒÐ¼
 
 		$ps,#Posts guest sign
 		$ts,#Topics guest sign
 
-		$grights=array();#Ïðàâà ãðóïïû. Íå îáÿçàòåëüíî ñîäåðæèò òîëüêî ãðóïïû ïîëüçîâàòåëÿ.
+		$rights=array();#ÐŸÑ€Ð°Ð²Ð° Ð³Ñ€ÑƒÐ¿Ð¿. ÐÐµ Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð¾ ÑÐ¾Ð´ÐµÑ€Ð¶Ð¸Ñ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð³Ñ€ÑƒÐ¿Ð¿Ñ‹ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ.
 
-	public function __construct()
+	public function __construct($config=false)
 	{
-		$this->ug=Eleanor::GetUserGroups();
-		$this->vars=Eleanor::LoadOptions($this->Forum->config['opts'],true);
+		parent::__construct($config);
+		$this->language=Language::$main;
 	}
 
 	/**
-	 * Îïðåäåëåíèå ïðàâ ãðóïïû â êîíêðåòíîì ôîðóìå
-	 *
-	 * @param int $f Èäåíòèôèêàòîð ôîðóìà
-	 * @param int $g Èäåíòèôèêàòîð ãðóïïû
+	 * ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð¸Ðµ Ð¿Ñ€Ð°Ð² Ð³Ñ€ÑƒÐ¿Ð¿Ñ‹ Ð² ÐºÐ¾Ð½ÐºÑ€ÐµÑ‚Ð½Ð¾Ð¼ Ñ„Ð¾Ñ€ÑƒÐ¼Ðµ
+	 * @param int $f Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ñ„Ð¾Ñ€ÑƒÐ¼Ð°
+	 * @param int $g Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ð³Ñ€ÑƒÐ¿Ð¿Ñ‹
 	 */
 	public function GroupPerms($f,$g)
 	{
@@ -50,25 +52,26 @@ class ForumCore extends Forum
 			if($f['parent']>0)
 				return$r+$this->GroupPerms($f['parent'],$g);
 		}
-		if(!isset($this->grights[$g]))
+		if(!isset($this->rights[$g]))
 			$this->GetGroups($g);
-		if(isset($this->grights[$g]))
-			$r+=$this->grights[$g];
-		return$r+ForumForums::$rights;;
+		if(isset($this->rights[$g]))
+			$r+=$this->rights[$g];
+		return$r+ForumForums::$rights;
 	}
 
 	/**
-	 * "Çàãðóçêà" ïîëüçîâàòåëÿ â êà÷åñòâå ïîëüçîâàòåëÿ ôîðóìà
+	 * "Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°" Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ð² ÐºÐ°Ñ‡ÐµÑÑ‚Ð²Ðµ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ñ„Ð¾Ñ€ÑƒÐ¼Ð°
 	 */
 	public function LoadUser()
 	{
+		$this->ug=Eleanor::GetUserGroups();
 		if(Eleanor::$Login->IsUser())
 		{
 			$uid=(int)Eleanor::$Login->GetUserValue('id');
-			$R=Eleanor::$Db->Query('SELECT `id`,`restrict_post`,`restrict_post_to`,`allread`,`hidden`,`moderate` FROM `'.$this->Forum->config['fu'].'` WHERE `id`='.$uid.' LIMIT 1');
+			$R=Eleanor::$Db->Query('SELECT `id`,`posts`,`restrict_post`,`restrict_post_to`,`allread`,`hidden`,`moderate` FROM `'.$this->Forum->config['fu'].'` WHERE `id`='.$uid.' LIMIT 1');
 			if(!$this->user=$R->fetch_assoc())
-				$this->user=$this->Service->AddUser($uid);
-			if($this->user['restrict_post_to'] and time()<strtotime($this->user['restrict_post_to']))
+				$this->user=$this->Service->AddUser($uid,true);
+			if((int)$this->user['restrict_post_to']>0 and time()<strtotime($this->user['restrict_post_to']))
 				$this->user['restrict_post']=true;
 			$this->user['allread']=strtotime($this->user['allread']);
 		}
@@ -78,16 +81,15 @@ class ForumCore extends Forum
 	}
 
 	/**
-	 * Ïîëó÷åíèå íàñòðîåê äëÿ ãðóïïû
-	 *
-	 * @param array|int $g Èäåíòèôèêàòîð(û) ãðóïï
-	 * @param bool $ug Ôëàã ïðèíàäëåæíîñòè ãðóïïû òåêóùåìó ïîëüçîâàòåëþ (áóäóò ïðèìåíåíû ñïåöíàñòðîéêè)
+	 * ÐŸÐ¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐº Ð´Ð»Ñ Ð³Ñ€ÑƒÐ¿Ð¿Ñ‹
+	 * @param array|int $g Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€(Ñ‹) Ð³Ñ€ÑƒÐ¿Ð¿
+	 * @param bool $ug Ð¤Ð»Ð°Ð³ Ð¿Ñ€Ð¸Ð½Ð°Ð´Ð»ÐµÐ¶Ð½Ð¾ÑÑ‚Ð¸ Ð³Ñ€ÑƒÐ¿Ð¿Ñ‹ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¼Ñƒ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÑŽ (Ð±ÑƒÐ´ÑƒÑ‚ Ð¿Ñ€Ð¸Ð¼ÐµÐ½ÐµÐ½Ñ‹ ÑÐ¿ÐµÑ†Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸)
 	 */
 	protected function GetGroups($g,$ug=false)
 	{
 		$g=(array)$g;
 
-		#Äëÿ òîãî, ÷òîáû íå òàñêàòü ñ ñîáîé âåñü äàìï ãðóïï, à òîëüêî íóæíûå.
+		#Ð”Ð»Ñ Ñ‚Ð¾Ð³Ð¾, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½Ðµ Ñ‚Ð°ÑÐºÐ°Ñ‚ÑŒ Ñ ÑÐ¾Ð±Ð¾Ð¹ Ð²ÐµÑÑŒ Ð´Ð°Ð¼Ð¿ Ð³Ñ€ÑƒÐ¿Ð¿, Ð° Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð½ÑƒÐ¶Ð½Ñ‹Ðµ.
 		$cn=$this->Forum->config['n'].'_groups'.join('g',$g);
 		$grs=Eleanor::$Cache->Get($cn);
 		if($grs===false)
@@ -128,7 +130,7 @@ class ForumCore extends Forum
 
 		foreach($grs as $k=>&$v)
 		{
-			$this->grights[$k]=$v['permissions'];
+			$this->rights[$k]=$v['permissions'];
 			if($ug)
 			{
 				if($this->user)
@@ -145,119 +147,162 @@ class ForumCore extends Forum
 	}
 
 	/**
-	 * Ïîëó÷åíèå çíà÷åíèé ïðàâ äëÿ îïðåäåëåííîãî ôîðóìà (äëÿ òåêóùåãî ïîëüçîâàòåëÿ)
-	 *
-	 * @param int $f Èäåíòèôèêàòîð ôîðóìà
+	 * ÐŸÐ¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ð¹ Ð¿Ñ€Ð°Ð² Ð´Ð»Ñ Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð½Ð¾Ð³Ð¾ Ñ„Ð¾Ñ€ÑƒÐ¼Ð° (Ð´Ð»Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ)
+	 * @param int $f Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ñ„Ð¾Ñ€ÑƒÐ¼Ð°
+	 * @param array|null $groups ÐŸÐµÑ€ÐµÐ¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð¸Ðµ Ð³Ñ€ÑƒÐ¿Ð¿ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ
 	 */
-	public function ForumRights($f)
+	public function ForumRights($f,$groups=null)
 	{
+		if($groups===null)
+			$groups=$this->ug;
+
 		$r=array();
-		foreach($this->ug as &$g)
+		foreach($groups as $g)
 		{
 			$fr=$this->GroupPerms($f,$g);
-			foreach($fr as $k=>&$v)
+			foreach($fr as $k=>$v)
 				$r[$k][]=$v;
 		}
 		return$r;
 	}
 
 	/**
-	 * Ïðîâåðêà âîçìîæíîñòè äîñòóïà òåêóùåãî ïîëüçîâàòåëÿ ê îïðåäåëåííîé òåìå
-	 *
-	 * @param array $t Ìàññèâ òåìû, îáÿçàòåëüíî íàëè÷èå êëþ÷åé: id - èäåíòèôèêàòîð òåìû, fid - èäåíòèôèêàòîð ôîðóìà, author_id - èäåíòèôèêàòîð àâòîðà
+	 * ÐŸÑ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ÑÑ‚Ð¸ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð° Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ Ðº Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð½Ð¾Ð¹ Ñ‚ÐµÐ¼Ðµ (ÑƒÑ‡Ð¸Ñ‚Ñ‹Ð²Ð°Ñ Ð¿Ñ€Ð°Ð²Ð° Ð½Ð° Ñ„Ð¾Ñ€ÑƒÐ¼Ðµ). Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ñ‚ÐµÐ¼Ñ‹ Ð½Ðµ ÑƒÑ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÑ‚ÑÑ.
+	 * @param array $t ÐœÐ°ÑÑÐ¸Ð² Ñ‚ÐµÐ¼Ñ‹, Ð¾Ð±ÑÐ·Ð°Ñ‚ÐµÐ»ÑŒÐ½Ð¾ Ð½Ð°Ð»Ð¸Ñ‡Ð¸Ðµ ÐºÐ»ÑŽÑ‡ÐµÐ¹: id - Ð¸Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ñ‚ÐµÐ¼Ñ‹, f - Ð¸Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ñ„Ð¾Ñ€ÑƒÐ¼Ð°, author_id - Ð¸Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ð°Ð²Ñ‚Ð¾Ñ€Ð°
+	 * @param array|null $user ÐŸÐ¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ
 	 */
-	public function CheckTopicAccess(array$t)
+	public function CheckTopicAccess(array$t,$user=null)
 	{
+		if($user===null)
+		{
+			$user=$this->user;
+			$groups=$this->ug;
+		}
+		else
+			$groups=isset($user['groups']) ? (array)$user['groups'] : $this->ug;
+
 		$ra=$rt=$rta=array();
-		foreach($this->ug as &$g)
+		foreach($groups as $g)
 		{
 			$r=$this->GroupPerms($t['f'],$g);
 			$ra[]=$r['access'];
 			$rt[]=$r['topics'];
 			$rta[]=$r['atopics'];
 		}
-		if(!$this->user)
+		if(!$user)
 			$gt=$this->GuestSign('t');
-		if(in_array(1,$ra) and in_array(1,$rt) and (in_array(1,$rta) or $this->user and $this->user['id']==$t['author_id'] or !$this->user and in_array($t['id'],$gt)))
+		if(in_array(1,$ra) and in_array(1,$rt) and (in_array(1,$rta) or $user and $user['id']==$t['author_id'] or !$user and in_array($t['id'],$gt)))
 			return true;
 	}
 
 	/**
-	 * Ïîëó÷åíèå ñïèñêà ïîëüçîâàòåëåé, ÷èòàþùèõ òåìó, ôîðóì, ïîñò...
-	 *
-	 * @param string $s Ñòðîêà ïîèñêàÆ -fID äëÿ ôîðóìà, -fID-tID äëÿ òåìû, -pID äëÿ ïîñòà
+	 * ÐŸÑ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð²Ð¾Ð·Ð¼Ð¾Ð¶Ð½Ð¾ÑÑ‚Ð¸ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð° Ðº Ñ„Ð¾Ñ€ÑƒÐ¼Ñƒ
+	 * @param int $f ID Ñ„Ð¾Ñ€ÑƒÐ¼Ð°
+	 * @param array|null $groups ÐŸÐµÑ€ÐµÐ¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð¸Ðµ Ð³Ñ€ÑƒÐ¿Ð¿ Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»Ñ
+	 */
+	public function CheckForumAccess($f,$groups=null)
+	{
+		if($groups===null)
+			$groups=$this->ug;
+
+		$ra=array();
+		foreach($groups as $g)
+		{
+			$r=$this->GroupPerms($f,$g);
+			$ra[]=$r['access'];
+		}
+		return isset($this->Forums->dump[$f]) && in_array(1,$ra);
+	}
+
+	/**
+	 * ÐŸÐ¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ ÑÐ¿Ð¸ÑÐºÐ° Ð¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ñ‚ÐµÐ»ÐµÐ¹, Ñ‡Ð¸Ñ‚Ð°ÑŽÑ‰Ð¸Ñ… Ñ‚ÐµÐ¼Ñƒ, Ñ„Ð¾Ñ€ÑƒÐ¼, Ð¿Ð¾ÑÑ‚...
+	 * @param string $s Ð¡Ñ‚Ñ€Ð¾ÐºÐ° Ð¿Ð¾Ð¸ÑÐºÐ°Ð– -fID Ð´Ð»Ñ Ñ„Ð¾Ñ€ÑƒÐ¼Ð°, -fID-tID Ð´Ð»Ñ Ñ‚ÐµÐ¼Ñ‹, -pID Ð´Ð»Ñ Ð¿Ð¾ÑÑ‚Ð°
 	 */
 	public function GetOnline($s='')
 	{
-		$h=($this->user and $this->user['hidden']);
-		$uid=$this->user ? $this->user['id'] : 0;
-		Eleanor::$sessaddon=$this->Forum->config['n'].$s.($h ? '-h' : '-');
-		$online[]=array('user_id'=>$uid,'enter'=>time(),'user'=>reset($this->ug),'name'=>Eleanor::$Login->GetUserValue('name'),'_hidden'=>$h);
-		$R=Eleanor::$Db->Query('SELECT `s`.`type`,`s`.`user_id`,`s`.`enter`,`s`.`name` `botname`,`s`.`addon`,`us`.`groups`,`us`.`name` FROM `'.P.'sessions` `s` INNER JOIN `'.P.'users_site` `us` ON `s`.`user_id`=`us`.`id` WHERE `s`.`addon` LIKE \''.$this->Forum->config['n'].$s.'-%\' AND `s`.`expire`>\''.date('Y-m-d H:i:s').'\' AND `s`.`service`=\''.Eleanor::$service.'\' ORDER BY `s`.`expire` DESC');
+		Eleanor::$sessextra=$this->Forum->config['n'].$s;
+
+		$online=array();
+		if($this->user)
+		{
+			$uid=$this->user['id'];
+			$name=Eleanor::$Login->GetUserValue('name',false);
+			$online[]=array('user_id'=>$uid,'enter'=>time(),'name'=>$name,'group'=>reset($this->ug),'_hidden'=>$this->user['hidden'],'_a'=>Eleanor::$Login->UserLink($name,$uid));
+
+			if($this->user['hidden'])
+				Eleanor::$sessextra.='-h';
+		}
+		else
+			$uid=-1;
+
+		$R=Eleanor::$Db->Query('SELECT `s`.`type`,`s`.`user_id`,`s`.`enter`,`s`.`name` `botname`,`s`.`extra`,`us`.`groups` `group`,`us`.`name` FROM `'.P.'sessions` `s` INNER JOIN `'.P.'users_site` `us` ON `s`.`user_id`=`us`.`id` WHERE `s`.`extra` LIKE \''.$this->Forum->config['n'].$s.'-%\' AND `s`.`expire`>\''.date('Y-m-d H:i:s').'\' AND `s`.`service`=\''.Eleanor::$service.'\' ORDER BY `s`.`expire` DESC');
 		while($a=$R->fetch_assoc())
 		{
 			$a['enter']=strtotime($a['enter']);
-			if($a['type']=='user' and $a['groups'])
-			{
-				$gs=array((int)ltrim($a['groups'],','));
-				$a['_pref']=join(Eleanor::Permissions($gs,'html_pref'));
-				$a['_end']=join(Eleanor::Permissions($gs,'html_end'));
-			}
-			else
-				$a['_end']=$a['_pref']='';
+			if($a['type']=='user' and $a['group'])
+				$a['group']=(int)ltrim($a['group'],',');
 
 			if($a['user_id']!=$uid)
-				$online[]=$a+array('_hidden'=>substr($a['addon'],-2)=='-h');
-			elseif($uid==0)
-				$uid=-1;
+			{
+				if($a['type']=='user')
+					$a['_a']=Eleanor::$Login->UserLink($a['name'],$a['user_id']);
+				$online[]=$a+array('_hidden'=>substr($a['extra'],-2)=='-h');
+			}
 		}
 		return$online;
 	}
 
 	/**
-	 * Ìåòîä äëÿ "ïîäïèñè" òåì è ïîñòîâ ãîñòÿ
-	 *
-	 * @param string $t Èäåíòèôèêàòîð ïîäïèñè: p äëÿ ïîñòà, t äëÿ òåìû
-	 * @param int|FALSE $add Èäåíòèôèêàòîð òåìû èëè ïîñòà, êîòîðûé íóæíî äîáàâèòü â ïîäïèñü
+	 * ÐœÐµÑ‚Ð¾Ð´ Ð´Ð»Ñ "Ð¿Ð¾Ð´Ð¿Ð¸ÑÐ¸" Ñ‚ÐµÐ¼ Ð¸ Ð¿Ð¾ÑÑ‚Ð¾Ð² Ð³Ð¾ÑÑ‚Ñ
+	 * @param string $t Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ð¿Ð¾Ð´Ð¿Ð¸ÑÐ¸: p Ð´Ð»Ñ Ð¿Ð¾ÑÑ‚Ð°, t Ð´Ð»Ñ Ñ‚ÐµÐ¼Ñ‹
+	 * @param array|int|FALSE $add Ð˜Ð´ÐµÐ½Ñ‚Ð¸Ñ„Ð¸ÐºÐ°Ñ‚Ð¾Ñ€ Ñ‚ÐµÐ¼Ñ‹ Ð¸Ð»Ð¸ Ð¿Ð¾ÑÑ‚Ð°, ÐºÐ¾Ñ‚Ð¾Ñ€Ñ‹Ð¹ Ð½ÑƒÐ¶Ð½Ð¾ Ð´Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð² Ð¿Ð¾Ð´Ð¿Ð¸ÑÑŒ
 	 */
 	public function GuestSign($t='p',$add=false)
 	{
+		$config = $this->Forum->config;
+		$isa=is_array($add);
 		if($t=='t')
 		{
 			if(!isset($this->ts))
 			{
-				$gt=Eleanor::GetCookie($this->Forum->config['n'].'-gt');
-				$gts=Eleanor::GetCookie($this->Forum->config['n'].'-gts');
-				$this->ts=$gt && $gts && $gts===md5($gt.$this->Forum->config['tsign']) ? explode(',',$gt) : array();
+				$gt=Eleanor::GetCookie($config['n'].'-gt');
+				$gts=Eleanor::GetCookie($config['n'].'-gts');
+				$this->ts=$gt && $gts && $gts===md5($gt. $config['tsign']) ? explode(',',$gt) : array();
 			}
-			if($add and !in_array($add,$this->ts))
+			if($add and ($isa and array_diff($add,$this->ts) or !$isa and !in_array($add,$this->ts)))
 			{
-				$this->ts[]=$add;
+				if($isa)
+					$this->ts=array_unique(array_merge($this->ts,$add));
+				else
+					$this->ts[]=$add;
 				$this->ts=array_slice($this->ts,-30);
 
 				sort($this->ts,SORT_NUMERIC);
 				$gt=join(',',$this->ts);
-				Eleanor::SetCookie($this->Forum->config['n'].'-gt',$gt);
-				Eleanor::SetCookie($this->Forum->config['n'].'-gts',md5($gt.$this->Forum->config['tsign']));
+				Eleanor::SetCookie($config['n'].'-gt',$gt);
+				Eleanor::SetCookie($config['n'].'-gts',md5($gt. $config['tsign']));
 			}
 			return$this->ts;
 		}
 
 		if(!isset($this->ps))
 		{
-			$gp=Eleanor::GetCookie($this->Forum->config['n'].'-gp');
-			$gps=Eleanor::GetCookie($this->Forum->config['n'].'-gps');
-			$this->ps=$gp && $gps && $gps===md5($gp.$this->Forum->config['psign']) ? explode(',',$gp) : array();
+			$gp=Eleanor::GetCookie($config['n'].'-gp');
+			$gps=Eleanor::GetCookie($config['n'].'-gps');
+			$this->ps=$gp && $gps && $gps===md5($gp. $config['psign']) ? explode(',',$gp) : array();
 		}
-		if($add and !in_array($add,$this->ps))
+		if($add and ($isa and array_diff($add,$this->ps) or !$isa and !in_array($add,$this->ps)))
 		{
-			$this->ps[]=$add;
+			if($isa)
+				$this->ps=array_unique(array_merge($this->ps,$add));
+			else
+				$this->ps[]=$add;
 			$this->ps=array_slice($this->ps,-30);
 
 			sort($this->ps,SORT_NUMERIC);
 			$gp=join(',',$this->ps);
-			Eleanor::SetCookie($this->Forum->config['n'].'-gp',$gp);
-			Eleanor::SetCookie($this->Forum->config['n'].'-gps',md5($gp.$this->Forum->config['psign']));
+			Eleanor::SetCookie($config['n'].'-gp',$gp);
+			Eleanor::SetCookie($config['n'].'-gps',md5($gp. $config['psign']));
 		}
 		return$this->ps;
 	}

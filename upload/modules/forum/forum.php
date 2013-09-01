@@ -1,21 +1,18 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright Â© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
 class Forum extends BaseClass
 {
 	#ToDo! PHP 5.4 trait Chain
 	public
-		$Base,#Îáúåêò áàçîâîãî êëàññà, ñ êîòîðîãî âñå çàïóñòèëîñü
-		$good=true,#Ôëàã òîãî, ÷òî îáúåêò ïðèãîäåí äëÿ ðàáîòû
-		$held,#Ìàññèâ "óäåðæèâàåìûõ" îáúåêòîâ çàâèñèìûõ îáúåêòîâ
-		$name;#Íàçâàíèå òåêóùåãî êëàññà
+		$Base,#ÐžÐ±ÑŠÐµÐºÑ‚ Ð±Ð°Ð·Ð¾Ð²Ð¾Ð³Ð¾ ÐºÐ»Ð°ÑÑÐ°, Ñ ÐºÐ¾Ñ‚Ð¾Ñ€Ð¾Ð³Ð¾ Ð²ÑÐµ Ð·Ð°Ð¿ÑƒÑÑ‚Ð¸Ð»Ð¾ÑÑŒ
+		$good=true,#Ð¤Ð»Ð°Ð³ Ñ‚Ð¾Ð³Ð¾, Ñ‡Ñ‚Ð¾ Ð¾Ð±ÑŠÐµÐºÑ‚ Ð¿Ñ€Ð¸Ð³Ð¾Ð´ÐµÐ½ Ð´Ð»Ñ Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹
+		$held,#ÐœÐ°ÑÑÐ¸Ð² "ÑƒÐ´ÐµÑ€Ð¶Ð¸Ð²Ð°ÐµÐ¼Ñ‹Ñ…" Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð² Ð·Ð°Ð²Ð¸ÑÐ¸Ð¼Ñ‹Ñ… Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
+		$name;#ÐÐ°Ð·Ð²Ð°Ð½Ð¸Ðµ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ ÐºÐ»Ð°ÑÑÐ°
 
 	final public function Free()
 	{
@@ -49,7 +46,7 @@ class Forum extends BaseClass
 			return$this;
 		else
 		{
-			$O=$this->Create($n);
+			$O=$this->Create($n,$this);
 			$O->Base=$this;
 			$O->name=$n;
 		}
@@ -59,29 +56,33 @@ class Forum extends BaseClass
 	#PHP 5.4 [E] trait chain
 
 	public
-		$config;#Êîíôèã ôîðóìà
+		$config;#ÐšÐ¾Ð½Ñ„Ð¸Ð³ Ñ„Ð¾Ñ€ÑƒÐ¼Ð°
 
 	public static
 		$root;
 
 	protected function __construct($config=false)
 	{
-		$this->config=$config ? $config : include self::$root.'/config.php';
+		$this->name=get_class($this);
+		if($this->name==__CLASS__)
+			$this->config=$config ? $config : include self::$root.'/config.php';
+		else#Ð£Ð±Ð¸Ð²Ð°ÐµÐ¼ Ð½Ð°Ñ‡Ð°Ð»ÑŒÐ½Ð¾Ðµ "Forum"
+			$this->name=substr($this->name,5);
 	}
 
 	/**
-	 * Ðåàëèçàöèÿ ìåòîäà Create òðýéòà Chain
-	 *
-	 * @param $name Èìÿ êëàññà äëÿ çàãðóçêè
-	**/
-	protected function Create($name)
+	 * Ð ÐµÐ°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ñ Ð¼ÐµÑ‚Ð¾Ð´Ð° Create Ñ‚Ñ€ÑÐ¹Ñ‚Ð° Chain
+	 * @param string $name Ð˜Ð¼Ñ ÐºÐ»Ð°ÑÑÐ° Ð´Ð»Ñ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸
+	 * @param obj $Base ÐžÐ±ÑŠÐµÐºÑ‚ Ð±Ð°Ð·Ð¾Ð²Ð¾Ð³Ð¾ ÐºÐ»Ð°ÑÑÐ°
+	 */
+	protected function Create($name,$Base)
 	{
 		if($name==__class__)
 			return new self;
 		$c='Forum'.$name;
 		if(class_exists($c,false) or include self::$root.strtolower($name).'.php')
-			return new$c;
+			return new$c(false,$Base);
 		throw new EE('Class not found: '.$name,EE::DEV,array('file'=>__file__,'line'=>__line__));
 	}
 }
-Forum::$root=dirname(__file__).DIRECTORY_SEPARATOR;
+Forum::$root=__DIR__.DIRECTORY_SEPARATOR;

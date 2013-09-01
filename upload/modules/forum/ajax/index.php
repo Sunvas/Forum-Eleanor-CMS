@@ -1,14 +1,11 @@
 <?php
 /*
-	Copyright � Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright © Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
-if(!defined('CMS'))die;
+defined('CMS')||die;
 
 global$Eleanor;
 $Eleanor->module['config']=$mc=include$Eleanor->module['path'].'config.php';
@@ -17,11 +14,15 @@ include$Eleanor->module['path'].'core.php';
 
 Eleanor::LoadOptions($mc['opts']);
 $Eleanor->Forum=new ForumCore($mc);
+$Forum=$Eleanor->Forum;
+$Forum->config=$Forum->Forum->config;
+$Forum->Language=new Language(true);
+$Forum->Language->loadfrom=dirname(__DIR__);
 
 $ev=isset($_POST['event']) ? (string)$_POST['event'] : '';
 switch($ev)
 {
-	case'progress':
+	case'progress':#Для админки: прогресс выполнения заданий
 		BeAs('admin');
 		if(!Eleanor::$Login->IsUser())
 			return Error();
@@ -40,76 +41,60 @@ switch($ev)
 		Result($res ? $res : false);
 	break;
 
-	case'allread':
-	case'forumread':
-	case'topicread':
+	case'all-read':#Пометка всего прочитанным
+	case'forum-read':#Пометка конкретного форума прочитанным
+	case'topic-read':#Пометка конкретной темы прочитанной
 		BeAs('user');
-		$Eleanor->Forum->LoadUser();
-		include Forum::$root.'markread.php';
+		$Forum->LoadUser();
+		include __DIR__.'/markread.php';
 	break;
 
-	case'fsubscribe':
-	case'tsubscribe':
+	case'subscribe-forum':#Подписка на форум
+	case'subscribe-topic':#Подписка на тему
 		BeAs('user');
-		$Eleanor->Forum->LoadUser();
-		include Forum::$root.'subscribe.php';
+		$Forum->LoadUser();
+		include __DIR__.'/subscribe.php';
 	break;
 
-	case'topic-move-forums':
-	case'topics-move-forums':
-	case'topic-pin':
+	case'pin-topic':#Закрепление темы из темы
+	case'pin-post':#Закрепление поста из темы
 		BeAs('user');
-		$Eleanor->Forum->LoadUser();
-		include Forum::$root.'moderate.php';
+		$Forum->LoadUser();
+		include __DIR__.'/moderate.php';
 	break;
 
-	case'showpost':#����� �����
+	case'show-post':#Показ поста
 		BeAs('user');
-		$Eleanor->Forum->LoadUser();
+		$Forum->LoadUser();
 		$do=false;
 		include$Eleanor->module['path'].'user/topic.php';
 		Result(ShowPost(isset($_POST['id']) ? (int)$_POST['id'] : 0,true));
 	break;
 
-	case'edit':#������ �����
-	case'save':#���������� �����
-	case'delete':#�������� �����
-	case'newpost':#����� ����
+	case'edit':#Правка поста
+	case'save':#Сохранение поста
+	case'delete':#Удаление поста
+	case'new-post':#Новый пост
 	case'lnp':#Load New Posts
 		BeAs('user');
-		$Eleanor->Forum->LoadUser();
-		include Forum::$root.'post.php';
+		$Forum->LoadUser();
+		include __DIR__.'/post.php';
+	break;
+	case'preview':
+		BeAs('user');
+		$Forum->LoadUser();
+
+		$Eleanor->Editor_result->type='bb';
+		$Eleanor->Editor_result->ownbb=$Eleanor->Editor_result->smiles=true;
+		$s=isset($_POST['text']) ? (string)$_POST['text'] : '';
+		if($Eleanor->Editor_result->ownbb and !isset(OwnBB::$replace['quote']) and strpos($s,'[quote')!==false)
+		{
+			if(!class_exists('ForumBBQoute',false))
+				include$Eleanor->module['path'].'Misc/bb-quote.php';
+			OwnBB::$replace['quote']='ForumBBQoute';
+		}
+		Result($Eleanor->Editor_result->GetHtml($s,true,false));
 	break;
 	default:
-		$type=isset($_POST['type']) ? (string)$_POST['type'] : '';
-		if($type=='bbpreview')
-		{
-			BeAs('user');
-			$Eleanor->Forum->LoadUser();
-
-			$Eleanor->Editor->type='bb';
-			$Eleanor->Editor->ownbb=isset($_POST['ownbb']);
-			$Eleanor->Editor->smiles=isset($_POST['smiles']);
-			$s=isset($_POST['text']) ? (string)$_POST['text'] : '';
-			if($Eleanor->Editor->ownbb and !isset(OwnBB::$replace['quote']) and strpos($s,'[quote')!==false)
-			{
-				if(!class_exists('ForumBBQoute',false))
-					include$Eleanor->module['path'].'Misc/bb-quote.php';
-				OwnBB::$replace['quote']='ForumBBQoute';
-			}
-			Result($Eleanor->Editor_result->GetHtml($s,true,false));
-		}
-		else
-			Error(Eleanor::$Language['main']['unknown_event']);
+		Error(Eleanor::$Language['main']['unknown_event']);
 }
-
-/*function CheckForumAccess($fid)
-{global$Eleanor;
-	foreach($Eleanor->Forum->ug as &$g)
-	{
-		$fr=$Eleanor->Forum->GroupPerms($fid,$g);
-		foreach($fr as $k=>&$v)
-			$rights[$k][]=$v;
-	}
-	return (isset($Eleanor->Forum->Forums->dump[$fid]) and in_array(1,$rights['access']));
-}*/

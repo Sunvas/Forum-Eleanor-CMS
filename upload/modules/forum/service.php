@@ -1,61 +1,57 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright В© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
 
 class ForumService extends Forum
 {
 	/**
-	 * Синхронизация групп системы с группами форума.
-	 *
-	 * @return array Ключи:
-	 * int done Количество синхронизованных групп
-	 * int total Количество групп, нуждающихся в синхронизации
-	 * Пока эти числа одинаковы, но в случае, если синхронизацию нужно будет делать для 100 и более групп (что маловероятно, но вполне возможно), придется вызывать метод несколько раз.
+	 * РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РіСЂСѓРїРї СЃРёСЃС‚РµРјС‹ СЃ РіСЂСѓРїРїР°РјРё С„РѕСЂСѓРјР°.
+	 * @return array РљР»СЋС‡Рё:
+	 * int done РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРёРЅС…СЂРѕРЅРёР·РѕРІР°РЅРЅС‹С… РіСЂСѓРїРї
+	 * int total РљРѕР»РёС‡РµСЃС‚РІРѕ РіСЂСѓРїРї, РЅСѓР¶РґР°СЋС‰РёС…СЃСЏ РІ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё
+	 * РџРѕРєР° СЌС‚Рё С‡РёСЃР»Р° РѕРґРёРЅР°РєРѕРІС‹, РЅРѕ РІ СЃР»СѓС‡Р°Рµ, РµСЃР»Рё СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ РґРµР»Р°С‚СЊ РґР»СЏ 100 Рё Р±РѕР»РµРµ РіСЂСѓРїРї (С‡С‚Рѕ РјР°Р»РѕРІРµСЂРѕСЏС‚РЅРѕ, РЅРѕ РІРїРѕР»РЅРµ РІРѕР·РјРѕР¶РЅРѕ), РїСЂРёРґРµС‚СЃСЏ РІС‹Р·С‹РІР°С‚СЊ РјРµС‚РѕРґ РЅРµСЃРєРѕР»СЊРєРѕ СЂР°Р·.
 	 */
 	public function SyncGroups()
 	{
 		$toins=$todel=array();
-		$R=Eleanor::$Db->Query('SELECT `g`.`id` FROM `'.P.'groups` `g` LEFT JOIN `'.$this->Forum->config['fg'].'` `f` USING (`id`) WHERE `f`.`id` IS NULL');
+		$config = $this->Forum->config;
+		$R=Eleanor::$Db->Query('SELECT `g`.`id` FROM `'.P.'groups` `g` LEFT JOIN `'. $config['fg'].'` `f` USING (`id`) WHERE `f`.`id` IS NULL');
 		while($t=$R->fetch_row())
 			$toins[]=$t[0];
 
-		$R=Eleanor::$Db->Query('SELECT `f`.`id` FROM `'.$this->Forum->config['fg'].'` `f` LEFT JOIN `'.P.'groups` `g` USING (`id`) WHERE `g`.`id` IS NULL');
+		$R=Eleanor::$Db->Query('SELECT `f`.`id` FROM `'. $config['fg'].'` `f` LEFT JOIN `'.P.'groups` `g` USING (`id`) WHERE `g`.`id` IS NULL');
 		while($t=$R->fetch_row())
 			$todel[]=$t[0];
 
 		if($toins)
-			Eleanor::$Db->Insert($this->Forum->config['fg'],array('id'=>$toins));
+			Eleanor::$Db->Insert($config['fg'],array('id'=>$toins));
 		if($todel)
-			Eleanor::$Db->Delete($this->Forum->config['fg'],'`id`'.Eleanor::$Db->In($todel));
+			Eleanor::$Db->Delete($config['fg'],'`id`'.Eleanor::$Db->In($todel));
 
-		#Не думаю, что есть смысл считать сколько всего сделано, но пусть будет
+		#РќРµ РґСѓРјР°СЋ, С‡С‚Рѕ РµСЃС‚СЊ СЃРјС‹СЃР» СЃС‡РёС‚Р°С‚СЊ СЃРєРѕР»СЊРєРѕ РІСЃРµРіРѕ СЃРґРµР»Р°РЅРѕ, РЅРѕ РїСѓСЃС‚СЊ Р±СѓРґРµС‚
 		$r=array(
-			'done'=>0,#Сделано
-			'total'=>0,#Всего
+			'done'=>0,#РЎРґРµР»Р°РЅРѕ
+			'total'=>0,#Р’СЃРµРіРѕ
 		);
 		$r['done']=$r['total']=count($todel)+count($toins);
 		return$r;
 	}
 
 	/**
-	 * Синхронизация пользователей системы с пользователями форума
-	 *
-	 * @param array $opts Настройки, ключи:
-	 * int id ID пользователя, с которого нужно начать синхронизацию (этот пользователь будет прощен и взят следующий)
-	 * string date дата с которой нужно начать синхронизацию
-	 * int limit количество пользователей синхронизуемых за раз
-	 * @return array Ключи:
-	 * int id ID пользователя, на котором завершена синхронизация
-	 * string date дата, на которой завершена синхронизация
-	 * int done Количество синхронизованных пользователей
-	 * int total Количество пользователей, нуждающихся в синхронизации
+	 * РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ СЃРёСЃС‚РµРјС‹ СЃ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРјРё С„РѕСЂСѓРјР°
+	 * @param array $opts РќР°СЃС‚СЂРѕР№РєРё, РєР»СЋС‡Рё:
+	 * int id ID РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, СЃ РєРѕС‚РѕСЂРѕРіРѕ РЅСѓР¶РЅРѕ РЅР°С‡Р°С‚СЊ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ (СЌС‚РѕС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ Р±СѓРґРµС‚ РїСЂРѕС‰РµРЅ Рё РІР·СЏС‚ СЃР»РµРґСѓСЋС‰РёР№)
+	 * string date РґР°С‚Р° СЃ РєРѕС‚РѕСЂРѕР№ РЅСѓР¶РЅРѕ РЅР°С‡Р°С‚СЊ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ
+	 * int limit РєРѕР»РёС‡РµСЃС‚РІРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ СЃРёРЅС…СЂРѕРЅРёР·СѓРµРјС‹С… Р·Р° СЂР°Р·
+	 * @return array РљР»СЋС‡Рё:
+	 * int id ID РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РЅР° РєРѕС‚РѕСЂРѕРј Р·Р°РІРµСЂС€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ
+	 * string date РґР°С‚Р°, РЅР° РєРѕС‚РѕСЂРѕР№ Р·Р°РІРµСЂС€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ
+	 * int done РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРёРЅС…СЂРѕРЅРёР·РѕРІР°РЅРЅС‹С… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+	 * int total РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РЅСѓР¶РґР°СЋС‰РёС…СЃСЏ РІ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё
 	 */
 	public function SyncUsers(array$opts=array())
 	{
@@ -113,29 +109,95 @@ class ForumService extends Forum
 	}
 
 	/**
-	 * Добавление пользователя в БД форума
-	 *
-	 * @param array|int $user Данные пользователя. Обязательно наличие ключа ID в случае массива
+	 * Р”РѕР±Р°РІР»РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ Р‘Р” С„РѕСЂСѓРјР°
+	 * @param array|int $user Р”Р°РЅРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ. РћР±СЏР·Р°С‚РµР»СЊРЅРѕ РЅР°Р»РёС‡РёРµ РєР»СЋС‡Р° ID РІ СЃР»СѓС‡Р°Рµ РјР°СЃСЃРёРІР°
 	 */
-	public function AddUser($user)
+	public function AddUser($user,$me=false)
 	{
 		if(!is_array($user))
 			$user=array('id'=>$user);
+		$config = $this->Forum->config;
+		if($me)
+		{
+			$ar=(int)Eleanor::GetCookie($config['n'].'-ar');
+			$ar=$ar>0 && time()-$ar>86400 * 365 ? date('Y-m-d H:i:s',$ar) : date('Y-m-d H:i:s');
+			$t=time();
+			Eleanor::SetCookie('ar',false);
+		}
+		else
+			$ar=date('Y-m-d H:i:s');
 		$user+=array(
 			'restrict_post'=>false,
-			'restrict_post_to'=>null,
-			'allread'=>date('Y-m-d H:i:s'),
+			'restrict_post_to'=>'0000-00-00 00:00:00',
+			'allread'=>$ar,
 			'hidden'=>false,
 			'moderate'=>false,
 		);
-		Eleanor::$Db->Insert($this->Forum->config['fu'],$user);
+		Eleanor::$Db->Insert($config['fu'],$user);
+		if($me)
+		{
+			#РџРµСЂРµРЅРѕСЃ "С‡РёС‚Р°РЅРЅРѕСЃС‚Рё С„РѕСЂСѓРјР°" Рё "С‡РёС‚Р°РЅРЅРѕСЃС‚Рё С‚РµРј" РёР· РєСѓРє РІ Р±Р°Р·Сѓ
+			$tr=(string)Eleanor::GetCookie($config['n'].'-tr');
+			$fr=(string)Eleanor::GetCookie($config['n'].'-fr');
+			$gt=$this->Core->GuestSign('t');
+
+			$forums=$todb=$topics=array();
+			$tr=$tr ? explode(',',$tr) : array();
+			$fr=$fr ? explode(',',$fr) : array();
+
+			foreach($tr as $v)
+				if(strpos($v,'-')!==false)
+				{
+					$v=explode('-',$v,2);
+					$v[0]=(int)$v[0];
+					$v[1]=(int)$v[1];
+					if($v[0]>0 and $v[1]>0)
+						$topics[ $v[0] ]=$v[1];
+				}
+
+			foreach($fr as $v)
+				if(strpos($v,'-')!==false)
+				{
+					$v=explode('-',$v,2);
+					$v[0]=(int)$v[0];
+					$v[1]=(int)$v[1];
+					if($v[0]>0 and $v[1]>0 and isset($this->Forum->Forums->dump[ $v[0] ]) and $this->Core->CheckForumAccess( $v[0] ))
+						$forums[ $v[0] ]=array('allread'=>$v[1],'topics'=>array());
+				}
+
+			if($topics)
+			{
+				$R=Eleanor::$Db->Query('SELECT `id`,`f`,`status` FROM `'. $config['ft'].'` WHERE `id`'.Eleanor::$Db->In(array_keys($topics)).' AND `status`IN(1,-1) LIMIT 1000');
+				while($a=$R->fetch_assoc())
+					if((isset($forums[ $a['f'] ]) and $topics[ $a['id'] ]>$forums[ $a['f'] ]['allread'] or !isset($forums[ $a['f'] ]) and $this->Core->CheckForumAccess($a['f'])) and ($a['status']==1 or $a['status']==-1 and in_array($a['id'],$gt)))
+						$forums[ $a['f'] ]['topics'][ $a['id'] ]=$topics[ $a['id'] ];
+			}
+
+			if($forums)
+			{
+				foreach($forums as $k=>$v)
+				{
+					arsort($v['topics'],SORT_NUMERIC);
+					$todb[]=array(
+						'uid'=>$user['id'],
+						'f'=>$k,
+						'allread'=>$v['allread'],
+						'topics'=>$v['topics'] ? serialize($v['topics']) : '',
+					);
+				}
+				Eleanor::$Db->Insert($config['re'],$todb);
+			}
+
+			#РЈРґР°Р»РµРЅРёРµ РєСѓРє
+			Eleanor::SetCookie($config['n'].'-tr',false);
+			Eleanor::SetCookie($config['n'].'-fr',false);
+		}
 		return$user;
 	}
 
 	/**
-	 * Проверка существования пользователя в БД форума. Если пользователь не существует, он будет добавлен, если удален из системы - будет удален
-	 *
-	 * @param int|array $ids Идентификатор(ы) пользователя
+	 * РџСЂРѕРІРµСЂРєР° СЃСѓС‰РµСЃС‚РІРѕРІР°РЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ Р‘Р” С„РѕСЂСѓРјР°. Р•СЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, РѕРЅ Р±СѓРґРµС‚ РґРѕР±Р°РІР»РµРЅ, РµСЃР»Рё СѓРґР°Р»РµРЅ РёР· СЃРёСЃС‚РµРјС‹ - Р±СѓРґРµС‚ СѓРґР°Р»РµРЅ
+	 * @param int|array $ids РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ(С‹) РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 	 */
 	public function CheckUser($ids)
 	{
@@ -162,10 +224,9 @@ class ForumService extends Forum
 	}
 
 	/**
-	 * Обновление пользователей
-	 *
-	 * @param array $data Массив данных для изменения
-	 * @param int|array|FALSE Идентификаторы пользователей, которых нужно изменить
+	 * РћР±РЅРѕРІР»РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+	 * @param array $data РњР°СЃСЃРёРІ РґР°РЅРЅС‹С… РґР»СЏ РёР·РјРµРЅРµРЅРёСЏ
+	 * @param int|array|FALSE РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ РёР·РјРµРЅРёС‚СЊ
 	 */
 	public function UpdateUser(array$data,$ids=false)
 	{
@@ -179,65 +240,65 @@ class ForumService extends Forum
 	}
 
 	/**
-	 * Метод удаление пользователя
-	 *
-	 * @param array|int $ids Идентификатор удаляемого пользователя
+	 * РњРµС‚РѕРґ СѓРґР°Р»РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+	 * @param array|int $ids РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СѓРґР°Р»СЏРµРјРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 	 */
 	public function DeleteUser($ids)
 	{
 		$in=Eleanor::$Db->In($ids);
-		Eleanor::$Db->Delete($this->Forum->config['re'],'`uid`'.$in);
-		Eleanor::$Db->Delete($this->Forum->config['fs'],'`uid`'.$in);
-		Eleanor::$Db->Delete($this->Forum->config['ts'],'`uid`'.$in);
-		Eleanor::$Db->Delete($this->Forum->config['lp'],'`uid`'.$in);
-		Eleanor::$Db->Delete($this->Forum->config['fu'],'`id`'.$in);
+		$config = $this->Forum->config;
+		Eleanor::$Db->Delete($config['re'],'`uid`'.$in);
+		Eleanor::$Db->Delete($config['fs'],'`uid`'.$in);
+		Eleanor::$Db->Delete($config['ts'],'`uid`'.$in);
+		Eleanor::$Db->Delete($config['lp'],'`uid`'.$in);
+		Eleanor::$Db->Delete($config['fu'],'`id`'.$in);
 	}
 
 	/**
-	 * Удаление форума
-	 *
-	 * @param int|array $ids Идентификатор удалямого форума
-	 * @param array $opts Опции удалени, массив с ключами:
-	 * array langs Языковые версии форума, которые удаляются. Если false - удаляются ВСЕ языковые версии. Если же будут указаны все языковые версии, из языковой таблицы они будут удалены, а из основной - нет. Учитывайте это.
-	 * int|FALSE trash Идентификатор форума, куда будут перемещены темы
-	 * array tolang Названия языка, в который будут преобразованы темы в случае перемещения
-	 * @return array Ключи:
-	 * int done Количество удаленных (перемещенных) элементов
-	 * int total Количество элементов, нуждающихся в удалении (перемещении)
+	 * РЈРґР°Р»РµРЅРёРµ С„РѕСЂСѓРјР°
+	 * @param int|array $ids РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СѓРґР°Р»СЏРјРѕРіРѕ С„РѕСЂСѓРјР°
+	 * @param array $opts РћРїС†РёРё СѓРґР°Р»РµРЅРё, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+	 * array langs РЇР·С‹РєРѕРІС‹Рµ РІРµСЂСЃРёРё С„РѕСЂСѓРјР°, РєРѕС‚РѕСЂС‹Рµ СѓРґР°Р»СЏСЋС‚СЃСЏ. Р•СЃР»Рё false - СѓРґР°Р»СЏСЋС‚СЃСЏ Р’РЎР• СЏР·С‹РєРѕРІС‹Рµ РІРµСЂСЃРёРё. Р•СЃР»Рё Р¶Рµ Р±СѓРґСѓС‚ СѓРєР°Р·Р°РЅС‹ РІСЃРµ СЏР·С‹РєРѕРІС‹Рµ РІРµСЂСЃРёРё, РёР· СЏР·С‹РєРѕРІРѕР№ С‚Р°Р±Р»РёС†С‹ РѕРЅРё Р±СѓРґСѓС‚ СѓРґР°Р»РµРЅС‹, Р° РёР· РѕСЃРЅРѕРІРЅРѕР№ - РЅРµС‚. РЈС‡РёС‚С‹РІР°Р№С‚Рµ СЌС‚Рѕ.
+	 * int|FALSE trash РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С„РѕСЂСѓРјР°, РєСѓРґР° Р±СѓРґСѓС‚ РїРµСЂРµРјРµС‰РµРЅС‹ С‚РµРјС‹
+	 * array tolang РќР°Р·РІР°РЅРёСЏ СЏР·С‹РєР°, РІ РєРѕС‚РѕСЂС‹Р№ Р±СѓРґСѓС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅС‹ С‚РµРјС‹ РІ СЃР»СѓС‡Р°Рµ РїРµСЂРµРјРµС‰РµРЅРёСЏ
+	 * @return array РљР»СЋС‡Рё:
+	 * int done РљРѕР»РёС‡РµСЃС‚РІРѕ СѓРґР°Р»РµРЅРЅС‹С… (РїРµСЂРµРјРµС‰РµРЅРЅС‹С…) СЌР»РµРјРµРЅС‚РѕРІ
+	 * int total РљРѕР»РёС‡РµСЃС‚РІРѕ СЌР»РµРјРµРЅС‚РѕРІ, РЅСѓР¶РґР°СЋС‰РёС…СЃСЏ РІ СѓРґР°Р»РµРЅРёРё (РїРµСЂРµРјРµС‰РµРЅРёРё)
 	 */
 	public function DeleteForum($ids,$opts=array())
 	{
 		$ids=(array)$ids;
 		$r=array(
-			'done'=>0,#Сделано
-			'total'=>0,#Всего
+			'done'=>0,#РЎРґРµР»Р°РЅРѕ
+			'total'=>0,#Р’СЃРµРіРѕ
 		);
 
 		$opts+=array(
-			'langs'=>false,#Языки форума, которые удаляем
-			'pt'=>1000,#Количество тем перемещаемых/удаляемых за раз
-			'pp'=>1000,#Количество постов перемещаемых/удаляемых за раз
-			'pa'=>1000,#Количество аттачей перемещаемых/удаляемых за раз
-			'pts'=>1000,#Количество подписок на темы перемещаемых/удаляемых за раз
-			'pfs'=>1000,#Количество подписок на форумы удаляемых за раз
-			'plp'=>1000,#Количество последних постов удаляемых за раз
-			'pre'=>1000,#Количество идентификаторов чтений удаляемых за раз
-			'ptr'=>1000,#Количество репутаций, удаляемых за раз
-			'trash'=>$this->Core->vars['trash'],#ИД форума, куда переместить топики
-			'trashlangs'=>array(),#Массив "новых" языков для трешка (для случая, когда все языки форума сливаем в один)
-			'tolang'=>false,#Язык, в который удаляем
+			'langs'=>false,#РЇР·С‹РєРё С„РѕСЂСѓРјР°, РєРѕС‚РѕСЂС‹Рµ СѓРґР°Р»СЏРµРј
+			'pt'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ С‚РµРј РїРµСЂРµРјРµС‰Р°РµРјС‹С…/СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'pp'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕСЃС‚РѕРІ РїРµСЂРµРјРµС‰Р°РµРјС‹С…/СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'pa'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ Р°С‚С‚Р°С‡РµР№ РїРµСЂРµРјРµС‰Р°РµРјС‹С…/СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'pts'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕРґРїРёСЃРѕРє РЅР° С‚РµРјС‹ РїРµСЂРµРјРµС‰Р°РµРјС‹С…/СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'pfs'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕРґРїРёСЃРѕРє РЅР° С„РѕСЂСѓРјС‹ СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'plp'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕСЃР»РµРґРЅРёС… РїРѕСЃС‚РѕРІ СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'pre'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ С‡С‚РµРЅРёР№ СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'pfr'=>1000,#РљРѕР»РёС‡РµСЃС‚РІРѕ СЂРµРїСѓС‚Р°С†РёР№, СѓРґР°Р»СЏРµРјС‹С… Р·Р° СЂР°Р·
+			'trash'=>$this->Core->vars['trash'],#РР” С„РѕСЂСѓРјР°, РєСѓРґР° РїРµСЂРµРјРµСЃС‚РёС‚СЊ С‚РѕРїРёРєРё
+			'trashlangs'=>array(),#РњР°СЃСЃРёРІ "РЅРѕРІС‹С…" СЏР·С‹РєРѕРІ РґР»СЏ С‚СЂРµС€Р° (РґР»СЏ СЃР»СѓС‡Р°СЏ, РєРѕРіРґР° РІСЃРµ СЏР·С‹РєРё С„РѕСЂСѓРјР° СЃР»РёРІР°РµРј РІ РѕРґРёРЅ)
+			'tolang'=>false,#РЇР·С‹Рє, РІ РєРѕС‚РѕСЂС‹Р№ СѓРґР°Р»СЏРµРј
 		);
 		if(in_array($opts['trash'],$ids) and ($opts['langs']===false or $opts['tolang']===false or in_array($opts['tolang'],$opts['langs'])))
 			throw new EE('MOVE_INTO_DELETE',EE::USER);
 
 		$ps=array();
-		$R=Eleanor::$Db->Query('SELECT `id`,`parents` FROM `'.$this->Forum->config['f'].'` INNER JOIN `'.$this->Forum->config['fl'].'` USING(`id`) WHERE `id`'.Eleanor::$Db->In($ids).($opts['langs']===false ? '' : ' AND `language`'.Eleanor::$Db->In($opts['langs'])));
+		$Forum = $this->Forum;
+		$R=Eleanor::$Db->Query('SELECT `id`,`parents` FROM `'. $Forum->config['f'].'` INNER JOIN `'. $Forum->config['fl'].'` USING(`id`) WHERE `id`'.Eleanor::$Db->In($ids).($opts['langs']===false ? '' : ' AND `language`'.Eleanor::$Db->In($opts['langs'])));
 		while($a=$R->fetch_assoc())
-			$ps[$a['id']]=$a['parents'];
+			$ps[ $a['id'] ]=$a['parents'];
 
-		foreach($ps as $k=>&$v)
+		foreach($ps as $k=>$v)
 		{
-			$R=Eleanor::$Db->Query('SELECT `id` FROM `'.$this->Forum->config['f'].'` WHERE `parents` LIKE \''.$v.$k.',%\'');
+			$R=Eleanor::$Db->Query('SELECT `id` FROM `'. $Forum->config['f'].'` WHERE `parents` LIKE \''.$v.$k.',%\'');
 			while($a=$R->fetch_assoc())
 				$ids[]=$a['id'];
 		}
@@ -247,67 +308,83 @@ class ForumService extends Forum
 
 		$lin=$in=Eleanor::$Db->In($ids);
 		if($opts['langs']!==false)
+		{
+			$nin=array();
+			$R=Eleanor::$Db->Query('SELECT `id` FROM `'. $Forum->config['fl'].'` WHERE `id`'.$in.' AND `language`'.Eleanor::$Db->In($opts['langs'],true));
+			while($a=$R->fetch_assoc())
+				$nin[]=$a['id'];
+			if($nin)
+				$in=Eleanor::$Db->In(array_diff($ids,$nin));
 			$lin.=' AND `language`'.Eleanor::$Db->In($opts['langs']);
+		}
 
 		$samelang=$opts['tolang']===false;
 		if($opts['trash'])
 		{
-			$langs=array();
-			$R=Eleanor::$Db->Query('SELECT `language` FROM `'.$this->Forum->config['fl'].'` WHERE `id`='.$opts['trash']);
-			while($a=$R->fetch_assoc())
-				$langs[]=$a['language'];
+			$newforum=!in_array($opts['trash'],$ids);
+			if($newforum)
+			{
+				$langs=array();
+				$R=Eleanor::$Db->Query('SELECT `language` FROM `'. $Forum->config['fl'].'` WHERE `id`='.$opts['trash']);
+				while($a=$R->fetch_assoc())
+					$langs[]=$a['language'];
+			}
 
 			if($opts['trashlangs'])
-				$langs=in_array('',$opts['trashlangs']) ? array('') : array_intersect($opts['trashlangs'],$langs);
+			{
+				$langs=array_intersect($opts['trashlangs'],$langs);
+				if(!$langs)
+					throw new EE('NO_DEST_LANG',EE::USER);
+			}
 
 			if($samelang)
-				$samelang='IF(`language`'.Eleanor::$Db->In($langs).',`language`,\'\')';
-			elseif(!in_array($opts['tolang'],$langs))
+				$samelang='IF(`language`'.Eleanor::$Db->In($langs).',`language`,\''.(in_array($this->Core->language,$langs) ? $this->Core->language : reset($langs)).'\')';
+			elseif($newforum and !in_array($opts['tolang'],$langs))
 				throw new EE('NO_DEST_LANG',EE::USER);
 		}
 
 		$R=Eleanor::$Db->Query('SELECT SUM(`s`.`cnt`) FROM (
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['ft'].'` WHERE `f`'.$lin.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['fp'].'` WHERE `f`'.$lin.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['fa'].'` WHERE `f`'.$lin.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['fs'].'` WHERE `f`'.$lin.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['ts'].'` WHERE `f`'.$lin.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['lp'].'` WHERE `f`'.$lin.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['re'].'` WHERE `f`'.$in.')UNION ALL
-			(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['fr'].'` WHERE `f`'.$in.')
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['ft'].'` WHERE `f`'.$lin.')UNION ALL
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['fp'].'` WHERE `f`'.$lin.')UNION ALL
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['fa'].'` WHERE `f`'.$lin.')UNION ALL
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['fs'].'` WHERE `f`'.$lin.')UNION ALL
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['lp'].'` WHERE `f`'.$lin.')UNION ALL
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['re'].'` WHERE `f`'.$in.')UNION ALL
+			(SELECT COUNT(`f`) `cnt` FROM `'. $Forum->config['fr'].'` WHERE `f`'.$in.')
 		) `s`');
+#(SELECT COUNT(`f`) `cnt` FROM `'.$this->Forum->config['ts'].'` WHERE `f`'.$lin.')UNION ALL
 		list($r['total'])=$R->fetch_row();
 
 		Eleanor::$Db->Transaction();
 		if($opts['trash'])
 		{
 			if($samelang)
-				$r['done']+=Eleanor::$Db->Update($this->Forum->config['fa'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pa'])
-					+Eleanor::$Db->Update($this->Forum->config['fp'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pp'])
-					+Eleanor::$Db->Update($this->Forum->config['ft'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pt'])
-					+Eleanor::$Db->Update($this->Forum->config['ts'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pts'])
-					+Eleanor::$Db->Update($this->Forum->config['tr'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['ptr']);
+				$r['done']+=Eleanor::$Db->Update($Forum->config['fa'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pa'])
+					+Eleanor::$Db->Update($Forum->config['fp'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pp'])
+					+Eleanor::$Db->Update($Forum->config['ft'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pt'])
+					#+Eleanor::$Db->Update($this->Forum->config['ts'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pts'])
+					+Eleanor::$Db->Update($Forum->config['fr'],array('f'=>$opts['trash'],'!language'=>$samelang),'`f`'.$lin.' LIMIT '.$opts['pfr']);
 			else
-				$r['done']+=Eleanor::$Db->Update($this->Forum->config['fa'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pa'])
-					+Eleanor::$Db->Update($this->Forum->config['fp'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pp'])
-					+Eleanor::$Db->Update($this->Forum->config['ft'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pt'])
-					+Eleanor::$Db->Update($this->Forum->config['ts'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pts'])
-					+Eleanor::$Db->Update($this->Forum->config['tr'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['ptr']);
+				$r['done']+=Eleanor::$Db->Update($Forum->config['fa'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pa'])
+					+Eleanor::$Db->Update($Forum->config['fp'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pp'])
+					+Eleanor::$Db->Update($Forum->config['ft'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pt'])
+					#+Eleanor::$Db->Update($this->Forum->config['ts'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pts'])
+					+Eleanor::$Db->Update($Forum->config['fr'],array('f'=>$opts['trash'],'language'=>$opts['tolang']),'`f`'.$lin.' LIMIT '.$opts['pfr']);
 		}
 		else
 		{
-			$R=Eleanor::$Db->Query('SELECT `p` FROM `'.$this->Forum->config['fa'].'` WHERE `f`'.$lin.' GROUP BY `p` LIMIT '.$opts['pa']);
+			$R=Eleanor::$Db->Query('SELECT `p` FROM `'. $Forum->config['fa'].'` WHERE `f`'.$lin.' GROUP BY `p` LIMIT '.$opts['pa']);
 			while($a=$R->fetch_assoc())
-				Files::Delete(Eleanor::$root.Eleanor::$uploads.DIRECTORY_SEPARATOR.$this->Forum->config['n'].'/p'.$a['p']);
-			$r['done']+=Eleanor::$Db->Delete($this->Forum->config['fa'],'`f`'.$lin.' LIMIT '.$opts['pa'])
-				+Eleanor::$Db->Delete($this->Forum->config['fp'],'`f`'.$lin.' LIMIT '.$opts['pp'])
-				+Eleanor::$Db->Delete($this->Forum->config['ft'],'`f`'.$lin.' LIMIT '.$opts['pt'])
-				+Eleanor::$Db->Delete($this->Forum->config['ts'],'`f`'.$lin.' LIMIT '.$opts['pts'])
-				+Eleanor::$Db->Delete($this->Forum->config['tr'],'`f`'.$lin.' LIMIT '.$opts['ptr']);
+				Files::Delete(Eleanor::$root.Eleanor::$uploads.DIRECTORY_SEPARATOR. $Forum->config['n'].'/p'.$a['p']);
+			$r['done']+=Eleanor::$Db->Delete($Forum->config['fa'],'`f`'.$lin.' LIMIT '.$opts['pa'])
+				+Eleanor::$Db->Delete($Forum->config['fp'],'`f`'.$lin.' LIMIT '.$opts['pp'])
+				+Eleanor::$Db->Delete($Forum->config['ft'],'`f`'.$lin.' LIMIT '.$opts['pt'])
+				#+Eleanor::$Db->Delete($this->Forum->config['ts'],'`f`'.$lin.' LIMIT '.$opts['pts'])
+				+Eleanor::$Db->Delete($Forum->config['fr'],'`f`'.$lin.' LIMIT '.$opts['pfr']);
 		}
-		$r['done']+=Eleanor::$Db->Delete($this->Forum->config['fs'],'`f`'.$lin.' LIMIT '.$opts['pfs'])
-			+Eleanor::$Db->Delete($this->Forum->config['lp'],'`f`'.$lin.' LIMIT '.$opts['plp'])
-			+Eleanor::$Db->Delete($this->Forum->config['re'],'`f`'.$in.' LIMIT '.$opts['pre']);
+		$r['done']+=Eleanor::$Db->Delete($Forum->config['fs'],'`f`'.$lin.' LIMIT '.$opts['pfs'])
+			+Eleanor::$Db->Delete($Forum->config['lp'],'`f`'.$lin.' LIMIT '.$opts['plp'])
+			+Eleanor::$Db->Delete($Forum->config['re'],'`f`'.$in.' LIMIT '.$opts['pre']);
 		Eleanor::$Db->Commit();
 
 		if($r['done']>=$r['total'])
@@ -315,7 +392,7 @@ class ForumService extends Forum
 			if($opts['trash'])
 			{
 				$upd=array();
-				$R=Eleanor::$Db->Query('SELECT `language`,`topics`,`posts`,`queued_topics`,`queued_posts` FROM `'.$this->Forum->config['fl'].'` WHERE `id`'.$lin);
+				$R=Eleanor::$Db->Query('SELECT `language`,`topics`,`posts`,`queued_topics`,`queued_posts` FROM `'. $Forum->config['fl'].'` WHERE `id`'.$lin);
 				while($a=$R->fetch_assoc())
 				{
 					$l=$a['language'];
@@ -330,9 +407,9 @@ class ForumService extends Forum
 				{
 					foreach($upd as $lang=>$up)
 						if($lang=='' or !in_array($lang,$langs))
-							Eleanor::$Db->Update($this->Forum->config['fl'],array('!topics'=>'`topics`+'.$up['topics'],'!posts'=>'`posts`+'.$up['posts'],'!queued_topics'=>'`queued_topics`+'.$up['queued_topics'],'!queued_posts'=>'`queued_posts`+'.$up['queued_posts']),'`id`='.$opts['trash']);
+							Eleanor::$Db->Update($Forum->config['fl'],array('!topics'=>'`topics`+'.$up['topics'],'!posts'=>'`posts`+'.$up['posts'],'!queued_topics'=>'`queued_topics`+'.$up['queued_topics'],'!queued_posts'=>'`queued_posts`+'.$up['queued_posts']),'`id`='.$opts['trash']);
 						else
-							Eleanor::$Db->Update($this->Forum->config['fl'],array('!topics'=>'`topics`+'.$up['topics'],'!posts'=>'`posts`+'.$up['posts'],'!queued_topics'=>'`queued_topics`+'.$up['queued_topics'],'!queued_posts'=>'`queued_posts`+'.$up['queued_posts']),'`id`='.$opts['trash'].' AND `language`=\''.$lang.'\' LIMIT 1');
+							Eleanor::$Db->Update($Forum->config['fl'],array('!topics'=>'`topics`+'.$up['topics'],'!posts'=>'`posts`+'.$up['posts'],'!queued_topics'=>'`queued_topics`+'.$up['queued_topics'],'!queued_posts'=>'`queued_posts`+'.$up['queued_posts']),'`id`='.$opts['trash'].' AND `language`=\''.$lang.'\' LIMIT 1');
 				}
 				else
 					Eleanor::$Db->Update($this->config['fl'],array('!topics'=>'`topics`+'.array_sum($upd['topics']),'!posts'=>'`posts`+'.array_sum($upd['posts']),'!queued_topics'=>'`queued_topics`+'.array_sum($upd['queued_topics']),'!queued_posts'=>'`queued_posts`+'.array_sum($upd['queued_posts'])),'`id`='.$opts['trash'].' AND `language`=\''.$opts['tolang'].'\' LIMIT 1');
@@ -342,22 +419,21 @@ class ForumService extends Forum
 
 			if($opts['langs']===false)
 			{
-				$R=Eleanor::$Db->Query('SELECT `id`,`prefixes` FROM `'.$this->Forum->config['f'].'` WHERE `id`'.$in);
+				$R=Eleanor::$Db->Query('SELECT `id`,`prefixes` FROM `'. $Forum->config['f'].'` WHERE `id`'.$in);
 				while($a=$R->fetch_assoc())
 					if($a['prefixes'])
-						Eleanor::$Db->Update($this->Forum->config['f'],array('!forums'=>'REPLACE(`forums`,\','.$a['id'].',\',\'\')'),'`id`'.Eleanor::$Db->In(explode(',,',trim($a['prefixes'],','))));
-				Eleanor::$Db->Delete($this->Forum->config['f'],'`id`'.$in);
+						Eleanor::$Db->Update($Forum->config['f'],array('!forums'=>'REPLACE(`forums`,\','.$a['id'].',\',\'\')'),'`id`'.Eleanor::$Db->In(explode(',,',trim($a['prefixes'],','))));
+				Eleanor::$Db->Delete($Forum->config['f'],'`id`'.$in);
 			}
-			Eleanor::$Db->Delete($this->Forum->config['fl'],'`id`'.$lin);
+			Eleanor::$Db->Delete($Forum->config['fl'],'`id`'.$lin);
 		}
 
 		return$r;
 	}
 
 	/**
-	 * Пересчет репутации пользователю
-	 *
-	 * @param int|array $ids ID пользователей, у которых будет пересчитана репутация
+	 * РџРµСЂРµСЃС‡РµС‚ СЂРµРїСѓС‚Р°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ
+	 * @param int|array $ids ID РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, Сѓ РєРѕС‚РѕСЂС‹С… Р±СѓРґРµС‚ РїРµСЂРµСЃС‡РёС‚Р°РЅР° СЂРµРїСѓС‚Р°С†РёСЏ
 	 */
 	public function RecountReputation($ids)
 	{

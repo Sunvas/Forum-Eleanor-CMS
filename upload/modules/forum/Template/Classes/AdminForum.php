@@ -1,11 +1,8 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright В© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
 class TplAdminForum
@@ -13,82 +10,85 @@ class TplAdminForum
 	public static
 		$lang;
 
-	protected static function Menu($act='')
+	protected static function Menu($act='',$js=false)
 	{
+		if($js)
+			array_push($GLOBALS['jscripts'],'modules/forum/Template/js/admin-forum.js','modules/forum/Template/js/admin-forum-'.Language::$main.'.js');
+
 		$links=&$GLOBALS['Eleanor']->module['links'];
 		$GLOBALS['Eleanor']->module['navigation']=array(
-			array($links['forums'],'Список форумов','act'=>$act=='forums',
+			array($links['forums'],static::$lang['flist'],'act'=>$act=='forums',
 				'submenu'=>array(
-					array($links['add-forum'],'Добавить форум','act'=>$act=='add-forum'),
+					array($links['add-forum'],static::$lang['addforum'],'act'=>$act=='add-forum'),
 				),
 			),
-			array($links['moders'],'Список модераторов','act'=>$act=='moders',
+			array($links['moders'],static::$lang['mlist'],'act'=>$act=='moders',
 				'submenu'=>array(
-					array($links['add-moder'],'Добавить модератора','act'=>$act=='add-moder'),
+					array($links['add-moder'],static::$lang['addmoder'],'act'=>$act=='add-moder'),
 				),
 			),
-			array($links['prefixes'],'Префиксы тем','act'=>$act=='prefixes',
+			array($links['prefixes'],static::$lang['prefixes'],'act'=>$act=='prefixes',
 				'submenu'=>array(
-					array($links['add-prefix'],'Добавить префикс','act'=>$act=='add-prefix'),
+					array($links['add-prefix'],static::$lang['addprefix'],'act'=>$act=='add-prefix'),
 				),
 			),
-			array($links['reputation'],'Репутация','act'=>$act=='reputation'),
-			array($links['groups'],'Базовые права групп','act'=>$act=='groups'),
-			array($links['massrights'],'Массовое назначение права','act'=>$act=='massrights'),
-			array($links['users'],'Пользователи','act'=>$act=='users'),
-			array($links['letters'],'Форматы писем','act'=>$act=='letters'),
-			array($links['files'],'Загруженные файлы','act'=>$act=='files'),
-			array($links['fsubscriptions'],'Подписки на форумы','act'=>$act=='fsubscriptions'),
-			array($links['tsubscriptions'],'Подписки на темы','act'=>$act=='tsubscriptions'),
-			array($links['tasks'],'Обслуживание','act'=>$act=='tasks'),
-			array($links['options'],'Настройки','act'=>$act=='options'),
+			array($links['reputation'],static::$lang['~reputation'],'act'=>$act=='reputation'),
+			array($links['groups'],static::$lang['bgr'],'act'=>$act=='groups'),
+			array($links['massrights'],static::$lang['massrights'],'act'=>$act=='massrights'),
+			array($links['users'],static::$lang['fusers'],'act'=>$act=='users'),
+			array($links['letters'],static::$lang['letters'],'act'=>$act=='letters'),
+			array($links['files'],static::$lang['uploads'],'act'=>$act=='files'),
+			array($links['fsubscriptions'],static::$lang['fsubscr'],'act'=>$act=='fsubscriptions'),
+			array($links['tsubscriptions'],static::$lang['tsubscr'],'act'=>$act=='tsubscriptions'),
+			array($links['tasks'],static::$lang['service'],'act'=>$act=='tasks'),
+			array($links['options'],Eleanor::$Language['main']['options'],'act'=>$act=='options'),
 		);
 	}
 
 	/*
-		Страница отображения всех форумов
-		$items Массив форумов. Формат: ID=>array(), ключи внутреннего массива:
-			title Название форума
-			image Путь к картинке-логотипу форума, если пустое - значит логотипа нет
-			pos Целое число, характеризующее позицию форума
-			_aedit Ссылка на редактирование форума
-			_adel Ссылка на удаление форума
-			_aparent Ссылка на просмотр подфорумов текущего форума
-			_aup Ссылка на поднятие форума вверх, если равна false - значит форум уже и так находится в самом верху
-			_adown Ссылка на опускание форума вниз, если равна false - значит форум уже и так находится в самом низу
-			_aaddp Сылка на добавление подфорумов к даному форуму
-		$subitems Массив подфорумов для страниц из массива $items. Формат: ID=>array(id=>array(), ...), где ID - идентификатор форума, id - идентификатор подфорума. Ключи массива подфорумов:
-			title Заголовок подфорума
-			_aedit Ссылка на редактирование подфорума
-		$navi Массив, хлебные крошки навигации. Формат ID=>array(), ключи:
-			title Заголовок крошки
-			_a Ссылка на подпункты даной крошки. Может быть равно false
-		$cnt Количество форумов всего
-		$pp Количество форумов на страницу
-		$qs Массив параметров адресной строки для каждого запроса
-		$page Номер текущей страницы, на которой мы сейчас находимся
-		$links Перечень необходимых ссылок, массив с ключами:
-			sort_title Ссылка на сортировку списка $items по названию (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_pos Ссылка на сортировку списка $items по позиции (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_id Ссылка на сортировку списка $items по ID (возрастанию/убыванию в зависимости от текущей сортировки)
-			form_items Ссылка для параметра action формы, внутри которой происходит отображение перечня $items
-			pp Фукнция-генератор ссылок на изменение количества форумов отображаемых на странице
-			first_page Ссылка на первую страницу пагинатора
-			pages Функция-генератор ссылок на остальные страницы
-			forum_groups_rights Функция-генератор ссылок на установку прав групп в конкретном форуме, параметры: ID форума, ID группы
+		РЎС‚СЂР°РЅРёС†Р° РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІСЃРµС… С„РѕСЂСѓРјРѕРІ
+		$items РњР°СЃСЃРёРІ С„РѕСЂСѓРјРѕРІ. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+			image РџСѓС‚СЊ Рє РєР°СЂС‚РёРЅРєРµ-Р»РѕРіРѕС‚РёРїСѓ С„РѕСЂСѓРјР°, РµСЃР»Рё РїСѓСЃС‚РѕРµ - Р·РЅР°С‡РёС‚ Р»РѕРіРѕС‚РёРїР° РЅРµС‚
+			pos Р¦РµР»РѕРµ С‡РёСЃР»Рѕ, С…Р°СЂР°РєС‚РµСЂРёР·СѓСЋС‰РµРµ РїРѕР·РёС†РёСЋ С„РѕСЂСѓРјР°
+			_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С„РѕСЂСѓРјР°
+			_adel РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ С„РѕСЂСѓРјР°
+			_aparent РЎСЃС‹Р»РєР° РЅР° РїСЂРѕСЃРјРѕС‚СЂ РїРѕРґС„РѕСЂСѓРјРѕРІ С‚РµРєСѓС‰РµРіРѕ С„РѕСЂСѓРјР°
+			_aup РЎСЃС‹Р»РєР° РЅР° РїРѕРґРЅСЏС‚РёРµ С„РѕСЂСѓРјР° РІРІРµСЂС…, РµСЃР»Рё СЂР°РІРЅР° false - Р·РЅР°С‡РёС‚ С„РѕСЂСѓРј СѓР¶Рµ Рё С‚Р°Рє РЅР°С…РѕРґРёС‚СЃСЏ РІ СЃР°РјРѕРј РІРµСЂС…Сѓ
+			_adown РЎСЃС‹Р»РєР° РЅР° РѕРїСѓСЃРєР°РЅРёРµ С„РѕСЂСѓРјР° РІРЅРёР·, РµСЃР»Рё СЂР°РІРЅР° false - Р·РЅР°С‡РёС‚ С„РѕСЂСѓРј СѓР¶Рµ Рё С‚Р°Рє РЅР°С…РѕРґРёС‚СЃСЏ РІ СЃР°РјРѕРј РЅРёР·Сѓ
+			_aaddp РЎС‹Р»РєР° РЅР° РґРѕР±Р°РІР»РµРЅРёРµ РїРѕРґС„РѕСЂСѓРјРѕРІ Рє РґР°РЅРѕРјСѓ С„РѕСЂСѓРјСѓ
+		$subitems РњР°СЃСЃРёРІ РїРѕРґС„РѕСЂСѓРјРѕРІ РґР»СЏ СЃС‚СЂР°РЅРёС† РёР· РјР°СЃСЃРёРІР° $items. Р¤РѕСЂРјР°С‚: ID=>array(id=>array(), ...), РіРґРµ ID - РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С„РѕСЂСѓРјР°, id - РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РїРѕРґС„РѕСЂСѓРјР°. РљР»СЋС‡Рё РјР°СЃСЃРёРІР° РїРѕРґС„РѕСЂСѓРјРѕРІ:
+			title Р—Р°РіРѕР»РѕРІРѕРє РїРѕРґС„РѕСЂСѓРјР°
+			_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕРґС„РѕСЂСѓРјР°
+		$navi РњР°СЃСЃРёРІ, С…Р»РµР±РЅС‹Рµ РєСЂРѕС€РєРё РЅР°РІРёРіР°С†РёРё. Р¤РѕСЂРјР°С‚ ID=>array(), РєР»СЋС‡Рё:
+			title Р—Р°РіРѕР»РѕРІРѕРє РєСЂРѕС€РєРё
+			_a РЎСЃС‹Р»РєР° РЅР° РїРѕРґРїСѓРЅРєС‚С‹ РґР°РЅРѕР№ РєСЂРѕС€РєРё. РњРѕР¶РµС‚ Р±С‹С‚СЊ СЂР°РІРЅРѕ false
+		$cnt РљРѕР»РёС‡РµСЃС‚РІРѕ С„РѕСЂСѓРјРѕРІ РІСЃРµРіРѕ
+		$pp РљРѕР»РёС‡РµСЃС‚РІРѕ С„РѕСЂСѓРјРѕРІ РЅР° СЃС‚СЂР°РЅРёС†Сѓ
+		$qs РњР°СЃСЃРёРІ РїР°СЂР°РјРµС‚СЂРѕРІ Р°РґСЂРµСЃРЅРѕР№ СЃС‚СЂРѕРєРё РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+		$page РќРѕРјРµСЂ С‚РµРєСѓС‰РµР№ СЃС‚СЂР°РЅРёС†С‹, РЅР° РєРѕС‚РѕСЂРѕР№ РјС‹ СЃРµР№С‡Р°СЃ РЅР°С…РѕРґРёРјСЃСЏ
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			sort_title РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ РЅР°Р·РІР°РЅРёСЋ (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_pos РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ РїРѕР·РёС†РёРё (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_id РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ ID (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			form_items РЎСЃС‹Р»РєР° РґР»СЏ РїР°СЂР°РјРµС‚СЂР° action С„РѕСЂРјС‹, РІРЅСѓС‚СЂРё РєРѕС‚РѕСЂРѕР№ РїСЂРѕРёСЃС…РѕРґРёС‚ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РїРµСЂРµС‡РЅСЏ $items
+			pp Р¤СѓРєРЅС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РёР·РјРµРЅРµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° С„РѕСЂСѓРјРѕРІ РѕС‚РѕР±СЂР°Р¶Р°РµРјС‹С… РЅР° СЃС‚СЂР°РЅРёС†Рµ
+			first_page РЎСЃС‹Р»РєР° РЅР° РїРµСЂРІСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ РїР°РіРёРЅР°С‚РѕСЂР°
+			pages Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РѕСЃС‚Р°Р»СЊРЅС‹Рµ СЃС‚СЂР°РЅРёС†С‹
+			forum_groups_rights Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° СѓСЃС‚Р°РЅРѕРІРєСѓ РїСЂР°РІ РіСЂСѓРїРї РІ РєРѕРЅРєСЂРµС‚РЅРѕРј С„РѕСЂСѓРјРµ, РїР°СЂР°РјРµС‚СЂС‹: ID С„РѕСЂСѓРјР°, ID РіСЂСѓРїРїС‹
 	*/
 	public static function Forums($items,$subitems,$navi,$cnt,$pp,$qs,$page,$links)
 	{
-		static::Menu('forums');
+		static::Menu('forums',true);
 		$ltpl=Eleanor::$Language['tpl'];
 		$nav=array();
 		foreach($navi as &$v)
-			$nav[]=$v['_a'] ? '<a href="'.$v['_a'].'">'.$v['title'].'</a>' : '<span class="fgr" title="Настроить права групп" data-id="'.(isset($qs['parent']) ? $qs['parent'] : 0).'">'.$v['title'].'</span>';
+			$nav[]=$v['_a'] ? '<a href="'.$v['_a'].'">'.$v['title'].'</a>' : '<span class="fgr" title="'.static::$lang['oprgr'].'" data-id="'.(isset($qs['parent']) ? $qs['parent'] : 0).'">'.$v['title'].'</span>';
 
 		$Lst=Eleanor::LoadListTemplate('table-list',4)
 			->begin(
 				array($ltpl['title'],'href'=>$links['sort_title'],'colspan'=>2),
-				array('Позиция',80,'href'=>$links['sort_pos']),
+				array(static::$lang['pos'],80,'href'=>$links['sort_pos']),
 				array($ltpl['functs'],80,'href'=>$links['sort_id'])
 			);
 		if($items)
@@ -100,22 +100,22 @@ class TplAdminForum
 			{
 				$subs='';
 				if(isset($subitems[$k]))
-					foreach($subitems[$k] as $kk=>&$vv)
+					foreach($subitems[$k] as &$vv)
 						$subs.='<a href="'.$vv['_aedit'].'">'.$vv['title'].'</a>, ';
 
 				$pos=$posasc
 					? $Lst('func',
-						$v['_aup'] ? array($v['_aup'],'Вверх',$images.'up.png') : false,
-						$v['_adown'] ? array($v['_adown'],'Вниз',$images.'down.png') : false
+						$v['_aup'] ? array($v['_aup'],static::$lang['up'],$images.'up.png') : false,
+						$v['_adown'] ? array($v['_adown'],static::$lang['down'],$images.'down.png') : false
 					)
 					: false;
 
 				$Lst->item(
 					$v['image'] ? array('<a href="'.$v['_aedit'].'"><img src="'.$v['image'].'" /></a>','style'=>'width:1px') : false,
-					array('<a id="id'.$k.'" href="'.$v['_aedit'].'">'.$v['title'].'</a><br /><span class="small"><a href="'.$v['_aparent'].'" style="font-weight:bold">Подфорумы</a>: '.rtrim($subs,', ').' <a href="'.$v['_aaddp'].'" title="Добавить подфорум"><img src="'.$images.'plus.gif'.'" /></a></span>','colspan'=>$v['image'] ? false : 2),
+					array('<a id="id'.$k.'" href="'.$v['_aedit'].'">'.$v['title'].'</a><br /><span class="small"><a href="'.$v['_aparent'].'" style="font-weight:bold">'.static::$lang['subforums'].'</a>: '.rtrim($subs,', ').' <a href="'.$v['_aaddp'].'" title="'.static::$lang['addsubforum'].'"><img src="'.$images.'plus.gif'.'" /></a></span>','colspan'=>$v['image'] ? false : 2),
 					$pos && $pos[0] ? $pos : array('&empty;','center'),
 					$Lst('func',
-						'<span class="fgr" title="Настроить права групп" data-id="'.$k.'"><img src="'.$images.'select_users.png" alt="" /></span>',
+						'<span class="fgr" title="'.static::$lang['oprgr'].'" data-id="'.$k.'"><img src="'.$images.'select_users.png" alt="" /></span>',
 						array($v['_aedit'],$ltpl['edit'],$images.'edit.png'),
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					)
@@ -123,62 +123,64 @@ class TplAdminForum
 			}
 		}
 		else
-			$Lst->empty($nav ? 'Подфорумы не найдены' : 'Форумы не найдены');
+			$Lst->empty($nav ? static::$lang['fbnf'] : static::$lang['fnf']);
 		return Eleanor::$Template->Cover(
 			($nav ? '<table class="filtertable"><tr><td style="font-weight:bold">'.join(' &raquo; ',$nav).'</td></tr></table>' : '')
 			.'<form action="'.$links['form_items'].'" method="post">'
-			.$Lst->end().'<div class="submitline" style="text-align:left">'.sprintf('Форумов на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div></form>'
+			.$Lst->end().'<div class="submitline" style="text-align:left">'.sprintf(static::$lang['fpp'],$Lst->perpage($pp,$links['pp'])).'</div></form>'
 			.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page']))
-		).self::FGR($links['forum_groups_rights']);
+		).static::FGR($links['forum_groups_rights']);
 	}
 
 	/*
-		Страница добавления/редактирования форума
-		$id идентификатор редактируемого форума, если $id==0 значит форум добавляется
-		$values массив значений полей
-			Общие ключи:
-			parent Родитель форума
-			pos Позиция форума
-			is_category Флаг категории (в катеории нельзя создавать темы, можно только форумы помещать)
-			image Логотип форума
-			inc_posts Флаг включения счетчика сообщений
-			reputation Флаг включение репутации в этом форуме
-			hide_attach Флаг включения сокрытия аттачей
-			prefixes Массив идентификаторов префиксов тем
+		РЎС‚СЂР°РЅРёС†Р° РґРѕР±Р°РІР»РµРЅРёСЏ/СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ С„РѕСЂСѓРјР°
+		$id РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЂРµРґР°РєС‚РёСЂСѓРµРјРѕРіРѕ С„РѕСЂСѓРјР°, РµСЃР»Рё $id==0 Р·РЅР°С‡РёС‚ С„РѕСЂСѓРј РґРѕР±Р°РІР»СЏРµС‚СЃСЏ
+		$values РјР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№
+			РћР±С‰РёРµ РєР»СЋС‡Рё:
+			parent Р РѕРґРёС‚РµР»СЊ С„РѕСЂСѓРјР°
+			pos РџРѕР·РёС†РёСЏ С„РѕСЂСѓРјР°
+			is_category Р¤Р»Р°Рі РєР°С‚РµРіРѕСЂРёРё (РІ РєР°С‚РµРѕСЂРёРё РЅРµР»СЊР·СЏ СЃРѕР·РґР°РІР°С‚СЊ С‚РµРјС‹, РјРѕР¶РЅРѕ С‚РѕР»СЊРєРѕ С„РѕСЂСѓРјС‹ РїРѕРјРµС‰Р°С‚СЊ)
+			image Р›РѕРіРѕС‚РёРї С„РѕСЂСѓРјР°
+			inc_posts Р¤Р»Р°Рі РІРєР»СЋС‡РµРЅРёСЏ СЃС‡РµС‚С‡РёРєР° СЃРѕРѕР±С‰РµРЅРёР№
+			reputation Р¤Р»Р°Рі РІРєР»СЋС‡РµРЅРёРµ СЂРµРїСѓС‚Р°С†РёРё РІ СЌС‚РѕРј С„РѕСЂСѓРјРµ
+			hide_attach Р¤Р»Р°Рі РІРєР»СЋС‡РµРЅРёСЏ СЃРѕРєСЂС‹С‚РёСЏ Р°С‚С‚Р°С‡РµР№
+			prefixes РњР°СЃСЃРёРІ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ РїСЂРµС„РёРєСЃРѕРІ С‚РµРј
 
-			Языковые ключи:
-			title Название форума
-			description Описание форума
-			uri URI форума
-			meta_title Заголовок окна браузера при просмотре форума
-			meta_descr Мета описание форума
+			РЇР·С‹РєРѕРІС‹Рµ РєР»СЋС‡Рё:
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+			description РћРїРёСЃР°РЅРёРµ С„РѕСЂСѓРјР°
+			rules РџСЂР°РІРёР»Р° С„РѕСЂСѓРјР°
+			uri URI С„РѕСЂСѓРјР°
+			meta_title Р—Р°РіРѕР»РѕРІРѕРє РѕРєРЅР° Р±СЂР°СѓР·РµСЂР° РїСЂРё РїСЂРѕСЃРјРѕС‚СЂРµ С„РѕСЂСѓРјР°
+			meta_descr РњРµС‚Р° РѕРїРёСЃР°РЅРёРµ С„РѕСЂСѓРјР°
 
-			Специальные ключи:
-			_onelang Флаг моноязычной новости при включенной мультиязычности
-		$errors Массив ошибок
-		$imagopts Набор option-ов для select-a с возможными логотипами
-		$prefixes Массив возможных префиксов форума, формат: id=>название префикса
-		$uploader Интерфейс загрузчика
-		$bypost Признак того, что даные нужно брать из POST запроса
-		$back URL возврата
-		$links Перечень необходимых ссылок, массив с ключами:
-			delete Ссылка на удаление форума или false
+			РЎРїРµС†РёР°Р»СЊРЅС‹Рµ РєР»СЋС‡Рё:
+			_onelang Р¤Р»Р°Рі РјРѕРЅРѕСЏР·С‹С‡РЅРѕР№ РЅРѕРІРѕСЃС‚Рё РїСЂРё РІРєР»СЋС‡РµРЅРЅРѕР№ РјСѓР»СЊС‚РёСЏР·С‹С‡РЅРѕСЃС‚Рё
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
+		$imagopts РќР°Р±РѕСЂ option-РѕРІ РґР»СЏ select-a СЃ РІРѕР·РјРѕР¶РЅС‹РјРё Р»РѕРіРѕС‚РёРїР°РјРё
+		$prefixes РњР°СЃСЃРёРІ РІРѕР·РјРѕР¶РЅС‹С… РїСЂРµС„РёРєСЃРѕРІ С„РѕСЂСѓРјР°, С„РѕСЂРјР°С‚: id=>РЅР°Р·РІР°РЅРёРµ РїСЂРµС„РёРєСЃР°
+		$uploader РРЅС‚РµСЂС„РµР№СЃ Р·Р°РіСЂСѓР·С‡РёРєР°
+		$bypost РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґР°РЅС‹Рµ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РёР· POST Р·Р°РїСЂРѕСЃР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			delete РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ С„РѕСЂСѓРјР° РёР»Рё false
 	*/
 	public static function AddEditForum($id,$values,$errors,$imagopts,$prefixes,$uploader,$bypost,$back,$links)
 	{
-		static::Menu($id ? 'edit-forum' : 'add-forum');
+		static::Menu($id ? 'edit-forum' : 'add-forum',true);
 
 		$ltpl=Eleanor::$Language['tpl'];
 		if(Eleanor::$vars['multilang'])
 		{
 			$ml=array();
-			foreach(Eleanor::$langs as $k=>&$v)
+			foreach(Eleanor::$langs as $k=>$v)
 			{
 				$ml['title'][$k]=Eleanor::Input('title['.$k.']',$GLOBALS['Eleanor']->Editor->imgalt=Eleanor::FilterLangValues($values['title'],$k),array('tabindex'=>5,'id'=>'title-'.$k));
 				$ml['uri'][$k]=Eleanor::Input('uri['.$k.']',Eleanor::FilterLangValues($values['uri'],$k),array('onfocus'=>'if(!$(this).val())$(this).val($(\'#title-'.$k.'\').val())','tabindex'=>6));
 				$ml['description'][$k]=$GLOBALS['Eleanor']->Editor->Area('description['.$k.']',Eleanor::FilterLangValues($values['description'],$k),array('bypost'=>$bypost,'no'=>array('tabindex'=>7,'rows'=>15)));
 				$ml['meta_title'][$k]=Eleanor::Input('meta_title['.$k.']',Eleanor::FilterLangValues($values['meta_title'],$k),array('tabindex'=>8));
 				$ml['meta_descr'][$k]=Eleanor::Input('meta_descr['.$k.']',Eleanor::FilterLangValues($values['meta_descr'],$k),array('tabindex'=>9));
+				$ml['rules'][$k]=$GLOBALS['Eleanor']->Editor->Area('rules['.$k.']',Eleanor::FilterLangValues($values['rules'],$k),array('bypost'=>$bypost,'no'=>array('tabindex'=>10,'rows'=>15)));
 			}
 		}
 		else
@@ -188,7 +190,17 @@ class TplAdminForum
 				'description'=>$GLOBALS['Eleanor']->Editor->Area('description',$values['description'],array('bypost'=>$bypost,'no'=>array('tabindex'=>7,'rows'=>15))),
 				'meta_title'=>Eleanor::Input('meta_title',$values['meta_title'],array('tabindex'=>8)),
 				'meta_descr'=>Eleanor::Input('meta_descr',$values['meta_descr'],array('tabindex'=>9)),
+				'rules'=>$GLOBALS['Eleanor']->Editor->Area('rules',$values['rules'],array('bypost'=>$bypost,'no'=>array('tabindex'=>10,'rows'=>15))),
 			);
+
+		$posopts='';
+		$i=1;
+		$parents=isset($values['parents']) ? $values['parents'] : '';
+		foreach($GLOBALS['Eleanor']->Forum->Forums->dump as $k=>$v)
+			if($k!=$id and $v['parents']==$parents)
+				$posopts.=Eleanor::Option($v['title'],++$i,$i==$values['pos']);
+		$posopts=Eleanor::Option(static::$lang['begin'],1,$values['pos']<=1)
+			.Eleanor::Optgroup(static::$lang['after'],$posopts);
 
 		if($back)
 			$back=Eleanor::Input('back',$back,array('type'=>'hidden'));
@@ -196,48 +208,39 @@ class TplAdminForum
 			->form()
 			->begin()
 
-			->head('Местоположение')
-			->item('Родитель',Eleanor::Select('parent',Eleanor::Option('-нет-','',$values['parent']==0).$GLOBALS['Eleanor']->Forum->Forums->SelectOptions($values['parent'],$id),array('tabindex'=>1)))
-			->item('Позиция',Eleanor::Input('pos',$values['pos'],array('tabindex'=>2)))
-			->item(array('Это категория, а не форум',Eleanor::Check('is_category',$values['is_category'],array('tabindex'=>3)),'tip'=>'В категориях размещают подфорумы, создавать темы в них нельзя'))
+			->head(static::$lang['location'])
+			->item(static::$lang['parent'],Eleanor::Select('parent',Eleanor::Option('-'.static::$lang['no'].'-','',$values['parent']==0).$GLOBALS['Eleanor']->Forum->Forums->SelectOptions($values['parent'],$id),array('tabindex'=>1)))
+			->item(static::$lang['pos'],Eleanor::Select('pos',$posopts,array('tabindex'=>2)))
+			->item(array(static::$lang['fcat'],Eleanor::Check('is_category',$values['is_category'],array('tabindex'=>3)),'tip'=>static::$lang['fcat_']))
 
-			->head('Пользовательская идентификация')
-			->item('Логотип',Eleanor::Select('image',Eleanor::Option('-нет-','',!$values['image']).$imagopts,array('id'=>'image','tabindex'=>4,'data-path'=>$GLOBALS['Eleanor']->module['config']['logos'])))
-			->item('&nbsp;','<img src="images/spacer.png" id="preview" />
-<script type="text/javascript">//<![CDATA[
-$(function(){
-	$("#image").change(function(){
-		var val=$(this).val();
-		if(val)
-			$("#preview").prop("src",$(this).data("path")+val).closest("tr").show();
-		else
-			$("#preview").prop("src","images/spacer.png").closest("tr").hide();
-	}).change();
-})//]]></script>')
+			->head(static::$lang['uid'])
+			->item(static::$lang['logo'],Eleanor::Select('image',Eleanor::Option('-'.static::$lang['no'].'-','',!$values['image']).$imagopts,array('id'=>'image','tabindex'=>4,'data-path'=>$GLOBALS['Eleanor']->module['config']['logos'])))
+			->item('&nbsp;','<img src="images/spacer.png" id="preview" /><script type="text/javascript">/*<![CDATA[*/$(function(){ AddEditForum() })//]]></script>')
 			->item($ltpl['title'],Eleanor::$Template->LangEdit($ml['title'],null))
 			->item('URI',Eleanor::$Template->LangEdit($ml['uri'],null))
-			->item('Описание',Eleanor::$Template->LangEdit($ml['description'],null))
-			->item('Window title',Eleanor::$Template->LangEdit($ml['meta_title'],null))
-			->item('Meta description',Eleanor::$Template->LangEdit($ml['meta_descr'],null));
+			->item(static::$lang['descr'],Eleanor::$Template->LangEdit($ml['description'],null))
+			->item('Page title',Eleanor::$Template->LangEdit($ml['meta_title'],null))
+			->item('Meta description',Eleanor::$Template->LangEdit($ml['meta_descr'],null))
+			->item(static::$lang['rules'],Eleanor::$Template->LangEdit($ml['rules'],null));
 
 		if(Eleanor::$vars['multilang'])
-			$Lst->item($ltpl['set_for_langs'],Eleanor::$Template->LangChecks($values['_onelang'],$values['_langs'],null,10));
+			$Lst->item($ltpl['set_for_langs'],Eleanor::$Template->LangChecks($values['_onelang'],$values['_langs'],null,11));
 
 		$prs='';
 		foreach($prefixes as $k=>&$v)
 			$prs.=Eleanor::Option($v,$k,in_array($k,$values['prefixes']));
 
-		$Lst->head('Опции')
-			->item('Включить счетчик сообщений',Eleanor::Check('inc_posts',$values['inc_posts'],array('tabindex'=>11)))
-			->item('Включить репутацию',Eleanor::Check('reputation',$values['reputation'],array('tabindex'=>12)))
-			->item(array('Прятать вложения',Eleanor::Check('hide_attach',$values['hide_attach'],array('tabindex'=>13)),'tip'=>'Включение этой опции сделает невозможным передачу ссылки на вложение третьим лицам'))
-			->item('Префиксы тем',Eleanor::Items('prefixes',$prs))
+		$Lst->head(static::$lang['opts'])
+			->item(static::$lang['incposts'],Eleanor::Check('inc_posts',$values['inc_posts'],array('tabindex'=>12)))
+			->item(static::$lang['enrep'],Eleanor::Check('reputation',$values['reputation'],array('tabindex'=>13)))
+			->item(array(static::$lang['hideattach'],Eleanor::Check('hide_attach',$values['hide_attach'],array('tabindex'=>14)),'tip'=>static::$lang['hideattach_']))
+			->item(static::$lang['prefixes'],Eleanor::Items('prefixes',$prs))
 
 			->end()
 			->submitline((string)$uploader)
 			->submitline(
 				$back
-				.Eleanor::Button('Ok','submit',array('tabindex'=>14))
+				.Eleanor::Button('Ok','submit',array('tabindex'=>15))
 				.($id ? ' '.Eleanor::Button($ltpl['delete'],'button',array('onclick'=>'window.location=\''.$links['delete'].'\'')) : '')
 			)
 			->endform();
@@ -250,88 +253,105 @@ $(function(){
 	}
 
 	/*
-		Интерфейс страницы, который появляется, если при редактировании форума удалить некоторые языки
-		$forum Массив даных форума, у которого удаляются языки, ключи:
-			id ID форума
-			title Название форума
-		$values Массив значений полей, ключи:
-			trash ID форума, куда могут быть перемещены темы с удаляемого форума
-		$langs Массив удаляемых языков форума
-		$newlangs Массив новых языков форума
-		$back URL возврата
+		РРЅС‚РµСЂС„РµР№СЃ СЃС‚СЂР°РЅРёС†С‹, РєРѕС‚РѕСЂС‹Р№ РїРѕСЏРІР»СЏРµС‚СЃСЏ, РµСЃР»Рё РїСЂРё СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРё С„РѕСЂСѓРјР° СѓРґР°Р»РёС‚СЊ РЅРµРєРѕС‚РѕСЂС‹Рµ СЏР·С‹РєРё
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… С„РѕСЂСѓРјР°, Сѓ РєРѕС‚РѕСЂРѕРіРѕ СѓРґР°Р»СЏСЋС‚СЃСЏ СЏР·С‹РєРё, РєР»СЋС‡Рё:
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$values РњР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№, РєР»СЋС‡Рё:
+			trash ID С„РѕСЂСѓРјР°, РєСѓРґР° РјРѕРіСѓС‚ Р±С‹С‚СЊ РїРµСЂРµРјРµС‰РµРЅС‹ С‚РµРјС‹ СЃ СѓРґР°Р»СЏРµРјРѕРіРѕ С„РѕСЂСѓРјР°
+		$langs РњР°СЃСЃРёРІ СѓРґР°Р»СЏРµРјС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+		$newlangs РњР°СЃСЃРёРІ РЅРѕРІС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
 	*/
 	public static function SaveDeleteForm($forum,$values,$langs,$newlangs,$back,$errors)
 	{
-		$onelang=$newlangs==array('');
+		static::Menu();
+
+		$nlopts='';
+		foreach($newlangs as $v)
+			$nlopts.=Eleanor::Option($v=='' ? static::$lang['uni'] : Eleanor::$langs[$v]['name'],$v,$v==$values['trash']);
+
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin()
-			->item('Куда переместить темы',Eleanor::Select('trash',Eleanor::Option('-удалить темы-',0,$values['trash']==0).$GLOBALS['Eleanor']->Forum->Forums->SelectOptions($onelang ? $forum['id'] : $values['trash'],$onelang ? array() : $forum['id'])))
+			->item(static::$lang['puttopics'],Eleanor::Select('trash',Eleanor::Option(static::$lang['deltopics'],0,$values['trash']=='0')
+				.($nlopts ? Eleanor::OptGroup(static::$lang['ltif'],$nlopts) : '')
+				.Eleanor::OptGroup(static::$lang['ptaf'],$GLOBALS['Eleanor']->Forum->Forums->SelectOptions($values['trash'],$forum['id']))
+			))
 			->end()
-			->submitline(Eleanor::Button('Удалить').($back ? ' '.Eleanor::Button('Отменить','button',array('onclick'=>'location.href="'.$back.'"')) : ''))
+			->submitline(Eleanor::Button(static::$lang['delete']).($back ? ' '.Eleanor::Button(static::$lang['cancel'],'button',array('onclick'=>'location.href="'.$back.'"')) : ''))
 			->endform();
 
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
+
+		$dc=static::$lang['delcf'];
 		return Eleanor::$Template->Cover(
-			Eleanor::$Template->Message('Вы собираетесь удалить языковые версии '.join(', ',$langs).' форума &quot;'.$forum['title'].'&quot;. Выберите форум, куда будут перемещены темы.','info').$Lst,
+			Eleanor::$Template->Message($dc($langs,$forum['title']),'info').$Lst,
 			$errors
 		);
 	}
 
 	/*
-		Интерфейс страницы с иноформацией о процессе удаления языков
-		$forum Массив даных форума, у которого удаляются языки, ключи:
-			id ID форума
-			title Название форума
-		$info Массив с даными об удалении, ключи:
-			total Количество тем, которые нужно перенести (удалить) в связи с удалением форума, в котором они находились
-			done Количество перемещенных (удаленных) тем
-		$langs Массив удаляемых языков форума
-		$newlangs Массив новых языков форума
-		$links Массив ссылок, ключи:
-			go URL перехода к очередной части удаления
+		РРЅС‚РµСЂС„РµР№СЃ СЃС‚СЂР°РЅРёС†С‹ СЃ РёРЅРѕС„РѕСЂРјР°С†РёРµР№ Рѕ РїСЂРѕС†РµСЃСЃРµ СѓРґР°Р»РµРЅРёСЏ СЏР·С‹РєРѕРІ
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… С„РѕСЂСѓРјР°, Сѓ РєРѕС‚РѕСЂРѕРіРѕ СѓРґР°Р»СЏСЋС‚СЃСЏ СЏР·С‹РєРё, РєР»СЋС‡Рё:
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$info РњР°СЃСЃРёРІ СЃ РґР°РЅС‹РјРё РѕР± СѓРґР°Р»РµРЅРёРё, РєР»СЋС‡Рё:
+			total РљРѕР»РёС‡РµСЃС‚РІРѕ С‚РµРј, РєРѕС‚РѕСЂС‹Рµ РЅСѓР¶РЅРѕ РїРµСЂРµРЅРµСЃС‚Рё (СѓРґР°Р»РёС‚СЊ) РІ СЃРІСЏР·Рё СЃ СѓРґР°Р»РµРЅРёРµРј С„РѕСЂСѓРјР°, РІ РєРѕС‚РѕСЂРѕРј РѕРЅРё РЅР°С…РѕРґРёР»РёСЃСЊ
+			done РљРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂРµРјРµС‰РµРЅРЅС‹С… (СѓРґР°Р»РµРЅРЅС‹С…) С‚РµРј
+		$langs РњР°СЃСЃРёРІ СѓРґР°Р»СЏРµРјС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+		$newlangs РњР°СЃСЃРёРІ РЅРѕРІС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+		$links РњР°СЃСЃРёРІ СЃСЃС‹Р»РѕРє, РєР»СЋС‡Рё:
+			go URL РїРµСЂРµС…РѕРґР° Рє РѕС‡РµСЂРµРґРЅРѕР№ С‡Р°СЃС‚Рё СѓРґР°Р»РµРЅРёСЏ
 	*/
 	public static function SaveDeleteProcess($forum,$info,$langs,$newlangs,$links)
 	{
+		static::Menu();
+		$dp=static::$lang['delfp'];
 		return Eleanor::$Template->RedirectScreen($links['go'],5)->Cover(
-			Eleanor::$Template->Message('Языковые версии '.join(', ',$langs).' форума &quot;'.$forum['title'].'&quot; удаляются...<br /><progress max="'.$info['total'].'" value="'.$info['done'].'" style="width:100%">'.($info['total']==0 ? 100 : round($info['done']/$info['total']*100)).'%</progress>','info')
+			Eleanor::$Template->Message($dp($links,$forum['title']).'<br /><progress max="'.$info['total'].'" value="'.$info['done'].'" style="width:100%">'.($info['total']==0 ? 100 : round($info['done']/$info['total']*100)).'%</progress>','info')
 		);
 	}
 
 	/*
-		Интерфейс страницы с иноформацией об успешно удаленных языках форума
-		$forum Массив даных форума, у которого удалились языки, ключи:
-			id ID форума
-			title Название форума
-		$langs Массив удаляемых языков форума
-		$newlangs Массив новых языков форума
-		$back URL возврата
+		РРЅС‚РµСЂС„РµР№СЃ СЃС‚СЂР°РЅРёС†С‹ СЃ РёРЅРѕС„РѕСЂРјР°С†РёРµР№ РѕР± СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅРЅС‹С… СЏР·С‹РєР°С… С„РѕСЂСѓРјР°
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… С„РѕСЂСѓРјР°, Сѓ РєРѕС‚РѕСЂРѕРіРѕ СѓРґР°Р»РёР»РёСЃСЊ СЏР·С‹РєРё, РєР»СЋС‡Рё:
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$langs РњР°СЃСЃРёРІ СѓРґР°Р»СЏРµРјС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+		$newlangs РњР°СЃСЃРёРІ РЅРѕРІС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
 	*/
 	public static function SaveDeleteComplete($forum,$langs,$newlangs,$back)
 	{
+		static::Menu();
+		$ded=static::$lang['deld'];
 		return Eleanor::$Template->Cover(
-			Eleanor::$Template->Message('Языковые версии '.join(', ',$langs).' форума &quot;'.$forum['title'].'&quot; успешно удалены.'.($back ? '<br /><a href="'.$back.'">Вернуться</a>' : ''),'info')
+			Eleanor::$Template->Message($ded($langs,$forum['title']).($back ? '<br /><a href="'.$back.'">'.static::$lang['back'].'</a>' : ''),'info')
 		);
 	}
 
 	/*
-		Страница отображения групп пользователей
-		$items Массив групп пользователей. Формат: ID=>array(), ключи внутреннего массива (если какое-то значение равно null, значит свойство наследуется):
-			title Нзвание группы
-			html_pref HTML префикс группы
-			html_end HTML окончание группы
-			parents Массив родителей группы
-			grow_to Идентификатор группы, в которую нужно автоматически переводить пользователей по достижению определенного количества сообщений (или других условия)
-			grow_after Количество сообщений по набору которых, пользователь должен быть переведен в другую группу
-			supermod Флаг наличия прав супермодератора у группы. Все члены этой группы будут иметь права супермодератора на форуме
-			_aedit - ссылка на редактирование группы
-			_aparent - ссылка на просмотр подгрупп
-		$subitems Массив подгрупп для групп из массива $items. Формат: ID=>array(id=>array(), ...), где ID - идентификатор группы, id - идентификатор подгруппы. Ключи массива подгруппы:
-			title Название подгруппы
-			_aedit Ссылка на редактирование подгруппы
-		$navi Массив, хлебные крошки навигации. Формат ID=>array(), ключи:
-			title - заголовок крошки
-			_a - ссылка подпункта даной крошки. Может быть равно false
-		$parents Массив родителей, для определения настроек групп, в случае, когда они наследуются, ключи: grow_to, grow_after, supermod - описание даны выше
+		РЎС‚СЂР°РЅРёС†Р° РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РіСЂСѓРїРї РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+		$items РњР°СЃСЃРёРІ РіСЂСѓРїРї РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР° (РµСЃР»Рё РєР°РєРѕРµ-С‚Рѕ Р·РЅР°С‡РµРЅРёРµ СЂР°РІРЅРѕ null, Р·РЅР°С‡РёС‚ СЃРІРѕР№СЃС‚РІРѕ РЅР°СЃР»РµРґСѓРµС‚СЃСЏ):
+			title РќР·РІР°РЅРёРµ РіСЂСѓРїРїС‹
+			html_pref HTML РїСЂРµС„РёРєСЃ РіСЂСѓРїРїС‹
+			html_end HTML РѕРєРѕРЅС‡Р°РЅРёРµ РіСЂСѓРїРїС‹
+			parents РњР°СЃСЃРёРІ СЂРѕРґРёС‚РµР»РµР№ РіСЂСѓРїРїС‹
+			grow_to РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РіСЂСѓРїРїС‹, РІ РєРѕС‚РѕСЂСѓСЋ РЅСѓР¶РЅРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРµСЂРµРІРѕРґРёС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РїРѕ РґРѕСЃС‚РёР¶РµРЅРёСЋ РѕРїСЂРµРґРµР»РµРЅРЅРѕРіРѕ РєРѕР»РёС‡РµСЃС‚РІР° СЃРѕРѕР±С‰РµРЅРёР№ (РёР»Рё РґСЂСѓРіРёС… СѓСЃР»РѕРІРёСЏ)
+			grow_after РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРѕРѕР±С‰РµРЅРёР№ РїРѕ РЅР°Р±РѕСЂСѓ РєРѕС‚РѕСЂС‹С…, РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РїРµСЂРµРІРµРґРµРЅ РІ РґСЂСѓРіСѓСЋ РіСЂСѓРїРїСѓ
+			supermod Р¤Р»Р°Рі РЅР°Р»РёС‡РёСЏ РїСЂР°РІ СЃСѓРїРµСЂРјРѕРґРµСЂР°С‚РѕСЂР° Сѓ РіСЂСѓРїРїС‹. Р’СЃРµ С‡Р»РµРЅС‹ СЌС‚РѕР№ РіСЂСѓРїРїС‹ Р±СѓРґСѓС‚ РёРјРµС‚СЊ РїСЂР°РІР° СЃСѓРїРµСЂРјРѕРґРµСЂР°С‚РѕСЂР° РЅР° С„РѕСЂСѓРјРµ
+			_aedit - СЃСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РіСЂСѓРїРїС‹
+			_aparent - СЃСЃС‹Р»РєР° РЅР° РїСЂРѕСЃРјРѕС‚СЂ РїРѕРґРіСЂСѓРїРї
+		$subitems РњР°СЃСЃРёРІ РїРѕРґРіСЂСѓРїРї РґР»СЏ РіСЂСѓРїРї РёР· РјР°СЃСЃРёРІР° $items. Р¤РѕСЂРјР°С‚: ID=>array(id=>array(), ...), РіРґРµ ID - РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РіСЂСѓРїРїС‹, id - РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РїРѕРґРіСЂСѓРїРїС‹. РљР»СЋС‡Рё РјР°СЃСЃРёРІР° РїРѕРґРіСЂСѓРїРїС‹:
+			title РќР°Р·РІР°РЅРёРµ РїРѕРґРіСЂСѓРїРїС‹
+			_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕРґРіСЂСѓРїРїС‹
+		$navi РњР°СЃСЃРёРІ, С…Р»РµР±РЅС‹Рµ РєСЂРѕС€РєРё РЅР°РІРёРіР°С†РёРё. Р¤РѕСЂРјР°С‚ ID=>array(), РєР»СЋС‡Рё:
+			title - Р·Р°РіРѕР»РѕРІРѕРє РєСЂРѕС€РєРё
+			_a - СЃСЃС‹Р»РєР° РїРѕРґРїСѓРЅРєС‚Р° РґР°РЅРѕР№ РєСЂРѕС€РєРё. РњРѕР¶РµС‚ Р±С‹С‚СЊ СЂР°РІРЅРѕ false
+		$parents РњР°СЃСЃРёРІ СЂРѕРґРёС‚РµР»РµР№, РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє РіСЂСѓРїРї, РІ СЃР»СѓС‡Р°Рµ, РєРѕРіРґР° РѕРЅРё РЅР°СЃР»РµРґСѓСЋС‚СЃСЏ, РєР»СЋС‡Рё: grow_to, grow_after, supermod - РѕРїРёСЃР°РЅРёРµ РґР°РЅС‹ РІС‹С€Рµ
 	*/
 	public static function Groups($items,$subitems,$navi,$parents)
 	{
@@ -344,20 +364,21 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',4)
 			->begin(
-				'Группа',
-				'Супермодератор',
-				'Продвижение',
+				static::$lang['group'],
+				static::$lang['supermod'],
+				static::$lang['propag'],
 				$ltpl['functs']
 			);
 
 		if($items)
 		{
 			$images=Eleanor::$Template->default['theme'].'images/';
+			$lga=static::$lang['ga'];
 			foreach($items as $k=>$v)
 			{
 				$subs='';
 				if(isset($subitems[$k]))
-					foreach($subitems[$k] as $kk=>&$vv)
+					foreach($subitems[$k] as &$vv)
 						$subs.='<a href="'.$vv['_aedit'].'">'.$vv['title'].'</a>, ';
 
 				foreach($v['parents'] as &$p)
@@ -371,9 +392,9 @@ $(function(){
 				}
 
 				$Lst->item(
-					array($v['html_pref'].$v['title'].$v['html_end'].($subs ? '<br /><span class="small"><a href="'.$v['_aparent'].'" style="font-weight:bold">Подгруппы</a>: '.rtrim($subs,', ').'</span>' : ''),'href'=>$v['_aedit']),
+					array($v['html_pref'].$v['title'].$v['html_end'].($subs ? '<br /><span class="small"><a href="'.$v['_aparent'].'" style="font-weight:bold">'.static::$lang['subgroups'].'</a>: '.rtrim($subs,', ').'</span>' : ''),'href'=>$v['_aedit']),
 					array(Eleanor::$Template->YesNo($v['supermod']),'center'),
-					array(isset($items[ $v['grow_to'] ]) ? $items[ $v['grow_to'] ]['html_pref'].$items[ $v['grow_to'] ]['title'].$items[ $v['grow_to'] ]['html_end'].' (после '.$v['grow_after'].' сообщений)' : '<i>нет</i>',isset($items[ $v['grow_to'] ]) ? '' : 'center'),
+					array(isset($items[ $v['grow_to'] ]) ? $items[ $v['grow_to'] ]['html_pref'].$items[ $v['grow_to'] ]['title'].$items[ $v['grow_to'] ]['html_end'].' ('.$lga($v['grow_after']).')' : '<i>'.static::$lang['no'].'</i>',isset($items[ $v['grow_to'] ]) ? '' : 'center'),
 					$Lst('func',
 						array($v['_aedit'],$ltpl['edit'],$images.'edit.png')
 					)
@@ -381,45 +402,48 @@ $(function(){
 			}
 		}
 		else
-			$Lst->empty('Подгруппы не найдены');
+			$Lst->empty(static::$lang['sgnf']);
 		return Eleanor::$Template->Cover(($nav ? '<table class="filtertable"><tr><td style="font-weight:bold">'.join(' &raquo; ',$nav).'</td></tr></table>' : '').$Lst->end());
 	}
 
 	/*
-		Страница правки группы
-		$group Массив даных группы (не для правки), ключи:
-			parents Массив родителей группы
-			title Название группы
-			html_pref HTML префикс группы
-			html_end HTML окончание группы
-		$values Массив значений полей, ключи:
-			grow_to Идентификатор группы, в которую будут переведены пользователи текущий группы по достижению определенного количества постов
-			grow_after Количество постов, до достижению которых пользователи будут переведены в другую группу
-			supermod Флаг группы с правами супермодератора
-			see_hidden_users Флаг позволения пользователям группы видеть скрытых пользователей на форуме
-			moderate Флаг включения перемодерации постов пользователям группы
-			permissions Массив HTML результата контролов разрешений
-			_inherit Массив имен наследуемых значений формы
-			_inheritp Массив имен наследуюемых разрешений
-		$controls Массив контролов разрешений
-		$groups option-ы для select-а с выбором группы
-		$min Минимально возможное значение для grow_after
-		$bypost Признак того, что даные нужно брать из POST запроса
-		$back URL возврата
-		$errors Массив ошибок
+		РЎС‚СЂР°РЅРёС†Р° РїСЂР°РІРєРё РіСЂСѓРїРїС‹
+		$group РњР°СЃСЃРёРІ РґР°РЅС‹С… РіСЂСѓРїРїС‹ (РЅРµ РґР»СЏ РїСЂР°РІРєРё), РєР»СЋС‡Рё:
+			parents РњР°СЃСЃРёРІ СЂРѕРґРёС‚РµР»РµР№ РіСЂСѓРїРїС‹
+			title РќР°Р·РІР°РЅРёРµ РіСЂСѓРїРїС‹
+			html_pref HTML РїСЂРµС„РёРєСЃ РіСЂСѓРїРїС‹
+			html_end HTML РѕРєРѕРЅС‡Р°РЅРёРµ РіСЂСѓРїРїС‹
+		$values РњР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№, РєР»СЋС‡Рё:
+			grow_to РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РіСЂСѓРїРїС‹, РІ РєРѕС‚РѕСЂСѓСЋ Р±СѓРґСѓС‚ РїРµСЂРµРІРµРґРµРЅС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»Рё С‚РµРєСѓС‰РёР№ РіСЂСѓРїРїС‹ РїРѕ РґРѕСЃС‚РёР¶РµРЅРёСЋ РѕРїСЂРµРґРµР»РµРЅРЅРѕРіРѕ РєРѕР»РёС‡РµСЃС‚РІР° РїРѕСЃС‚РѕРІ
+			grow_after РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕСЃС‚РѕРІ, РґРѕ РґРѕСЃС‚РёР¶РµРЅРёСЋ РєРѕС‚РѕСЂС‹С… РїРѕР»СЊР·РѕРІР°С‚РµР»Рё Р±СѓРґСѓС‚ РїРµСЂРµРІРµРґРµРЅС‹ РІ РґСЂСѓРіСѓСЋ РіСЂСѓРїРїСѓ
+			supermod Р¤Р»Р°Рі РіСЂСѓРїРїС‹ СЃ РїСЂР°РІР°РјРё СЃСѓРїРµСЂРјРѕРґРµСЂР°С‚РѕСЂР°
+			see_hidden_users Р¤Р»Р°Рі РїРѕР·РІРѕР»РµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРј РіСЂСѓРїРїС‹ РІРёРґРµС‚СЊ СЃРєСЂС‹С‚С‹С… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РЅР° С„РѕСЂСѓРјРµ
+			moderate Р¤Р»Р°Рі РІРєР»СЋС‡РµРЅРёСЏ РїРµСЂРµРјРѕРґРµСЂР°С†РёРё РїРѕСЃС‚РѕРІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРј РіСЂСѓРїРїС‹
+			permissions РњР°СЃСЃРёРІ HTML СЂРµР·СѓР»СЊС‚Р°С‚Р° РєРѕРЅС‚СЂРѕР»РѕРІ СЂР°Р·СЂРµС€РµРЅРёР№
+			_inherit РњР°СЃСЃРёРІ РёРјРµРЅ РЅР°СЃР»РµРґСѓРµРјС‹С… Р·РЅР°С‡РµРЅРёР№ С„РѕСЂРјС‹
+			_inheritp РњР°СЃСЃРёРІ РёРјРµРЅ РЅР°СЃР»РµРґСѓСЋРµРјС‹С… СЂР°Р·СЂРµС€РµРЅРёР№
+		$controls РњР°СЃСЃРёРІ РєРѕРЅС‚СЂРѕР»РѕРІ СЂР°Р·СЂРµС€РµРЅРёР№
+		$groups option-С‹ РґР»СЏ select-Р° СЃ РІС‹Р±РѕСЂРѕРј РіСЂСѓРїРїС‹
+		$min РњРёРЅРёРјР°Р»СЊРЅРѕ РІРѕР·РјРѕР¶РЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РґР»СЏ grow_after
+		$bypost РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґР°РЅС‹Рµ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РёР· POST Р·Р°РїСЂРѕСЃР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
 	*/
-	public static function EditGroup($group,$values,$controls,$groups,$min,$bypost,$back,$errors)
+	public static function EditGroup($group,$values,$imagopts,$controls,$groups,$min,$bypost,$back,$errors)
 	{
-		static::Menu('edit-group');
+		static::Menu('edit-group',true);
 		$Lst=Eleanor::LoadListTemplate('table-form');
 		$general=(string)$Lst->begin(array('id'=>'tg'))
-			->head('Продвижение')
-			->item('В группу'.($group['parents'] ? Eleanor::Check('_inherit[]',in_array('grow_to',$values['_inherit']),array('style'=>'display:none','value'=>'grow_to')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Select('grow_to',Eleanor::Option('-Не продвигать-',0,$values['grow_to']==0).$groups).($group['parents'] ? '</div>' : ''))
-			->item('По написанию'.($group['parents'] ? Eleanor::Check('_inherit[]',in_array('grow_after',$values['_inherit']),array('style'=>'display:none','value'=>'grow_after')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Input('grow_after',$min<$values['grow_after'] ? $values['grow_after'] : $min,array('min'=>$min,'type'=>'number')).' сообщений.'.($group['parents'] ? '</div>' : ''))
-			->head('Глобальные права')
-			->item('Супермодератор'.($group['parents'] ? Eleanor::Check('_inherit[]',in_array('supermod',$values['_inherit']),array('style'=>'display:none','value'=>'supermod')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Check('supermod',$values['supermod']).($group['parents'] ? '</div>' : ''))
-			->item('Видеть скрытых пользователей'.($group['parents'] ? Eleanor::Check('_inherit[]',in_array('see_hidden_users',$values['_inherit']),array('style'=>'display:none','value'=>'see_hidden_users')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Check('see_hidden_users',$values['see_hidden_users']).($group['parents'] ? '</div>' : ''))
-			->item('Премодерация постов'.($group['parents'] ? Eleanor::Check('_inherit[]',in_array('moderate',$values['_inherit']),array('style'=>'display:none','value'=>'moderate')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Check('moderate',$values['moderate']).($group['parents'] ? '</div>' : ''))
+			->head(static::$lang['propag'])
+			->item(static::$lang['togr'].($group['parents'] ? Eleanor::Check('_inherit[]',in_array('grow_to',$values['_inherit']),array('style'=>'display:none','value'=>'grow_to')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Select('grow_to',Eleanor::Option(static::$lang['-nopropag-'],0,$values['grow_to']==0).$groups,array('tabindex'=>1)).($group['parents'] ? '</div>' : ''))
+			->item(static::$lang['afposts'].($group['parents'] ? Eleanor::Check('_inherit[]',in_array('grow_after',$values['_inherit']),array('style'=>'display:none','value'=>'grow_after')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Input('grow_after',$min<$values['grow_after'] ? $values['grow_after'] : $min,array('min'=>$min,'type'=>'number','tabindex'=>2)).static::$lang['posts.'].($group['parents'] ? '</div>' : ''))
+			->head(static::$lang['gr'])
+			->item(static::$lang['supermod'].($group['parents'] ? Eleanor::Check('_inherit[]',in_array('supermod',$values['_inherit']),array('style'=>'display:none','value'=>'supermod')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Check('supermod',$values['supermod'],array('tabindex'=>3)).($group['parents'] ? '</div>' : ''))
+			->item(static::$lang['shu'].($group['parents'] ? Eleanor::Check('_inherit[]',in_array('see_hidden_users',$values['_inherit']),array('style'=>'display:none','value'=>'see_hidden_users')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Check('see_hidden_users',$values['see_hidden_users'],array('tabindex'=>4)).($group['parents'] ? '</div>' : ''))
+			->item(static::$lang['premod'].($group['parents'] ? Eleanor::Check('_inherit[]',in_array('moderate',$values['_inherit']),array('style'=>'display:none','value'=>'moderate')) : ''),($group['parents'] ? '<div>' : '').Eleanor::Check('moderate',$values['moderate'],array('tabindex'=>5)).($group['parents'] ? '</div>' : ''))
+			->head(static::$lang['mains'])
+			->item(static::$lang['logo'],Eleanor::Select('image',Eleanor::Option('-'.static::$lang['no'].'-','',!$values['image']).$imagopts,array('id'=>'image','tabindex'=>6,'data-path'=>$GLOBALS['Eleanor']->module['config']['glogos'])))
+			->item('&nbsp;','<img src="images/spacer.png" id="preview" />')
 			->end();
 
 		$Lst->begin(array('id'=>'tp'));
@@ -432,71 +456,44 @@ $(function(){
 
 		if($back)
 			$back=Eleanor::Input('back',$back,array('type'=>'hidden'));
+
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
+
 		return Eleanor::$Template->Cover(
 			$Lst->form()
 			->tabs(
-				array('Общие настройки',$general),
-				array('Разрешения по умолчанию',$perms)
+				array(static::$lang['mains'],$general),
+				array(static::$lang['rbd'],$perms)
 			)
 			->submitline($back.Eleanor::Button('OK','submit',array('tabindex'=>100)))
 			->endform(),
 			$errors
-		).'<script type="text/javascript">//<![CDATA[
-$(function(){
-	var ga=$("input[name=\"grow_after\"]:first"),
-		gt=$("select[name=\"grow_to\"]:first").change(function(){
-			ga.prop("disabled",$(this).val()==0);
-		}).change();
-'.($group['parents'] ? 'var Check=function(ftd,state)
-		{
-			var ch=ftd.find(":checkbox");
-			if(typeof state=="undefined")
-				state=!ch.prop("checked");
-			if(state)
-			{
-				ftd.css("text-decoration","line-through").prop("title","Наследуется").next().children("div").hide();
-				if(ch.val()=="grow_to")
-					ga.prop("disabled",false);
-			}
-			else
-			{
-				ftd.css("text-decoration","").prop("title","").next().children("div").show();
-				if(ch.val()=="grow_to" && gt.val()==0)
-					ga.prop("disabled",true);
-			}
-			ch.prop("checked",state)
-		}
-		$("#tg tr,#tp tr").find("td:first").filter(function(){
-			return $(this).has(":checkbox").size()>0;
-		}).click(function(){
-			Check($(this));
-		}).each(function(){
-			Check($(this),$(":checkbox",this).prop("checked"));
-		}).css("cursor","pointer");' : '').'
-})//]]></script>';
+		).'<script type="text/javascript">/*<![CDATA[*/$(function(){ EditGroup('.($group['parents'] ? 'true' : 'false').') })//]]></script>';
 	}
 
 	/*
-		Страница установки массовых прав групп для форумов
-		$controls Массив контролов разрешений
-		$values Массив значений полей, ключи:
-			rights Массив HTML результата контролов разрешений
-			inherit Массив имен наследуюемых разрешений
-		$groups option-ы для select-а с выбором группы
-		$forums option-ы для select-а с выбором форумов
-		$bypost Признак того, что даные нужно брать из POST запроса
-		$errors Массив ошибок
+		РЎС‚СЂР°РЅРёС†Р° СѓСЃС‚Р°РЅРѕРІРєРё РјР°СЃСЃРѕРІС‹С… РїСЂР°РІ РіСЂСѓРїРї РґР»СЏ С„РѕСЂСѓРјРѕРІ
+		$controls РњР°СЃСЃРёРІ РєРѕРЅС‚СЂРѕР»РѕРІ СЂР°Р·СЂРµС€РµРЅРёР№
+		$values РњР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№, РєР»СЋС‡Рё:
+			rights РњР°СЃСЃРёРІ HTML СЂРµР·СѓР»СЊС‚Р°С‚Р° РєРѕРЅС‚СЂРѕР»РѕРІ СЂР°Р·СЂРµС€РµРЅРёР№
+			inherit РњР°СЃСЃРёРІ РёРјРµРЅ РЅР°СЃР»РµРґСѓСЋРµРјС‹С… СЂР°Р·СЂРµС€РµРЅРёР№
+		$groups option-С‹ РґР»СЏ select-Р° СЃ РІС‹Р±РѕСЂРѕРј РіСЂСѓРїРїС‹
+		$forums option-С‹ РґР»СЏ select-Р° СЃ РІС‹Р±РѕСЂРѕРј С„РѕСЂСѓРјРѕРІ
+		$bypost РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґР°РЅС‹Рµ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РёР· POST Р·Р°РїСЂРѕСЃР°
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
 	*/
 	public static function MassRights($controls,$values,$groups,$forums,$bypost,$errors)
 	{
-		static::Menu('massrights');
+		static::Menu('massrights',true);
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin(array('id'=>'fg'))
-			->head('Назначение')
-			->item('Группы',Eleanor::Items('groups',$groups))
-			->item('Форумы',Eleanor::Items('forums',$forums))
-			->head('Разрешения');
+			->head(static::$lang['assignment'])
+			->item(static::$lang['groups'],Eleanor::Items('groups',$groups))
+			->item(static::$lang['forums'],Eleanor::Items('forums',$forums))
+			->head(static::$lang['rights']);
 
 		foreach($controls as $k=>&$v)
 			if(is_array($v) and isset($values['rights'][$k]))
@@ -512,35 +509,18 @@ $(function(){
 			->submitline(Eleanor::Button('OK','submit',array('tabindex'=>100)))
 			->endform();
 
-		return Eleanor::$Template->Cover((!$errors && $bypost ? Eleanor::$Template->Message('Права успешно сохранены','info') : '').$Lst,$errors)
-			.'<script type="text/javascript">//<![CDATA[
-$(function(){
-	var Check=function(ftd,state)
-		{
-			var ch=$(ftd).find(":checkbox");
-			if(typeof state=="undefined")
-				state=!ch.prop("checked");
-			if(state)
-				ch.end().css("text-decoration","line-through").prop("title","Наследуется из прав группы в родительском форуме или из базовых прав групп").next().children("div").hide();
-			else
-				ch.end().css("text-decoration","").prop("title","").next().children("div").show();
-			ch.prop("checked",state)
-		};
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
 
-		$("#fg tr").find("td:first").filter(function(){
-			return $(this).has(":checkbox").size()>0;
-		}).click(function(){
-			Check(this);
-		}).each(function(){
-			Check(this,$(":checkbox",this).prop("checked"));
-		}).css("cursor","pointer");
-})//]]></script>';
+		return Eleanor::$Template->Cover((!$errors && $bypost ? Eleanor::$Template->Message(static::$lang['riss'],'info') : '').$Lst,$errors)
+			.'<script type="text/javascript">/*<![CDATA[*/$(function(){ MassRights() })//]]></script>';
 	}
 
 	/*
-		Шаблон страницы с редактированием форматов писем
-		$controls Перечень контролов в соответствии с классом контролов. Если какой-то элемент массива не является массивом, значит это заголовок подгруппы контролов
-		$values Результирующий HTML код контролов, который необходимо вывести на странице. Ключи даного массива совпадают с ключами $controls
+		РЁР°Р±Р»РѕРЅ СЃС‚СЂР°РЅРёС†С‹ СЃ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµРј С„РѕСЂРјР°С‚РѕРІ РїРёСЃРµРј
+		$controls РџРµСЂРµС‡РµРЅСЊ РєРѕРЅС‚СЂРѕР»РѕРІ РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРё СЃ РєР»Р°СЃСЃРѕРј РєРѕРЅС‚СЂРѕР»РѕРІ. Р•СЃР»Рё РєР°РєРѕР№-С‚Рѕ СЌР»РµРјРµРЅС‚ РјР°СЃСЃРёРІР° РЅРµ СЏРІР»СЏРµС‚СЃСЏ РјР°СЃСЃРёРІРѕРј, Р·РЅР°С‡РёС‚ СЌС‚Рѕ Р·Р°РіРѕР»РѕРІРѕРє РїРѕРґРіСЂСѓРїРїС‹ РєРѕРЅС‚СЂРѕР»РѕРІ
+		$values Р РµР·СѓР»СЊС‚РёСЂСѓСЋС‰РёР№ HTML РєРѕРґ РєРѕРЅС‚СЂРѕР»РѕРІ, РєРѕС‚РѕСЂС‹Р№ РЅРµРѕР±С…РѕРґРёРјРѕ РІС‹РІРµСЃС‚Рё РЅР° СЃС‚СЂР°РЅРёС†Рµ. РљР»СЋС‡Рё РґР°РЅРѕРіРѕ РјР°СЃСЃРёРІР° СЃРѕРІРїР°РґР°СЋС‚ СЃ РєР»СЋС‡Р°РјРё $controls
 	*/
 	public static function Letters($controls,$values)
 	{
@@ -555,38 +535,38 @@ $(function(){
 	}
 
 	/*
-		Шаблон отображения списка пользователей форума
-		$items Массив пользователей. Формат: ID=>array(), ключи внутреннего массива:
-			full_name Полное имя пользователя
-			name Имя пользователя (небезопасный HTML!)
-			email E-mail пользователя
-			ip IP адрес пользователя
-			posts Количество полезных постов пользователя на форуме
-			_asedit Ссылка на редактирование пользователя (системное)
-			_adel Ссылка на удаление пользователя (системное)
-			_aedit Ссылка на форумное редактирование пользователя
-			_arecount Ссылка на пересчет репутации пользователя
-			_arep Ссылка на подробный просмотр репутации пользователя
-		$cnt Количество страниц всего
-		$pp Количество пользователей форума на страницу
-		$page Номер текущей страницы, на которой мы сейчас находимся
-		$qs Массив параметров адресной строки для каждого запроса
-		$links Перечень необходимых ссылок, массив с ключами:
-			sort_posts Ссылка на сортировку списка $items по количеству постов (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_rep Ссылка на сортировку списка $items по репутации (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_name Ссылка на сортировку списка $items по имени пользователя (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_email Ссылка на сортировку списка $items по email (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_ip Ссылка на сортировку списка $items по ip адресу (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_id Ссылка на сортировку списка $items по ID (возрастанию/убыванию в зависимости от текущей сортировки)
-			form_items Ссылка для параметра action формы, внутри которой происходит отображение перечня $items
-			pp Фукнция-генератор ссылок на изменение количества пользователей отображаемых на странице
-			first_page Ссылка на первую страницу пагинатора
-			pages Функция-генератор ссылок на остальные страницы
-		$info Массив информационных сообщений, возможные ключи и значения:
-			REPUTATION Наличие ключа сообщает о том, что пересчитана репутация у пользователей, которые содержатся в массиве значения. Ключи:
-				_aedit Ссылка на редактирование пользователя
-				name Имя пользователя. Небезопасный HTML!
-				full_name Полное имя пользователя
+		РЁР°Р±Р»РѕРЅ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ СЃРїРёСЃРєР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ С„РѕСЂСѓРјР°
+		$items РњР°СЃСЃРёРІ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			full_name РџРѕР»РЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			name РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (РЅРµР±РµР·РѕРїР°СЃРЅС‹Р№ HTML!)
+			email E-mail РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			ip IP Р°РґСЂРµСЃ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			posts РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕР»РµР·РЅС‹С… РїРѕСЃС‚РѕРІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РЅР° С„РѕСЂСѓРјРµ
+			_asedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (СЃРёСЃС‚РµРјРЅРѕРµ)
+			_adel РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (СЃРёСЃС‚РµРјРЅРѕРµ)
+			_aedit РЎСЃС‹Р»РєР° РЅР° С„РѕСЂСѓРјРЅРѕРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			_arecount РЎСЃС‹Р»РєР° РЅР° РїРµСЂРµСЃС‡РµС‚ СЂРµРїСѓС‚Р°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			_arep РЎСЃС‹Р»РєР° РЅР° РїРѕРґСЂРѕР±РЅС‹Р№ РїСЂРѕСЃРјРѕС‚СЂ СЂРµРїСѓС‚Р°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+		$cnt РљРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂР°РЅРёС† РІСЃРµРіРѕ
+		$pp РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ С„РѕСЂСѓРјР° РЅР° СЃС‚СЂР°РЅРёС†Сѓ
+		$page РќРѕРјРµСЂ С‚РµРєСѓС‰РµР№ СЃС‚СЂР°РЅРёС†С‹, РЅР° РєРѕС‚РѕСЂРѕР№ РјС‹ СЃРµР№С‡Р°СЃ РЅР°С…РѕРґРёРјСЃСЏ
+		$qs РњР°СЃСЃРёРІ РїР°СЂР°РјРµС‚СЂРѕРІ Р°РґСЂРµСЃРЅРѕР№ СЃС‚СЂРѕРєРё РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			sort_posts РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ РєРѕР»РёС‡РµСЃС‚РІСѓ РїРѕСЃС‚РѕРІ (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_rep РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ СЂРµРїСѓС‚Р°С†РёРё (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_name РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ РёРјРµРЅРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_email РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ email (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_ip РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ ip Р°РґСЂРµСЃСѓ (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_id РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ ID (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			form_items РЎСЃС‹Р»РєР° РґР»СЏ РїР°СЂР°РјРµС‚СЂР° action С„РѕСЂРјС‹, РІРЅСѓС‚СЂРё РєРѕС‚РѕСЂРѕР№ РїСЂРѕРёСЃС…РѕРґРёС‚ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РїРµСЂРµС‡РЅСЏ $items
+			pp Р¤СѓРєРЅС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РёР·РјРµРЅРµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РѕС‚РѕР±СЂР°Р¶Р°РµРјС‹С… РЅР° СЃС‚СЂР°РЅРёС†Рµ
+			first_page РЎСЃС‹Р»РєР° РЅР° РїРµСЂРІСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ РїР°РіРёРЅР°С‚РѕСЂР°
+			pages Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РѕСЃС‚Р°Р»СЊРЅС‹Рµ СЃС‚СЂР°РЅРёС†С‹
+		$info РњР°СЃСЃРёРІ РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹С… СЃРѕРѕР±С‰РµРЅРёР№, РІРѕР·РјРѕР¶РЅС‹Рµ РєР»СЋС‡Рё Рё Р·РЅР°С‡РµРЅРёСЏ:
+			REPUTATION РќР°Р»РёС‡РёРµ РєР»СЋС‡Р° СЃРѕРѕР±С‰Р°РµС‚ Рѕ С‚РѕРј, С‡С‚Рѕ РїРµСЂРµСЃС‡РёС‚Р°РЅР° СЂРµРїСѓС‚Р°С†РёСЏ Сѓ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ СЃРѕРґРµСЂР¶Р°С‚СЃСЏ РІ РјР°СЃСЃРёРІРµ Р·РЅР°С‡РµРЅРёСЏ. РљР»СЋС‡Рё:
+				_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+				name РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ. РќРµР±РµР·РѕРїР°СЃРЅС‹Р№ HTML!
+				full_name РџРѕР»РЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 	*/
 	public static function UserList($items,$cnt,$pp,$page,$qs,$links,$info)
 	{
@@ -609,19 +589,19 @@ $(function(){
 
 		$finamet='';
 		$namet=array(
-			'b'=>'Начинается на',
-			'q'=>'Совпадает с',
-			'e'=>'Заканчивается на',
-			'm'=>'Содержит',
+			'b'=>static::$lang['b'],
+			'q'=>static::$lang['q'],
+			'e'=>static::$lang['e'],
+			'm'=>static::$lang['m'],
 		);
 		foreach($namet as $k=>&$v)
 			$finamet.=Eleanor::Option($v,$k,$qs['']['fi']['namet']==$k);
 
 		$Lst=Eleanor::LoadListTemplate('table-list',7)
 			->begin(
-				array('Имя пользователя','href'=>$links['sort_name']),
-				array('Постов','href'=>$links['sort_posts']),
-				array('Репутация','href'=>$links['sort_rep']),
+				array(static::$lang['un'],'href'=>$links['sort_name']),
+				array(static::$lang['posts'],'href'=>$links['sort_posts']),
+				array(static::$lang['reputation'],'href'=>$links['sort_rep']),
 				array('E-mail','href'=>$links['sort_email']),
 				array('IP','href'=>$links['sort_ip']),
 				array($ltpl['functs'],'href'=>$links['sort_id']),
@@ -635,11 +615,11 @@ $(function(){
 				$Lst->item(
 					'<a href="'.$v['_afedit'].'" id="it'.$k.'">'.$v['name'].'</a>'.($v['name']==$v['full_name'] ? '' : '<br /><i>'.$v['full_name'].'</i>'),
 					array($v['posts'],'right'),
-					array($v['rep']===null ? '<i>Нет</i>' : '<a href="'.$v['_arep'].'">'.$v['rep'].'</a>','right'),
+					array($v['rep']===null ? '<i>'.static::$lang['no'].'</i>' : '<a href="'.$v['_arep'].'">'.$v['rep'].'</a>','right'),
 					array($v['email'],'center'),
 					array($v['ip'],'center','href'=>'http://eleanor-cms.ru/whois/'.$v['ip'],'hrefextra'=>array('target'=>'_blank')),
 					$Lst('func',
-						array($v['_arecount'],'Пересчитать репутацию',$images.'sort.png'),
+						array($v['_arecount'],static::$lang['recrep'],$images.'sort.png'),
 						array($v['_afedit'],$ltpl['edit'],$images.'edit.png'),
 						$v['_adel'] ? array($v['_adel'],$ltpl['delete'],$images.'delete.png') : false
 					),
@@ -647,16 +627,16 @@ $(function(){
 				);
 		}
 		else
-			$Lst->empty('Пользователи не найдены');
+			$Lst->empty(static::$lang['unf']);
 
 		$messages='';
+		$rc=static::$lang['rcounted'];
 		foreach($info as $k=>&$v)
 			if($k=='REPUTATION')
 			{
-				$us='';
-				foreach($v as $vv)
-					$us.='<a href="'.$vv['_aedit'].'">'.htmlspecialchars($vv['name'],ELENT,CHARSET).'</a>, ';
-				$messages.=Eleanor::$Template->Message('Репутация у пользовател'.(count($v)>1 ? 'ей ' : 'я ').rtrim($us,', ').' пересчитана','info');
+				foreach($v as &$vv)
+					$vv='<a href="'.$vv['_aedit'].'">'.htmlspecialchars($vv['name'],ELENT,CHARSET).'</a>';
+				$messages.=Eleanor::$Template->Message($rc($v),'info');
 			}
 
 		return Eleanor::$Template->Cover(
@@ -665,7 +645,7 @@ $(function(){
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="2"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>Имя пользователя</b><br />'.Eleanor::Select('fi[namet]',$finamet,array('style'=>'width:30%')).Eleanor::Input('fi[name]',$qs['']['fi']['name'],array('style'=>'width:68%')).'</td>
+					<td><b>'.static::$lang['un'].'</b><br />'.Eleanor::Select('fi[namet]',$finamet,array('style'=>'width:30%')).Eleanor::Input('fi[name]',$qs['']['fi']['name'],array('style'=>'width:68%')).'</td>
 					<td><b>E-mail</b><br />'.Eleanor::Input('fi[email]',$qs['']['fi']['email']).'</td>
 				</tr>
 				<tr>
@@ -673,7 +653,7 @@ $(function(){
 					<td><b>IP</b><br />'.Eleanor::Input('fi[ip]',$qs['']['fi']['ip']).'</td>
 				</tr>
 				<tr>
-					<td><b>Регистрация</b> от до<br />'.Dates::Calendar('fi[regfrom]',$qs['']['fi']['regfrom'],true,array('style'=>'width:35%')).' - '.Dates::Calendar('fi[regto]',$qs['']['fi']['regto'],true,array('style'=>'width:35%')).'</td>
+					<td><b>'.static::$lang['reg'].'</b> '.static::$lang['ft'].'<br />'.Dates::Calendar('fi[regfrom]',$qs['']['fi']['regfrom'],true,array('style'=>'width:35%')).' - '.Dates::Calendar('fi[regto]',$qs['']['fi']['regto'],true,array('style'=>'width:35%')).'</td>
 					<td style="text-align:center;vertical-align:middle">'.Eleanor::Button($ltpl['apply']).'</td>
 				</tr>
 			</table>
@@ -693,28 +673,28 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Пользователей на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Пересчитать репутацию','r')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf(static::$lang['upp'],$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option(static::$lang['recrep'],'r')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница правки пользователя форума
-		$users Массив даных пользоватея (не для правки), ключи:
-			_aedit Ссылка на системное редактирование пользователя
-			group Массив даных основной группы пользователя, ключи
-				title Название группы
-				html_pref HTML префикс группы
-				html_end HTML окончание группы
-			full_name Полное имя пользователя
-			name Имя пользователя (небезопасный HTML!)
-		$values Массив значений полей, ключи:
-			posts Количество постов у пользователя
-			restrict_post Флаг запрета публикации сообщений на форуме
-			restrict_post_to Дата, до наступления которой пользователю будет запрещена публикация постов на форуме
-			descr Описание пользователя (только для админа)
-		$bypost Признак того, что даные нужно брать из POST запроса
-		$back URL возврата
-		$errors Массив ошибок
+		РЎС‚СЂР°РЅРёС†Р° РїСЂР°РІРєРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ С„РѕСЂСѓРјР°
+		$users РњР°СЃСЃРёРІ РґР°РЅС‹С… РїРѕР»СЊР·РѕРІР°С‚РµСЏ (РЅРµ РґР»СЏ РїСЂР°РІРєРё), РєР»СЋС‡Рё:
+			_aedit РЎСЃС‹Р»РєР° РЅР° СЃРёСЃС‚РµРјРЅРѕРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			group РњР°СЃСЃРёРІ РґР°РЅС‹С… РѕСЃРЅРѕРІРЅРѕР№ РіСЂСѓРїРїС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ, РєР»СЋС‡Рё
+				title РќР°Р·РІР°РЅРёРµ РіСЂСѓРїРїС‹
+				html_pref HTML РїСЂРµС„РёРєСЃ РіСЂСѓРїРїС‹
+				html_end HTML РѕРєРѕРЅС‡Р°РЅРёРµ РіСЂСѓРїРїС‹
+			full_name РџРѕР»РЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			name РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (РЅРµР±РµР·РѕРїР°СЃРЅС‹Р№ HTML!)
+		$values РњР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№, РєР»СЋС‡Рё:
+			posts РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕСЃС‚РѕРІ Сѓ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			restrict_post Р¤Р»Р°Рі Р·Р°РїСЂРµС‚Р° РїСѓР±Р»РёРєР°С†РёРё СЃРѕРѕР±С‰РµРЅРёР№ РЅР° С„РѕСЂСѓРјРµ
+			restrict_post_to Р”Р°С‚Р°, РґРѕ РЅР°СЃС‚СѓРїР»РµРЅРёСЏ РєРѕС‚РѕСЂРѕР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ Р±СѓРґРµС‚ Р·Р°РїСЂРµС‰РµРЅР° РїСѓР±Р»РёРєР°С†РёСЏ РїРѕСЃС‚РѕРІ РЅР° С„РѕСЂСѓРјРµ
+			descr РћРїРёСЃР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (С‚РѕР»СЊРєРѕ РґР»СЏ Р°РґРјРёРЅР°)
+		$bypost РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґР°РЅС‹Рµ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РёР· POST Р·Р°РїСЂРѕСЃР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
 	*/
 	public static function EditUser($user,$values,$bypost,$back,$errors)
 	{
@@ -727,50 +707,54 @@ $(function(){
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin()
-			->item('Пользователь','<a href="'.$user['_aedit'].'" title="'.$user['group']['title'].'">'.$user['group']['html_pref'].$user['name'].$user['group']['html_end'].'</a>'.($user['name']==$user['full_name'] ? '' : ' ('.$user['full_name'].')'))
-			->item('Постов на форуме',Eleanor::Input('posts',$values['posts'],array('min'=>0,'type'=>'number')))
-			->item('Запретить публикацию сообщений',Eleanor::Check('restrict_post',$values['restrict_post']))
-			->item('Запретить публикацию сообщений до',Dates::Calendar('restrict_post_to',$values['restrict_post_to'],true))
-			->item(array('Описание',Eleanor::Text('descr',$values['descr']),'descr'=>'Внутреннее, только для администратора'))
+			->item(static::$lang['un'],'<a href="'.$user['_aedit'].'" title="'.$user['group']['title'].'">'.$user['group']['html_pref'].$user['name'].$user['group']['html_end'].'</a>'.($user['name']==$user['full_name'] ? '' : ' ('.$user['full_name'].')'))
+			->item(static::$lang['pon'],Eleanor::Input('posts',$values['posts'],array('min'=>0,'type'=>'number')))
+			->item(static::$lang['rpr'],Eleanor::Check('restrict_post',$values['restrict_post']))
+			->item(static::$lang['rpru'],Dates::Calendar('restrict_post_to',$values['restrict_post_to'],true))
+			->item(array(static::$lang['note'],Eleanor::Text('descr',$values['descr']),'descr'=>static::$lang['internal']))
 			->end()
 			->submitline($back.Eleanor::Button('OK','submit',array('tabindex'=>100)))
 			->endform();
+
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
 
 		return Eleanor::$Template->Cover($Lst,$errors);
 	}
 
 	/*
-		Шаблон отображения списка модераторов
-		$items Массив модераторов. Формат: ID=>array(), ключи внутреннего массива:
-			groups Массив ID групп пользователей, которые входят в этого модератора
-			users Массив ID пользователей, которые входят в этого модератора
-			date Дата создания модератора
-			forums Массив ID форумов, на которые распространяются права модерирования даного модератора
-			_adel Ссылка на удаление модератора
-			_aedit Ссылка на правку модератора
-		$forums Массив с подробной информацией о форумах, в которых модерируют модераторы даного списка. Формат: ID=>array(), ключи внутреннего массива:
-			title Название форума
-			_aedit Ссылка на правку форума
-		$users Массив с подробной информацией о пользователях, которые входят в модераторов из даного списка. Формат: ID=>array(), ключи внутреннего массива:
-			group ID группы пользователя
-			name Имя пользователя (небезопасный HTML!)
-			full_name Полное имя пользователя
-		$groups Массив с подробной информацией о группах пользователей, которые входят в модераторов из даного списка. Формат: ID=>array(), ключи внутреннего массива:
-			title Название группы
-			html_pref HTML префикс группы
-			html_end HTML окончание группы
-		$fiforums Option-ы для Select-а фильтра модераторов по форуму
-		$cnt Количество страниц всего
-		$pp Количество модераторов на страницу
-		$page Номер текущей страницы, на которой мы сейчас находимся
-		$qs Массив параметров адресной строки для каждого запроса
-		$links Перечень необходимых ссылок, массив с ключами:
-			sort_id Ссылка на сортировку списка $items по ID (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_date Ссылка на сортировку списка $items по дате создания модераторов (возрастанию/убыванию в зависимости от текущей сортировки)
-			form_items Ссылка для параметра action формы, внутри которой происходит отображение перечня $items
-			pp Фукнция-генератор ссылок на изменение количества модераторов отображаемых на странице
-			first_page Ссылка на первую страницу пагинатора
-			pages Функция-генератор ссылок на остальные страницы
+		РЁР°Р±Р»РѕРЅ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ СЃРїРёСЃРєР° РјРѕРґРµСЂР°С‚РѕСЂРѕРІ
+		$items РњР°СЃСЃРёРІ РјРѕРґРµСЂР°С‚РѕСЂРѕРІ. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			groups РњР°СЃСЃРёРІ ID РіСЂСѓРїРї РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ СЌС‚РѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°
+			users РњР°СЃСЃРёРІ ID РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ СЌС‚РѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°
+			date Р”Р°С‚Р° СЃРѕР·РґР°РЅРёСЏ РјРѕРґРµСЂР°С‚РѕСЂР°
+			forums РњР°СЃСЃРёРІ ID С„РѕСЂСѓРјРѕРІ, РЅР° РєРѕС‚РѕСЂС‹Рµ СЂР°СЃРїСЂРѕСЃС‚СЂР°РЅСЏСЋС‚СЃСЏ РїСЂР°РІР° РјРѕРґРµСЂРёСЂРѕРІР°РЅРёСЏ РґР°РЅРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°
+			_adel РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ РјРѕРґРµСЂР°С‚РѕСЂР°
+			_aedit РЎСЃС‹Р»РєР° РЅР° РїСЂР°РІРєСѓ РјРѕРґРµСЂР°С‚РѕСЂР°
+		$forums РњР°СЃСЃРёРІ СЃ РїРѕРґСЂРѕР±РЅРѕР№ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ С„РѕСЂСѓРјР°С…, РІ РєРѕС‚РѕСЂС‹С… РјРѕРґРµСЂРёСЂСѓСЋС‚ РјРѕРґРµСЂР°С‚РѕСЂС‹ РґР°РЅРѕРіРѕ СЃРїРёСЃРєР°. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+			_aedit РЎСЃС‹Р»РєР° РЅР° РїСЂР°РІРєСѓ С„РѕСЂСѓРјР°
+		$users РњР°СЃСЃРёРІ СЃ РїРѕРґСЂРѕР±РЅРѕР№ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏС…, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РёР· РґР°РЅРѕРіРѕ СЃРїРёСЃРєР°. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			group ID РіСЂСѓРїРїС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+			name РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (РЅРµР±РµР·РѕРїР°СЃРЅС‹Р№ HTML!)
+			full_name РџРѕР»РЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+		$groups РњР°СЃСЃРёРІ СЃ РїРѕРґСЂРѕР±РЅРѕР№ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РіСЂСѓРїРїР°С… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РёР· РґР°РЅРѕРіРѕ СЃРїРёСЃРєР°. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			title РќР°Р·РІР°РЅРёРµ РіСЂСѓРїРїС‹
+			html_pref HTML РїСЂРµС„РёРєСЃ РіСЂСѓРїРїС‹
+			html_end HTML РѕРєРѕРЅС‡Р°РЅРёРµ РіСЂСѓРїРїС‹
+		$fiforums Option-С‹ РґР»СЏ Select-Р° С„РёР»СЊС‚СЂР° РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РїРѕ С„РѕСЂСѓРјСѓ
+		$cnt РљРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂР°РЅРёС† РІСЃРµРіРѕ
+		$pp РљРѕР»РёС‡РµСЃС‚РІРѕ РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РЅР° СЃС‚СЂР°РЅРёС†Сѓ
+		$page РќРѕРјРµСЂ С‚РµРєСѓС‰РµР№ СЃС‚СЂР°РЅРёС†С‹, РЅР° РєРѕС‚РѕСЂРѕР№ РјС‹ СЃРµР№С‡Р°СЃ РЅР°С…РѕРґРёРјСЃСЏ
+		$qs РњР°СЃСЃРёРІ РїР°СЂР°РјРµС‚СЂРѕРІ Р°РґСЂРµСЃРЅРѕР№ СЃС‚СЂРѕРєРё РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			sort_id РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ ID (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_date РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ РґР°С‚Рµ СЃРѕР·РґР°РЅРёСЏ РјРѕРґРµСЂР°С‚РѕСЂРѕРІ (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			form_items РЎСЃС‹Р»РєР° РґР»СЏ РїР°СЂР°РјРµС‚СЂР° action С„РѕСЂРјС‹, РІРЅСѓС‚СЂРё РєРѕС‚РѕСЂРѕР№ РїСЂРѕРёСЃС…РѕРґРёС‚ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РїРµСЂРµС‡РЅСЏ $items
+			pp Р¤СѓРєРЅС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РёР·РјРµРЅРµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РѕС‚РѕР±СЂР°Р¶Р°РµРјС‹С… РЅР° СЃС‚СЂР°РЅРёС†Рµ
+			first_page РЎСЃС‹Р»РєР° РЅР° РїРµСЂРІСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ РїР°РіРёРЅР°С‚РѕСЂР°
+			pages Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РѕСЃС‚Р°Р»СЊРЅС‹Рµ СЃС‚СЂР°РЅРёС†С‹
 	*/
 	public static function Moderators($items,$forums,$users,$groups,$fiforums,$cnt,$pp,$page,$qs,$links)
 	{
@@ -781,10 +765,10 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',6)
 			->begin(
-				'Пользователи',
-				'Группы',
-				array('Создание','href'=>$links['sort_date']),
-				'Форумы',
+				static::$lang['users'],
+				static::$lang['groups'],
+				array(static::$lang['creation'],'href'=>$links['sort_date']),
+				static::$lang['forums'],
 				array($ltpl['functs'],'href'=>$links['sort_id']),
 				array(Eleanor::Check('mass',false,array('id'=>'mass-check')),20)
 			);
@@ -819,10 +803,10 @@ $(function(){
 						$fs.='<a href="'.$forums[$f]['_aedit'].'">'.$forums[$f]['title'].'</a>, ';
 
 				$Lst->item(
-					$us ? rtrim($us,', ') : '<i>нет</i>',
-					$gs ? rtrim($gs,', ') : '<i>нет</i>',
+					$us ? rtrim($us,', ') : '<i>'.static::$lang['no'].'</i>',
+					$gs ? rtrim($gs,', ') : '<i>'.static::$lang['no'].'</i>',
 					array(Eleanor::$Language->Date($v['date'],'fdt'),'center'),
-					$fs ? rtrim($fs,', ') : '<i>нет</i>',
+					$fs ? rtrim($fs,', ') : '<i>'.static::$lang['no'].'</i>',
 					$Lst('func',
 						array($v['_aedit'],$ltpl['edit'],$images.'edit.png'),
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
@@ -833,14 +817,14 @@ $(function(){
 			}
 		}
 		else
-			$Lst->empty('Модераторы не найдены');
+			$Lst->empty(static::$lang['mnf']);
 
 		return Eleanor::$Template->Cover(
 		'<form method="post">
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="2"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>Форум<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-не важно-',0).$fiforums).'</td>
+					<td><b>'.static::$lang['forum'].'<br />'.Eleanor::Select('fi[forums]',Eleanor::Option(static::$lang['dnm'],0).$fiforums).'</td>
 					<td style="text-align:center;vertical-align:middle">'.Eleanor::Button($ltpl['apply']).'</td>
 				</tr>
 			</table>
@@ -857,45 +841,45 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Модераторов на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Удалить','k')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf(static::$lang['mpp'],$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option(static::$lang['delete'],'k')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница правки модератора
-		$id идентификатор редактируемого модератора, если $id==0 значит модератор создается
-		$controls Массив контролов разрешений
-		$values массив значений полей, ключи:
-			users Массив пользователей, которые входят в даного модератора, формат: id=>name
-			groups Массив ID групп, которые входят в даного модератора
-			forums Массив ID форумов, которые модерирует даный модератор
-			descr Описание модератора (только для администратора)
-			Так же этот массив содержат ключи со зданиями для массива $controls
-		$forums Option-ы для Select-а выбора форумов, которые модерирует даный модератор
-		$errors Массив ошибок
-		$bypost Признак того, что даные нужно брать из POST запроса
-		$back URL возврата
-		$links Перечень необходимых ссылок, массив с ключами:
-			delete Ссылка на удаление модератора или false
+		РЎС‚СЂР°РЅРёС†Р° РїСЂР°РІРєРё РјРѕРґРµСЂР°С‚РѕСЂР°
+		$id РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЂРµРґР°РєС‚РёСЂСѓРµРјРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°, РµСЃР»Рё $id==0 Р·РЅР°С‡РёС‚ РјРѕРґРµСЂР°С‚РѕСЂ СЃРѕР·РґР°РµС‚СЃСЏ
+		$controls РњР°СЃСЃРёРІ РєРѕРЅС‚СЂРѕР»РѕРІ СЂР°Р·СЂРµС€РµРЅРёР№
+		$values РјР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№, РєР»СЋС‡Рё:
+			users РњР°СЃСЃРёРІ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ РґР°РЅРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°, С„РѕСЂРјР°С‚: id=>name
+			groups РњР°СЃСЃРёРІ ID РіСЂСѓРїРї, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ РґР°РЅРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°
+			forums РњР°СЃСЃРёРІ ID С„РѕСЂСѓРјРѕРІ, РєРѕС‚РѕСЂС‹Рµ РјРѕРґРµСЂРёСЂСѓРµС‚ РґР°РЅС‹Р№ РјРѕРґРµСЂР°С‚РѕСЂ
+			descr РћРїРёСЃР°РЅРёРµ РјРѕРґРµСЂР°С‚РѕСЂР° (С‚РѕР»СЊРєРѕ РґР»СЏ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°)
+			РўР°Рє Р¶Рµ СЌС‚РѕС‚ РјР°СЃСЃРёРІ СЃРѕРґРµСЂР¶Р°С‚ РєР»СЋС‡Рё СЃРѕ Р·РґР°РЅРёСЏРјРё РґР»СЏ РјР°СЃСЃРёРІР° $controls
+		$forums Option-С‹ РґР»СЏ Select-Р° РІС‹Р±РѕСЂР° С„РѕСЂСѓРјРѕРІ, РєРѕС‚РѕСЂС‹Рµ РјРѕРґРµСЂРёСЂСѓРµС‚ РґР°РЅС‹Р№ РјРѕРґРµСЂР°С‚РѕСЂ
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
+		$bypost РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґР°РЅС‹Рµ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РёР· POST Р·Р°РїСЂРѕСЃР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			delete РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ РјРѕРґРµСЂР°С‚РѕСЂР° РёР»Рё false
 	*/
 	public static function AddEditModer($id,$controls,$values,$forums,$errors,$bypost,$back,$links)
 	{
-		static::Menu($id ? 'edit-moder' : 'add-moder');
+		static::Menu($id ? 'edit-moder' : 'add-moder',true);
 		$ltpl=Eleanor::$Language['tpl'];
 		$Lst=Eleanor::LoadListTemplate('table-form');
 
 		$users=array();
 		if(count($values['users'])>0)
 			foreach($values['users'] as $k=>&$v)
-				$users[]=Eleanor::$Template->Author(array('names[]'=>$v),array('users[]'=>$k),2).' <a href="#" class="del-moder">Удалить</a>';
+				$users[]=Eleanor::$Template->Author(array('names[]'=>$v),array('users[]'=>$k),2).' <a href="#" class="del-moder">'.static::$lang['delete'].'</a>';
 		else
-			$users[]=Eleanor::$Template->Author(array('names[]'=>''),array('users[]'=>''),2).' <a href="#" class="del-moder">Удалить</a>';
+			$users[]=Eleanor::$Template->Author(array('names[]'=>''),array('users[]'=>''),2).' <a href="#" class="del-moder">'.static::$lang['delete'].'</a>';
 
 		$general=(string)$Lst->begin()
-			->item(array('Группы',Eleanor::Items('groups',UserManager::GroupsOpts($values['groups']),array('tabindex'=>1))))
-			->item(array('Пользователь','<ul id="moders"><li>'.join('</li><li>',$users).'</li></ul><a href="#" id="add-moder" style="font-weight:bold;float:right">Добавить</a>'))
-			->item('Форумы',Eleanor::Items('forums',$forums,array('tabindex'=>3)))
-			->item(array('Примечание',Eleanor::Text('descr',$values['descr'],array('tabindex'=>4)),'descr'=>'Только для администратора'))
+			->item(array(static::$lang['groups'],Eleanor::Items('groups',UserManager::GroupsOpts($values['groups']),array('tabindex'=>1))))
+			->item(array(static::$lang['users'],'<ul id="moders"><li>'.join('</li><li>',$users).'</li></ul><a href="#" id="add-moder" style="font-weight:bold;float:right">'.static::$lang['add'].'</a>'))
+			->item(static::$lang['forums'],Eleanor::Items('forums',$forums,array('tabindex'=>3)))
+			->item(array(static::$lang['note'],Eleanor::Text('descr',$values['descr'],array('tabindex'=>4)),'descr'=>static::$lang['internal']))
 			->end();
 
 		$Lst->begin();
@@ -908,11 +892,16 @@ $(function(){
 
 		if($back)
 			$back=Eleanor::Input('back',$back,array('type'=>'hidden'));
+
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
+
 		return Eleanor::$Template->Cover(
 			$Lst->form()
 			->tabs(
-				array('Общие',$general),
-				array('Права модератора',$rights)
+				array(static::$lang['mains'],$general),
+				array(static::$lang['moderrights'],$rights)
 			)
 			->submitline(
 				$back
@@ -921,42 +910,25 @@ $(function(){
 			)
 			->endform(),
 			$errors
-		).'<script type="text/javascript">//<![CDATA[
-$(function(){
-	var m=$("#moders");
-	m.on("click",".del-moder",function(){
-		if(m.find("li").size()>1)
-			$(this).closest("li").remove();
-		else
-			$(this).closest("li").find(":input").val("");
-		return false;
-	});
-	$("#add-moder").click(function(){
-		$("#moders li:first").clone(true)
-			.find(":input").val("").end()
-			.appendTo("#moders")
-			.find(".cloneable").trigger("clone");
-		return false;
-	});
-})//]]></script>';
+		).'<script type="text/javascript">/*<![CDATA[*/$(function(){ AddEditModer() })//]]></script>';
 	}
 
 	/*
-		Страница удаления модератора
-		$moder массив параметров удаляемого модератора
-			users Массив пользователей, которые входят в даного модератора, формат: ID=>array(), ключи внутреннего массива:
-				_aedit Ссылка на редактирование пользователя форума
-				full_name Полное имя пользователя
-				name Имя пользователя (небезопасный HTML!)
-			groups Массив групп пользователей, которые входят в даного модератора, формат: ID=>array(), ключи внутреннего массива:
-				_aedit Ссылка на группы пользователей форума
-				title Название группы
-				html_pref HTML префикс группы
-				html_end HTML окончание группы
-			forums Массив форумов, в которых модерирует даный модератор, формат: ID=>array(), ключи внутреннего массива:
-				_aedit Ссылка на редактирование форума
-				title Название форума
-		$back URL возврата
+		РЎС‚СЂР°РЅРёС†Р° СѓРґР°Р»РµРЅРёСЏ РјРѕРґРµСЂР°С‚РѕСЂР°
+		$moder РјР°СЃСЃРёРІ РїР°СЂР°РјРµС‚СЂРѕРІ СѓРґР°Р»СЏРµРјРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°
+			users РњР°СЃСЃРёРІ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ РґР°РЅРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°, С„РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+				_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ С„РѕСЂСѓРјР°
+				full_name РџРѕР»РЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+				name РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (РЅРµР±РµР·РѕРїР°СЃРЅС‹Р№ HTML!)
+			groups РњР°СЃСЃРёРІ РіСЂСѓРїРї РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕС‚РѕСЂС‹Рµ РІС…РѕРґСЏС‚ РІ РґР°РЅРѕРіРѕ РјРѕРґРµСЂР°С‚РѕСЂР°, С„РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+				_aedit РЎСЃС‹Р»РєР° РЅР° РіСЂСѓРїРїС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ С„РѕСЂСѓРјР°
+				title РќР°Р·РІР°РЅРёРµ РіСЂСѓРїРїС‹
+				html_pref HTML РїСЂРµС„РёРєСЃ РіСЂСѓРїРїС‹
+				html_end HTML РѕРєРѕРЅС‡Р°РЅРёРµ РіСЂСѓРїРїС‹
+			forums РњР°СЃСЃРёРІ С„РѕСЂСѓРјРѕРІ, РІ РєРѕС‚РѕСЂС‹С… РјРѕРґРµСЂРёСЂСѓРµС‚ РґР°РЅС‹Р№ РјРѕРґРµСЂР°С‚РѕСЂ, С„РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+				_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С„РѕСЂСѓРјР°
+				title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
 	*/
 	public static function DeleteModerator($moder,$back)
 	{
@@ -971,106 +943,64 @@ $(function(){
 		foreach($moder['users'] as &$v)
 			$users.='<a href="'.$v['_aedit'].'">'.htmlspecialchars($v['name'],ELENT,CHARSET).'</a>, ';
 
+		$gdc=static::$lang['gdc'];
 		return Eleanor::$Template->Cover(Eleanor::$Template->Confirm(
-			'Вы действительно хотить удалить модераторов '.rtrim($forums,' ,')
-			.' в лице '.($groups ? 'групп '.rtrim($groups,', ') : '')
-			.($users ? ($groups ? ' и ' : '').'пользователей '.rtrim($users,', ') : '')
-			.'?',
+			$gdc($forums,$groups,$users),
 			$back
 		));
 	}
 
 	/*
-		Приватно. Прикрепление мини-формы для выбора прав групп определенного форума. Forum-Group-Rights
-		$F Функция-генератор ссылок на установку прав групп в конкретном форуме, параметры: ID форума, ID группы
-		$g ID выбранной группы
+		РџСЂРёРІР°С‚РЅРѕ. РџСЂРёРєСЂРµРїР»РµРЅРёРµ РјРёРЅРё-С„РѕСЂРјС‹ РґР»СЏ РІС‹Р±РѕСЂР° РїСЂР°РІ РіСЂСѓРїРї РѕРїСЂРµРґРµР»РµРЅРЅРѕРіРѕ С„РѕСЂСѓРјР°. Forum-Group-Rights
+		$F Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° СѓСЃС‚Р°РЅРѕРІРєСѓ РїСЂР°РІ РіСЂСѓРїРї РІ РєРѕРЅРєСЂРµС‚РЅРѕРј С„РѕСЂСѓРјРµ, РїР°СЂР°РјРµС‚СЂС‹: ID С„РѕСЂСѓРјР°, ID РіСЂСѓРїРїС‹
+		$g ID РІС‹Р±СЂР°РЅРЅРѕР№ РіСЂСѓРїРїС‹
 	*/
 	private static function FGR($F,$g=0)
 	{
 		return'<div style="position:absolute;display:none;background:#F6F6F6;border:1px solid #A1A1A1" id="fgr" data-url="'.$F('_forum_','_group_').'">'
-			.Eleanor::Select('get',UserManager::GroupsOpts($g)).Eleanor::Button('Настроить права','button')
-			.'</div><script type="text/javascript">//<![CDATA[
-$(function(){
-	var fgr=$("#fgr"),
-		showed=false,
-		f,
-		Pos=function(o,fade)
-		{
-			o=$(o);
-			f=o.data("id");
-			fgr.css({left:o.offset().left,top:o.offset().top+o.outerHeight()});
-			if(fade)
-				fgr.fadeIn("fast");
-		};
-
-	fgr.on("click",":button",function(){
-		with(location)
-			href=protocol+"//"+hostname+CORE.site_path+fgr.data("url").replace("_forum_",f).replace("_group_",fgr.find(":first").val());
-	}).find(":first").change(function(){
-		$(this).next().click();
-	});
-
-	$(".fgr").css("cursor","pointer").click(function(){
-		if(showed)
-			fgr.hide();
-		else
-			Pos(this,true);
-		showed=!showed;
-		return false;
-	}).mouseover(function(){
-		if(showed)
-			Pos(this);
-	});
-
-	$(this).on("click",function(e){
-		if(!$(e.target).is("#fgr,#fgr *"))
-		{
-			fgr.hide();
-			showed=false;
-		}
-	});
-});//]]></script>';
+			.Eleanor::Select('get',UserManager::GroupsOpts($g)).Eleanor::Button(static::$lang['setrights'],'button')
+			.'</div><script type="text/javascript">/*<![CDATA[*/$(function(){ FGC() })//]]></script>';
 	}
 
 	/*
-		Страница настройки прав конкретной группы в конкретном форуме
-		$forum Массив даных форума, ключи:
-			id ID форума
-			title Название форума
-			parent ID родителя
-			parents массив всех родителей форума
-		$group Массив даных группы, ключи:
-			title Нзвание группы
-			html_pref HTML префикс группы
-			html_end HTML окончание группы
-		$controls Перечень контролов разрешений в соответствии с классом контролов. Если какой-то элемент массива не является массивом, значит это заголовок подгруппы контролов
-		$values Результирующий HTML код контролов, который необходимо вывести на странице. Ключи даного массива совпадают с ключами $controls
-		$haschild Признак того, что текущий форум имеет подфорумы
-		$inherits Признак того, что подфорумы текущего форума наследуют разрешения текущего форума
-		$inherit Массив с именами контролов (из массива $controls) настройки которых наследуются из форума-родителя
-		$navi Массив, хлебные крошки навигации. Формат ID=>array(), ключи:
-			title Заголовок крошки
-			_a Ссылка на подпункты даной крошки. Может быть равно false
-		$errors Массив ошибок
-		$saved Флаг успешного сохранения прав
-		$back URL возврата
-		$links Перечень необходимых ссылок, массив с ключами:
-			forum_groups_rights Функция-генератор ссылок на установку прав групп в конкретном форуме, параметры: ID форума, ID группы
+		РЎС‚СЂР°РЅРёС†Р° РЅР°СЃС‚СЂРѕР№РєРё РїСЂР°РІ РєРѕРЅРєСЂРµС‚РЅРѕР№ РіСЂСѓРїРїС‹ РІ РєРѕРЅРєСЂРµС‚РЅРѕРј С„РѕСЂСѓРјРµ
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… С„РѕСЂСѓРјР°, РєР»СЋС‡Рё:
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+			parent ID СЂРѕРґРёС‚РµР»СЏ
+			parents РјР°СЃСЃРёРІ РІСЃРµС… СЂРѕРґРёС‚РµР»РµР№ С„РѕСЂСѓРјР°
+		$group РњР°СЃСЃРёРІ РґР°РЅС‹С… РіСЂСѓРїРїС‹, РєР»СЋС‡Рё:
+			title РќР·РІР°РЅРёРµ РіСЂСѓРїРїС‹
+			html_pref HTML РїСЂРµС„РёРєСЃ РіСЂСѓРїРїС‹
+			html_end HTML РѕРєРѕРЅС‡Р°РЅРёРµ РіСЂСѓРїРїС‹
+		$controls РџРµСЂРµС‡РµРЅСЊ РєРѕРЅС‚СЂРѕР»РѕРІ СЂР°Р·СЂРµС€РµРЅРёР№ РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРё СЃ РєР»Р°СЃСЃРѕРј РєРѕРЅС‚СЂРѕР»РѕРІ. Р•СЃР»Рё РєР°РєРѕР№-С‚Рѕ СЌР»РµРјРµРЅС‚ РјР°СЃСЃРёРІР° РЅРµ СЏРІР»СЏРµС‚СЃСЏ РјР°СЃСЃРёРІРѕРј, Р·РЅР°С‡РёС‚ СЌС‚Рѕ Р·Р°РіРѕР»РѕРІРѕРє РїРѕРґРіСЂСѓРїРїС‹ РєРѕРЅС‚СЂРѕР»РѕРІ
+		$values Р РµР·СѓР»СЊС‚РёСЂСѓСЋС‰РёР№ HTML РєРѕРґ РєРѕРЅС‚СЂРѕР»РѕРІ, РєРѕС‚РѕСЂС‹Р№ РЅРµРѕР±С…РѕРґРёРјРѕ РІС‹РІРµСЃС‚Рё РЅР° СЃС‚СЂР°РЅРёС†Рµ. РљР»СЋС‡Рё РґР°РЅРѕРіРѕ РјР°СЃСЃРёРІР° СЃРѕРІРїР°РґР°СЋС‚ СЃ РєР»СЋС‡Р°РјРё $controls
+		$haschild РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ С‚РµРєСѓС‰РёР№ С„РѕСЂСѓРј РёРјРµРµС‚ РїРѕРґС„РѕСЂСѓРјС‹
+		$inherits РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РїРѕРґС„РѕСЂСѓРјС‹ С‚РµРєСѓС‰РµРіРѕ С„РѕСЂСѓРјР° РЅР°СЃР»РµРґСѓСЋС‚ СЂР°Р·СЂРµС€РµРЅРёСЏ С‚РµРєСѓС‰РµРіРѕ С„РѕСЂСѓРјР°
+		$inherit РњР°СЃСЃРёРІ СЃ РёРјРµРЅР°РјРё РєРѕРЅС‚СЂРѕР»РѕРІ (РёР· РјР°СЃСЃРёРІР° $controls) РЅР°СЃС‚СЂРѕР№РєРё РєРѕС‚РѕСЂС‹С… РЅР°СЃР»РµРґСѓСЋС‚СЃСЏ РёР· С„РѕСЂСѓРјР°-СЂРѕРґРёС‚РµР»СЏ
+		$navi РњР°СЃСЃРёРІ, С…Р»РµР±РЅС‹Рµ РєСЂРѕС€РєРё РЅР°РІРёРіР°С†РёРё. Р¤РѕСЂРјР°С‚ ID=>array(), РєР»СЋС‡Рё:
+			title Р—Р°РіРѕР»РѕРІРѕРє РєСЂРѕС€РєРё
+			_a РЎСЃС‹Р»РєР° РЅР° РїРѕРґРїСѓРЅРєС‚С‹ РґР°РЅРѕР№ РєСЂРѕС€РєРё. РњРѕР¶РµС‚ Р±С‹С‚СЊ СЂР°РІРЅРѕ false
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
+		$saved Р¤Р»Р°Рі СѓСЃРїРµС€РЅРѕРіРѕ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїСЂР°РІ
+		$back URL РІРѕР·РІСЂР°С‚Р°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			forum_groups_rights Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° СѓСЃС‚Р°РЅРѕРІРєСѓ РїСЂР°РІ РіСЂСѓРїРї РІ РєРѕРЅРєСЂРµС‚РЅРѕРј С„РѕСЂСѓРјРµ, РїР°СЂР°РјРµС‚СЂС‹: ID С„РѕСЂСѓРјР°, ID РіСЂСѓРїРїС‹
 	*/
 	public static function ForumGroupRights($forum,$group,$controls,$values,$haschild,$inherits,$inherit,$navi,$errors,$saved,$back,$links)
 	{
-		static::Menu('fgr');
+		static::Menu('fgr',true);
 		$nav=array();
-		foreach($navi as $k=>&$v)
+		foreach($navi as &$v)
 			$nav[]='<a href="'.$v['_afgr'].'">'.$v['title'].'</a>';
 
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin(array('id'=>'fg'))
-			->head(($nav ? join(' &raquo; ',$nav).' &raquo; ' : '').$forum['title'].': <span style="cursor:pointer" class="fgr" title="Настроить права групп" data-id="'.$forum['id'].'">'.$group['html_pref'].$group['title'].$group['html_end'].'</span>');
+			->head(($nav ? join(' &raquo; ',$nav).' &raquo; ' : '').$forum['title'].': <span style="cursor:pointer" class="fgr" title="'.static::$lang['oprgr'].'" data-id="'.$forum['id'].'">'.$group['html_pref'].$group['title'].$group['html_end'].'</span>');
 
 		if($haschild)
-			$Lst->item('<span style="color:darkred">Применить к подфорумам?</span>',Eleanor::Check('subs',$inherits));
+			$Lst->item('<span style="color:darkred">'.static::$lang['atsf'].'</span>',Eleanor::Check('subs',$inherits));
 
 		foreach($controls as $k=>&$v)
 			if(is_array($v) and isset($values[$k]))
@@ -1082,45 +1012,28 @@ $(function(){
 			->submitline(
 				($back ? Eleanor::Input('back',$back,array('type'=>'hidden')) : '')
 				.Eleanor::Button('OK','submit',array('tabindex'=>100))
-			)
-			->endform();
+			)->endform();
+
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
 
 		return Eleanor::$Template->Cover(
-			($saved ? Eleanor::$Template->Message('Успешно сохранено'.($back ? '<br /><a href="'.$back.'">Вернуться</a>' : ''),'info') : '')
+			($saved ? Eleanor::$Template->Message(static::$lang['saved'].($back ? '<br /><a href="'.$back.'">'.static::$lang['back'].'</a>' : ''),'info') : '')
 			.$Lst,
 			$errors
-		).'<script type="text/javascript">//<![CDATA[
-$(function(){
-	var Check=function(ftd,state)
-		{
-			var ch=ftd.find(":checkbox");
-			if(typeof state=="undefined")
-				state=!ch.prop("checked");
-			if(state)
-				ftd.css("text-decoration","line-through").prop("title","'.($forum['parent']>0 ? 'Наследуется из прав группы в родительском форуме' : 'Наследуется из базовых прав групп').'").next().children("div").hide();
-			else
-				ftd.css("text-decoration","").prop("title","").next().children("div").show();
-			ch.prop("checked",state)
-		};
-
-		$("#fg tr").find("td:first").filter(function(){
-			return $(this).has(":checkbox").size()>0;
-		}).click(function(){
-			Check($(this));
-		}).each(function(){
-			Check($(this),$(":checkbox",this).prop("checked"));
-		}).css("cursor","pointer");
-})//]]></script>'.self::FGR($links['forum_groups_rights'],$group['id']);
+		).static::FGR($links['forum_groups_rights'],$group['id'])
+		.'<script type="text/javascript">/*<![CDATA[*/$(function(){ ForumGroupRights('.$forum['parent'].') })//]]></script>';
 	}
 
 	/*
-		Удаление форума
-		$forum Массив даных удаляемого форума
-			id ID форума
-			title Название форума
-		$values Массив значений полей, ключи:
-			trash ID форума, куда могут быть перемещены темы с удаляемого форума
-		$back URL возврата
+		РЈРґР°Р»РµРЅРёРµ С„РѕСЂСѓРјР°
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… СѓРґР°Р»СЏРµРјРѕРіРѕ С„РѕСЂСѓРјР°
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$values РњР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№, РєР»СЋС‡Рё:
+			trash ID С„РѕСЂСѓРјР°, РєСѓРґР° РјРѕРіСѓС‚ Р±С‹С‚СЊ РїРµСЂРµРјРµС‰РµРЅС‹ С‚РµРјС‹ СЃ СѓРґР°Р»СЏРµРјРѕРіРѕ С„РѕСЂСѓРјР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
 	*/
 	public static function DeleteForm($forum,$values,$back,$errors)
 	{
@@ -1128,72 +1041,77 @@ $(function(){
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin()
-			->item('Куда переместить темы',Eleanor::Select('trash',Eleanor::Option('-удалить темы-',0,$values['trash']==0).$GLOBALS['Eleanor']->Forum->Forums->SelectOptions($values['trash'],$forum['id'])))
+			->item(static::$lang['puttopics'],Eleanor::Select('trash',Eleanor::Option(static::$lang['deltopics'],0,$values['trash']==0).$GLOBALS['Eleanor']->Forum->Forums->SelectOptions($values['trash'],$forum['id'])))
 			->end()
-			->submitline(Eleanor::Button('Удалить').($back ? ' '.Eleanor::Button('Отменить','button',array('onclick'=>'location.href="'.$back.'"')) : ''))
+			->submitline(Eleanor::Button(static::$lang['delete']).($back ? ' '.Eleanor::Button(static::$lang['cancel'],'button',array('onclick'=>'location.href="'.$back.'"')) : ''))
 			->endform();
 
+		foreach($errors as $k=>&$v)
+			if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+				$v=static::$lang[$v];
+
 		return Eleanor::$Template->Cover(
-			Eleanor::$Template->Message('Вы действительно хотите удалить форум&quot;'.$forum['title'].'&quot;? Выберите форум, куда будут перемещены темы.','info').$Lst,
+			Eleanor::$Template->Message(sprintf(static::$lang['dfc'],$forum['title']),'info').$Lst,
 			$errors
 		);
 	}
 
 	/*
-		Процессе удаления форума
-		$forum Массив даных удаляемого форума
-			id ID форума
-			title Название форума
-		$info Массив с даными об удалении, ключи:
-			total Количество тем, которые нужно перенести (удалить) в связи с удалением форума, в котором они находились
-			done Количество перемещенных (удаленных) тем
-		$links Массив ссылок, ключи:
-			go URL перехода к очередной части удаления
+		РџСЂРѕС†РµСЃСЃРµ СѓРґР°Р»РµРЅРёСЏ С„РѕСЂСѓРјР°
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… СѓРґР°Р»СЏРµРјРѕРіРѕ С„РѕСЂСѓРјР°
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$info РњР°СЃСЃРёРІ СЃ РґР°РЅС‹РјРё РѕР± СѓРґР°Р»РµРЅРёРё, РєР»СЋС‡Рё:
+			total РљРѕР»РёС‡РµСЃС‚РІРѕ С‚РµРј, РєРѕС‚РѕСЂС‹Рµ РЅСѓР¶РЅРѕ РїРµСЂРµРЅРµСЃС‚Рё (СѓРґР°Р»РёС‚СЊ) РІ СЃРІСЏР·Рё СЃ СѓРґР°Р»РµРЅРёРµРј С„РѕСЂСѓРјР°, РІ РєРѕС‚РѕСЂРѕРј РѕРЅРё РЅР°С…РѕРґРёР»РёСЃСЊ
+			done РљРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂРµРјРµС‰РµРЅРЅС‹С… (СѓРґР°Р»РµРЅРЅС‹С…) С‚РµРј
+		$links РњР°СЃСЃРёРІ СЃСЃС‹Р»РѕРє, РєР»СЋС‡Рё:
+			go URL РїРµСЂРµС…РѕРґР° Рє РѕС‡РµСЂРµРґРЅРѕР№ С‡Р°СЃС‚Рё СѓРґР°Р»РµРЅРёСЏ
 	*/
 	public static function DeleteProcess($forum,$info,$links)
 	{
+		static::Menu();
 		return Eleanor::$Template->RedirectScreen($links['go'],5)->Cover(
-			Eleanor::$Template->Message('Форум &quot;'.$forum['title'].'&quot; удаляется...<br /><progress max="'.$info['total'].'" value="'.$info['done'].'" style="width:100%">'.($info['total']==0 ? 100 : round($info['done']/$info['total']*100)).'%</progress>','info')
+			Eleanor::$Template->Message(sprintf(static::$lang['fdels'],$forum['title']).'<br /><progress max="'.$info['total'].'" value="'.$info['done'].'" style="width:100%">'.($info['total']==0 ? 100 : round($info['done']/$info['total']*100)).'%</progress>','info')
 		);
 	}
 
 	/*
-		Финиш удаления форума
-		$forum Массив даных УЖЕ удаленного форума
-			id ID форума
-			title Название форума
-		$back URL возврата
+		Р¤РёРЅРёС€ СѓРґР°Р»РµРЅРёСЏ С„РѕСЂСѓРјР°
+		$forum РњР°СЃСЃРёРІ РґР°РЅС‹С… РЈР–Р• СѓРґР°Р»РµРЅРЅРѕРіРѕ С„РѕСЂСѓРјР°
+			id ID С„РѕСЂСѓРјР°
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
 	*/
 	public static function DeleteComplete($forum,$back)
 	{
 		static::Menu('delete-forum');
 		return Eleanor::$Template->Cover(
-			Eleanor::$Template->Message('Форум &quot;'.$forum['title'].'&quot; успешно удалён.'.($back ? '<br /><a href="'.$back.'">Вернуться</a>' : ''),'info')
+			Eleanor::$Template->Message(sprintf(static::$lang['fdeleted'],$forum['title']).($back ? '<br /><a href="'.$back.'">'.static::$lang['back'].'</a>' : ''),'info')
 		);
 	}
 
 	/*
-		Шаблон отображения списка префиксов тем
-		$items Массив префиксов тем. Формат: ID=>array(), ключи внутреннего массива:
-			title Название префикса
-			forums Массив ID форумов, в которых существует даный префикс
-			_adel Ссылка на удаление префикса
-			_aedit Ссылка на правку префикса
-		$forums Массив с подробной информацией о форумах, в которых существуют префиксы даного списка. Формат: ID=>array(), ключи внутреннего массива:
-			title Название форума
-			_aedit Ссылка на правку форума
-		$fiforums Option-ы для Select-а фильтра модераторов по форуму
-		$cnt Количество страниц всего
-		$pp Количество префиксов тем на страницу
-		$page Номер текущей страницы, на которой мы сейчас находимся
-		$qs Массив параметров адресной строки для каждого запроса
-		$links Перечень необходимых ссылок, массив с ключами:
-			sort_id Ссылка на сортировку списка $items по ID (возрастанию/убыванию в зависимости от текущей сортировки)
-			sort_title Ссылка на сортировку списка $items по названию (возрастанию/убыванию в зависимости от текущей сортировки)
-			form_items Ссылка для параметра action формы, внутри которой происходит отображение перечня $items
-			pp Фукнция-генератор ссылок на изменение количества модераторов отображаемых на странице
-			first_page Ссылка на первую страницу пагинатора
-			pages Функция-генератор ссылок на остальные страницы
+		РЁР°Р±Р»РѕРЅ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ СЃРїРёСЃРєР° РїСЂРµС„РёРєСЃРѕРІ С‚РµРј
+		$items РњР°СЃСЃРёРІ РїСЂРµС„РёРєСЃРѕРІ С‚РµРј. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			title РќР°Р·РІР°РЅРёРµ РїСЂРµС„РёРєСЃР°
+			forums РњР°СЃСЃРёРІ ID С„РѕСЂСѓРјРѕРІ, РІ РєРѕС‚РѕСЂС‹С… СЃСѓС‰РµСЃС‚РІСѓРµС‚ РґР°РЅС‹Р№ РїСЂРµС„РёРєСЃ
+			_adel РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ РїСЂРµС„РёРєСЃР°
+			_aedit РЎСЃС‹Р»РєР° РЅР° РїСЂР°РІРєСѓ РїСЂРµС„РёРєСЃР°
+		$forums РњР°СЃСЃРёРІ СЃ РїРѕРґСЂРѕР±РЅРѕР№ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ С„РѕСЂСѓРјР°С…, РІ РєРѕС‚РѕСЂС‹С… СЃСѓС‰РµСЃС‚РІСѓСЋС‚ РїСЂРµС„РёРєСЃС‹ РґР°РЅРѕРіРѕ СЃРїРёСЃРєР°. Р¤РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+			title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+			_aedit РЎСЃС‹Р»РєР° РЅР° РїСЂР°РІРєСѓ С„РѕСЂСѓРјР°
+		$fiforums Option-С‹ РґР»СЏ Select-Р° С„РёР»СЊС‚СЂР° РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РїРѕ С„РѕСЂСѓРјСѓ
+		$cnt РљРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂР°РЅРёС† РІСЃРµРіРѕ
+		$pp РљРѕР»РёС‡РµСЃС‚РІРѕ РїСЂРµС„РёРєСЃРѕРІ С‚РµРј РЅР° СЃС‚СЂР°РЅРёС†Сѓ
+		$page РќРѕРјРµСЂ С‚РµРєСѓС‰РµР№ СЃС‚СЂР°РЅРёС†С‹, РЅР° РєРѕС‚РѕСЂРѕР№ РјС‹ СЃРµР№С‡Р°СЃ РЅР°С…РѕРґРёРјСЃСЏ
+		$qs РњР°СЃСЃРёРІ РїР°СЂР°РјРµС‚СЂРѕРІ Р°РґСЂРµСЃРЅРѕР№ СЃС‚СЂРѕРєРё РґР»СЏ РєР°Р¶РґРѕРіРѕ Р·Р°РїСЂРѕСЃР°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			sort_id РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ ID (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			sort_title РЎСЃС‹Р»РєР° РЅР° СЃРѕСЂС‚РёСЂРѕРІРєСѓ СЃРїРёСЃРєР° $items РїРѕ РЅР°Р·РІР°РЅРёСЋ (РІРѕР·СЂР°СЃС‚Р°РЅРёСЋ/СѓР±С‹РІР°РЅРёСЋ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РµРєСѓС‰РµР№ СЃРѕСЂС‚РёСЂРѕРІРєРё)
+			form_items РЎСЃС‹Р»РєР° РґР»СЏ РїР°СЂР°РјРµС‚СЂР° action С„РѕСЂРјС‹, РІРЅСѓС‚СЂРё РєРѕС‚РѕСЂРѕР№ РїСЂРѕРёСЃС…РѕРґРёС‚ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РїРµСЂРµС‡РЅСЏ $items
+			pp Р¤СѓРєРЅС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РёР·РјРµРЅРµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РјРѕРґРµСЂР°С‚РѕСЂРѕРІ РѕС‚РѕР±СЂР°Р¶Р°РµРјС‹С… РЅР° СЃС‚СЂР°РЅРёС†Рµ
+			first_page РЎСЃС‹Р»РєР° РЅР° РїРµСЂРІСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ РїР°РіРёРЅР°С‚РѕСЂР°
+			pages Р¤СѓРЅРєС†РёСЏ-РіРµРЅРµСЂР°С‚РѕСЂ СЃСЃС‹Р»РѕРє РЅР° РѕСЃС‚Р°Р»СЊРЅС‹Рµ СЃС‚СЂР°РЅРёС†С‹
 	*/
 	public static function Prefixes($items,$forums,$fiforums,$cnt,$pp,$page,$qs,$links)
 	{
@@ -1204,8 +1122,8 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',4)
 			->begin(
-				array('Префикс','href'=>$links['sort_title']),
-				'Форумы',
+				array(static::$lang['prefix'],'href'=>$links['sort_title']),
+				static::$lang['forums'],
 				array($ltpl['functs'],'href'=>$links['sort_id']),
 				array(Eleanor::Check('mass',false,array('id'=>'mass-check')),20)
 			);
@@ -1223,7 +1141,7 @@ $(function(){
 
 				$Lst->item(
 					$v['title'],
-					$fs ? rtrim($fs,', ') : '<i>нет</i>',
+					$fs ? rtrim($fs,', ') : '<i>'.static::$lang['no'].'</i>',
 					$Lst('func',
 						array($v['_aedit'],$ltpl['edit'],$images.'edit.png'),
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
@@ -1234,7 +1152,7 @@ $(function(){
 			}
 		}
 		else
-			$Lst->empty('Префиксы не найдены');
+			$Lst->empty(static::$lang['pnf']);
 
 		$qs+=array(''=>array());
 		$qs['']+=array('fi'=>array());
@@ -1248,8 +1166,8 @@ $(function(){
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="2"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>Название</b><br />'.Eleanor::Input('fi[title]',$qs['']['fi']['title']).'</td>
-					<td><b>Форум<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-не важно-',0).$fiforums).'</td>
+					<td><b>'.static::$lang['design'].'</b><br />'.Eleanor::Input('fi[title]',$qs['']['fi']['title']).'</td>
+					<td><b>'.static::$lang['forum'].'<br />'.Eleanor::Select('fi[forums]',Eleanor::Option(static::$lang['dnm'],0).$fiforums).'</td>
 				</tr>
 				<tr>
 					<td colspan="2" style="text-align:center">'.Eleanor::Button($ltpl['apply']).'</td>
@@ -1268,28 +1186,28 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Префиксов на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Удалить','k')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf(static::$lang['ppp'],$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option(static::$lang['delete'],'k')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница правки префикса
-		$id идентификатор редактируемого префикса, если $id==0 значит префикс создается
-		$values массив значений полей
-			Общие ключи:
-			forums Массив идентификаторов форумов, в которых используются даный префикс
+		РЎС‚СЂР°РЅРёС†Р° РїСЂР°РІРєРё РїСЂРµС„РёРєСЃР°
+		$id РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ СЂРµРґР°РєС‚РёСЂСѓРµРјРѕРіРѕ РїСЂРµС„РёРєСЃР°, РµСЃР»Рё $id==0 Р·РЅР°С‡РёС‚ РїСЂРµС„РёРєСЃ СЃРѕР·РґР°РµС‚СЃСЏ
+		$values РјР°СЃСЃРёРІ Р·РЅР°С‡РµРЅРёР№ РїРѕР»РµР№
+			РћР±С‰РёРµ РєР»СЋС‡Рё:
+			forums РњР°СЃСЃРёРІ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ С„РѕСЂСѓРјРѕРІ, РІ РєРѕС‚РѕСЂС‹С… РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РґР°РЅС‹Р№ РїСЂРµС„РёРєСЃ
 
-			Языковые ключи:
-			title Название префикса
+			РЇР·С‹РєРѕРІС‹Рµ РєР»СЋС‡Рё:
+			title РќР°Р·РІР°РЅРёРµ РїСЂРµС„РёРєСЃР°
 
-			Специальные ключи:
-			_onelang Флаг моноязычной новости при включенной мультиязычности
-		$forums Option-ы для Select-а выбора форумов, в которых используется даный префикс
-		$errors Массив ошибок
-		$bypost Признак того, что даные нужно брать из POST запроса
-		$back URL возврата
-		$links Перечень необходимых ссылок, массив с ключами:
-			delete Ссылка на удаление модератора или false
+			РЎРїРµС†РёР°Р»СЊРЅС‹Рµ РєР»СЋС‡Рё:
+			_onelang Р¤Р»Р°Рі РјРѕРЅРѕСЏР·С‹С‡РЅРѕР№ РЅРѕРІРѕСЃС‚Рё РїСЂРё РІРєР»СЋС‡РµРЅРЅРѕР№ РјСѓР»СЊС‚РёСЏР·С‹С‡РЅРѕСЃС‚Рё
+		$forums Option-С‹ РґР»СЏ Select-Р° РІС‹Р±РѕСЂР° С„РѕСЂСѓРјРѕРІ, РІ РєРѕС‚РѕСЂС‹С… РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР°РЅС‹Р№ РїСЂРµС„РёРєСЃ
+		$errors РњР°СЃСЃРёРІ РѕС€РёР±РѕРє
+		$bypost РџСЂРёР·РЅР°Рє С‚РѕРіРѕ, С‡С‚Рѕ РґР°РЅС‹Рµ РЅСѓР¶РЅРѕ Р±СЂР°С‚СЊ РёР· POST Р·Р°РїСЂРѕСЃР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
+		$links РџРµСЂРµС‡РµРЅСЊ РЅРµРѕР±С…РѕРґРёРјС‹С… СЃСЃС‹Р»РѕРє, РјР°СЃСЃРёРІ СЃ РєР»СЋС‡Р°РјРё:
+			delete РЎСЃС‹Р»РєР° РЅР° СѓРґР°Р»РµРЅРёРµ РјРѕРґРµСЂР°С‚РѕСЂР° РёР»Рё false
 	*/
 	public static function AddEditPrefix($id,$values,$forums,$errors,$bypost,$back,$links)
 	{
@@ -1312,7 +1230,7 @@ $(function(){
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin()
-			->item('Форумы',Eleanor::Items('forums',$forums,array('tabindex'=>1)))
+			->item(static::$lang['forums'],Eleanor::Items('forums',$forums,array('tabindex'=>1)))
 			->item($ltpl['title'],Eleanor::$Template->LangEdit($ml['title'],null));
 
 		if(Eleanor::$vars['multilang'])
@@ -1334,29 +1252,29 @@ $(function(){
 	}
 
 	/*
-		Страница удаления префикса тем
-		$prefix массив параметров удаляемого префикса
-			title Название префикса
-			forums Массив форумов, в которых используется даный префиксов, формат: ID=>array(), ключи внутреннего массива:
-				_aedit Ссылка на редактирование форума
-				title Название форума
-		$back URL возврата
+		РЎС‚СЂР°РЅРёС†Р° СѓРґР°Р»РµРЅРёСЏ РїСЂРµС„РёРєСЃР° С‚РµРј
+		$prefix РјР°СЃСЃРёРІ РїР°СЂР°РјРµС‚СЂРѕРІ СѓРґР°Р»СЏРµРјРѕРіРѕ РїСЂРµС„РёРєСЃР°
+			title РќР°Р·РІР°РЅРёРµ РїСЂРµС„РёРєСЃР°
+			forums РњР°СЃСЃРёРІ С„РѕСЂСѓРјРѕРІ, РІ РєРѕС‚РѕСЂС‹С… РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР°РЅС‹Р№ РїСЂРµС„РёРєСЃРѕРІ, С„РѕСЂРјР°С‚: ID=>array(), РєР»СЋС‡Рё РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РјР°СЃСЃРёРІР°:
+				_aedit РЎСЃС‹Р»РєР° РЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С„РѕСЂСѓРјР°
+				title РќР°Р·РІР°РЅРёРµ С„РѕСЂСѓРјР°
+		$back URL РІРѕР·РІСЂР°С‚Р°
 	*/
 	public static function DeletePrefix($prefix,$back)
 	{
 		static::Menu('delete-prefix');
-		$forums='';
 		foreach($prefix['forums'] as &$v)
-			$forums.='<a href="'.$v['_aedit'].'">'.$v['title'].'</a>, ';
+			$v='<a href="'.$v['_aedit'].'">'.$v['title'].'</a>';
 
+		$pdf=static::$lang['pdf'];
 		return Eleanor::$Template->Cover(Eleanor::$Template->Confirm(
-			'Вы действительно хотить префикс тем &quot;'.$prefix['title'].'&quot; используемый в форумах '.rtrim($forums,',').'?',
+			$pdf($prefix['title'],$prefix['forums']),
 			$back
 		));
 	}
 
 	/*
-		Страница просмотра аттачей
+		РЎС‚СЂР°РЅРёС†Р° РїСЂРѕСЃРјРѕС‚СЂР° Р°С‚С‚Р°С‡РµР№
 		#ToDo!
 	*/
 	public static function Files($items,$forums,$topics,$fiforums,$cnt,$pp,$page,$qs,$links)
@@ -1368,10 +1286,10 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',6)
 			->begin(
-				'Файл',
-				array('Дата','href'=>$links['sort_date']),
-				'Форум',
-				'Тема',
+				'Р¤Р°Р№Р»',
+				array('Р”Р°С‚Р°','href'=>$links['sort_date']),
+				'Р¤РѕСЂСѓРј',
+				'РўРµРјР°',
 				array($ltpl['functs'],'href'=>$links['sort_id']),
 				array(Eleanor::Check('mass',false,array('id'=>'mass-check')),20)
 			);
@@ -1383,24 +1301,24 @@ $(function(){
 				$Lst->item(
 					'<a href="'.$v['_adown'].'">'.$v['filename'].'</a><br /><span class="small">'.Files::BytesToSize($v['filesize']).'</span>',
 					Eleanor::$Language->Date($v['date'],'fdt'),
-					isset($forums[ $v['f'] ][ $v['language'] ]) ? '<a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a>' : '<i>нет</i>',
-					isset($topics[ $v['t'] ]) ? '<a href="'.$topics[ $v['f'] ]['_a'].'" target="_blank">'.$topics[ $v['f'] ]['title'].'</a>' : '<i>нет</i>',
+					isset($forums[ $v['f'] ][ $v['language'] ]) ? '<a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a>' : '<i>РЅРµС‚</i>',
+					isset($topics[ $v['t'] ]) ? '<a href="'.$topics[ $v['f'] ]['_a'].'" target="_blank">'.$topics[ $v['f'] ]['title'].'</a>' : '<i>РЅРµС‚</i>',
 					$Lst('func',
-						array($v['_aprev'],'Просмотр превьюшки',$images.'viewfile.png'),
+						array($v['_aprev'],'РџСЂРѕСЃРјРѕС‚СЂ РїСЂРµРІСЊСЋС€РєРё',$images.'viewfile.png'),
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					),
 					Eleanor::Check('mass[]',false,array('value'=>$k))
 				);
 		}
 		else
-			$Lst->empty('Файлы не найдены');
+			$Lst->empty('Р¤Р°Р№Р»С‹ РЅРµ РЅР°Р№РґРµРЅС‹');
 
 		return Eleanor::$Template->Cover(
 		'<form method="post">
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="2"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>Форум<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-не важно-',0).$fiforums).'</td>
+					<td><b>Р¤РѕСЂСѓРј<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-РЅРµ РІР°Р¶РЅРѕ-',0).$fiforums).'</td>
 					<td>'.Eleanor::Button($ltpl['apply']).'</td>
 				</tr>
 			</table>
@@ -1417,12 +1335,12 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Файлов на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Удалить','k')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Р¤Р°Р№Р»РѕРІ РЅР° СЃС‚СЂР°РЅРёС†Сѓ: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('РЈРґР°Р»РёС‚СЊ','k')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница удаления аттача
+		РЎС‚СЂР°РЅРёС†Р° СѓРґР°Р»РµРЅРёСЏ Р°С‚С‚Р°С‡Р°
 		#ToDo!
 	*/
 	public static function DeleteAttach($attach,$back)
@@ -1430,13 +1348,13 @@ $(function(){
 		static::Menu('delete-attach');
 
 		return Eleanor::$Template->Cover(Eleanor::$Template->Confirm(
-			'Вы действительно хотить аттач?',
+			'Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚СЊ Р°С‚С‚Р°С‡?',
 			$back
 		));
 	}
 
 	/*
-		Страница просмотра подписок на форумы
+		РЎС‚СЂР°РЅРёС†Р° РїСЂРѕСЃРјРѕС‚СЂР° РїРѕРґРїРёСЃРѕРє РЅР° С„РѕСЂСѓРјС‹
 		#ToDo!
 	*/
 	public static function FSubscriptions($items,$forums,$users,$fiforums,$fiuname,$cnt,$pp,$page,$qs,$links)
@@ -1448,11 +1366,11 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',7)
 			->begin(
-				array('Дата','href'=>$links['sort_date']),
-				'Форум',
-				'Юзер',
-				'Интенс.',
-				'Посл. отправка',
+				array('Р”Р°С‚Р°','href'=>$links['sort_date']),
+				'Р¤РѕСЂСѓРј',
+				'Р®Р·РµСЂ',
+				'РРЅС‚РµРЅСЃ.',
+				'РџРѕСЃР». РѕС‚РїСЂР°РІРєР°',
 				$ltpl['functs'],
 				array(Eleanor::Check('mass',false,array('id'=>'mass-check')),20)
 			);
@@ -1461,19 +1379,19 @@ $(function(){
 		{
 			$images=Eleanor::$Template->default['theme'].'images/';
 			$intencity=array(
-				'i'=>'Немедленно',
-				'd'=>'Ежедневно',
-				'w'=>'Еженедельно',
-				'm'=>'Ежемесячно',
-				'y'=>'Ежегодно',
+				'i'=>'РќРµРјРµРґР»РµРЅРЅРѕ',
+				'd'=>'Р•Р¶РµРґРЅРµРІРЅРѕ',
+				'w'=>'Р•Р¶РµРЅРµРґРµР»СЊРЅРѕ',
+				'm'=>'Р•Р¶РµРјРµСЃСЏС‡РЅРѕ',
+				'y'=>'Р•Р¶РµРіРѕРґРЅРѕ',
 			);
-			foreach($items as $k=>&$v)
+			foreach($items as &$v)
 				$Lst->item(
 					Eleanor::$Language->Date($v['date'],'fdt'),
-					isset($forums[ $v['f'] ][ $v['language'] ]) ? '<a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a>' : '<i>нет</i>',
-					isset($users[ $v['uid'] ]) ? '<a href="'.$users[ $v['uid'] ]['_aedit'].'">'.htmlspecialchars($users[ $v['uid'] ]['name'],ELENT,CHARSET).'</a>' : '<i>нет</i>',
-					array(isset($intencity[ $v['intencity'] ]) ? $intencity[ $v['intencity'] ] : '<i>нет</i>','center'),
-					'<span title="Следующая отправка '.Eleanor::$Language->Date($v['nextsend'],'fdt').'">'.Eleanor::$Language->Date($v['lastsend'],'fdt').'</span>',
+					isset($forums[ $v['f'] ][ $v['language'] ]) ? '<a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a>' : '<i>РЅРµС‚</i>',
+					isset($users[ $v['uid'] ]) ? '<a href="'.$users[ $v['uid'] ]['_aedit'].'">'.htmlspecialchars($users[ $v['uid'] ]['name'],ELENT,CHARSET).'</a>' : '<i>РЅРµС‚</i>',
+					array(isset($intencity[ $v['intencity'] ]) ? $intencity[ $v['intencity'] ] : '<i>РЅРµС‚</i>','center'),
+					'<span title="РЎР»РµРґСѓСЋС‰Р°СЏ РѕС‚РїСЂР°РІРєР° '.Eleanor::$Language->Date($v['nextsend'],'fdt').'">'.Eleanor::$Language->Date($v['lastsend'],'fdt').'</span>',
 					$Lst('func',
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					),
@@ -1481,7 +1399,7 @@ $(function(){
 				);
 		}
 		else
-			$Lst->empty('Подписки на форумы не найдены');
+			$Lst->empty('РџРѕРґРїРёСЃРєРё РЅР° С„РѕСЂСѓРјС‹ РЅРµ РЅР°Р№РґРµРЅС‹');
 
 		$qs+=array(''=>array());
 		$qs['']+=array('fi'=>array());
@@ -1495,8 +1413,8 @@ $(function(){
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="2"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>Пользователь</b><br />'.Eleanor::$Template->Author(array(''=>$fiuname),array('fi[u]'=>$qs['']['fi']['u'])).'</td>
-					<td><b>Форум<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-не важно-',0).$fiforums).'</td>
+					<td><b>РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ</b><br />'.Eleanor::$Template->Author(array(''=>$fiuname),array('fi[u]'=>$qs['']['fi']['u'])).'</td>
+					<td><b>Р¤РѕСЂСѓРј<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-РЅРµ РІР°Р¶РЅРѕ-',0).$fiforums).'</td>
 				</tr>
 				<tr>
 					<td colspan="2" style="text-align:center">'.Eleanor::Button($ltpl['apply']).'</td>
@@ -1515,12 +1433,12 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Подписок на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Удалить','k')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('РџРѕРґРїРёСЃРѕРє РЅР° СЃС‚СЂР°РЅРёС†Сѓ: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('РЈРґР°Р»РёС‚СЊ','k')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница удаления подписки пользователя на форум
+		РЎС‚СЂР°РЅРёС†Р° СѓРґР°Р»РµРЅРёСЏ РїРѕРґРїРёСЃРєРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РЅР° С„РѕСЂСѓРј
 		#ToDo!
 	*/
 	public static function DeleteFS()
@@ -1529,7 +1447,7 @@ $(function(){
 	}
 
 	/*
-		Страница просмотра подписок на темы
+		РЎС‚СЂР°РЅРёС†Р° РїСЂРѕСЃРјРѕС‚СЂР° РїРѕРґРїРёСЃРѕРє РЅР° С‚РµРјС‹
 		#ToDo!
 	*/
 	public static function TSubscriptions($items,$forums,$users,$topics,$fiforums,$fiuname,$fitopic,$cnt,$pp,$page,$qs,$links)
@@ -1541,11 +1459,11 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',7)
 			->begin(
-				array('Дата','href'=>$links['sort_date']),
-				'Тема',
-				'Юзер',
-				'Интенс.',
-				'Посл. отправка',
+				array('Р”Р°С‚Р°','href'=>$links['sort_date']),
+				'РўРµРјР°',
+				'Р®Р·РµСЂ',
+				'РРЅС‚РµРЅСЃ.',
+				'РџРѕСЃР». РѕС‚РїСЂР°РІРєР°',
 				$ltpl['functs'],
 				array(Eleanor::Check('mass',false,array('id'=>'mass-check')),20)
 			);
@@ -1554,22 +1472,22 @@ $(function(){
 		{
 			$images=Eleanor::$Template->default['theme'].'images/';
 			$intencity=array(
-				'i'=>'Немедленно',
-				'd'=>'Ежедневно',
-				'w'=>'Еженедельно',
-				'm'=>'Ежемесячно',
-				'y'=>'Ежегодно',
+				'i'=>'РќРµРјРµРґР»РµРЅРЅРѕ',
+				'd'=>'Р•Р¶РµРґРЅРµРІРЅРѕ',
+				'w'=>'Р•Р¶РµРЅРµРґРµР»СЊРЅРѕ',
+				'm'=>'Р•Р¶РµРјРµСЃСЏС‡РЅРѕ',
+				'y'=>'Р•Р¶РµРіРѕРґРЅРѕ',
 			);
-			foreach($items as $k=>&$v)
+			foreach($items as &$v)
 			{
 				$ist=isset($topics[ $v['t'] ]);
 				$Lst->item(
 					Eleanor::$Language->Date($v['date'],'fdt'),
-					($ist ? '<a href="'.$topics[ $v['t'] ]['_a'].'" target="_blank">'.$topics[ $v['t'] ]['title'].'</a>' : '<i>нет</i>')
+					($ist ? '<a href="'.$topics[ $v['t'] ]['_a'].'" target="_blank">'.$topics[ $v['t'] ]['title'].'</a>' : '<i>РЅРµС‚</i>')
 					.($ist && isset($forums[ $v['f'] ][ $v['language'] ]) ? '<br /><span class="small"><a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a></span>' : ''),
-					isset($users[ $v['uid'] ]) ? '<a href="'.$users[ $v['uid'] ]['_aedit'].'">'.htmlspecialchars($users[ $v['uid'] ]['name'],ELENT,CHARSET).'</a>' : '<i>нет</i>',
-					array(isset($intencity[ $v['intencity'] ]) ? $intencity[ $v['intencity'] ] : '<i>нет</i>','center'),
-					'<span title="Следующая отправка '.Eleanor::$Language->Date($v['nextsend'],'fdt').'">'.Eleanor::$Language->Date($v['lastsend'],'fdt').'</span>',
+					isset($users[ $v['uid'] ]) ? '<a href="'.$users[ $v['uid'] ]['_aedit'].'">'.htmlspecialchars($users[ $v['uid'] ]['name'],ELENT,CHARSET).'</a>' : '<i>РЅРµС‚</i>',
+					array(isset($intencity[ $v['intencity'] ]) ? $intencity[ $v['intencity'] ] : '<i>РЅРµС‚</i>','center'),
+					'<span title="РЎР»РµРґСѓСЋС‰Р°СЏ РѕС‚РїСЂР°РІРєР° '.Eleanor::$Language->Date($v['nextsend'],'fdt').'">'.Eleanor::$Language->Date($v['lastsend'],'fdt').'</span>',
 					$Lst('func',
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					),
@@ -1578,7 +1496,7 @@ $(function(){
 			}
 		}
 		else
-			$Lst->empty('Подписки на темы не найдены');
+			$Lst->empty('РџРѕРґРїРёСЃРєРё РЅР° С‚РµРјС‹ РЅРµ РЅР°Р№РґРµРЅС‹');
 
 		$qs+=array(''=>array());
 		$qs['']+=array('fi'=>array());
@@ -1593,11 +1511,11 @@ $(function(){
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="2"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>Пользователь</b><br />'.Eleanor::$Template->Author(array(''=>$fiuname),array('fi[u]'=>$qs['']['fi']['u'])).'</td>
-					<td><b>Форум<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-не важно-',0).$fiforums).'</td>
+					<td><b>РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ</b><br />'.Eleanor::$Template->Author(array(''=>$fiuname),array('fi[u]'=>$qs['']['fi']['u'])).'</td>
+					<td><b>Р¤РѕСЂСѓРј<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-РЅРµ РІР°Р¶РЅРѕ-',0).$fiforums).'</td>
 				</tr>
 				<tr>
-					<td><b>'.($fitopic ? '<a href="'.$fitopic['_a'].'">'.$fitopic['title'].'</a>' : 'ID темы').'<br />'.Eleanor::Input('fi[t]',$qs['']['fi']['t'],array('type'=>'number')).'</td>
+					<td><b>'.($fitopic ? '<a href="'.$fitopic['_a'].'">'.$fitopic['title'].'</a>' : 'ID С‚РµРјС‹').'<br />'.Eleanor::Input('fi[t]',$qs['']['fi']['t'],array('type'=>'number')).'</td>
 					<td style="text-align:center">'.Eleanor::Button($ltpl['apply']).'</td>
 				</tr>
 			</table>
@@ -1614,12 +1532,12 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Подписок на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Удалить','k')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('РџРѕРґРїРёСЃРѕРє РЅР° СЃС‚СЂР°РЅРёС†Сѓ: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('РЈРґР°Р»РёС‚СЊ','k')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница удаления подписки пользователя на тему
+		РЎС‚СЂР°РЅРёС†Р° СѓРґР°Р»РµРЅРёСЏ РїРѕРґРїРёСЃРєРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РЅР° С‚РµРјСѓ
 		#ToDo!
 	*/
 	public static function DeleteTS()
@@ -1628,7 +1546,7 @@ $(function(){
 	}
 
 	/*
-		Страница просмотра изменений репутации
+		РЎС‚СЂР°РЅРёС†Р° РїСЂРѕСЃРјРѕС‚СЂР° РёР·РјРµРЅРµРЅРёР№ СЂРµРїСѓС‚Р°С†РёРё
 		#ToDo!
 	*/
 	public static function Reputation($items,$forums,$users,$topics,$fiforums,$fiutoname,$fiufromname,$fitopic,$cnt,$pp,$page,$qs,$links)
@@ -1640,11 +1558,11 @@ $(function(){
 
 		$Lst=Eleanor::LoadListTemplate('table-list',8)
 			->begin(
-				array('Кто','colspan'=>2),
-				'Дата',
-				'Кому',
-				'Где',
-				'Примечание',
+				array('РљС‚Рѕ','colspan'=>2),
+				'Р”Р°С‚Р°',
+				'РљРѕРјСѓ',
+				'Р“РґРµ',
+				'РџСЂРёРјРµС‡Р°РЅРёРµ',
 				array($ltpl['functs'],'href'=>$links['sort_id']),
 				array(Eleanor::Check('mass',false,array('id'=>'mass-check')),20)
 			);
@@ -1652,15 +1570,15 @@ $(function(){
 		if($items)
 		{
 			$images=Eleanor::$Template->default['theme'].'images/';
-			foreach($items as $k=>&$v)
+			foreach($items as &$v)
 			{
 				$ist=isset($topics[ $v['t'] ]);
 				$Lst->item(
 					$v['value']>1 ? '<b style="color:green">'.$v['value'].'</b>' : '<b style="color:red">'.$v['value'].'</b>',
 					isset($users[ $v['from'] ]) ? '<a href="'.$users[ $v['from'] ]['_a'].'">'.htmlspecialchars($users[ $v['from'] ]['name'],ELENT,CHARSET).'</a>' : $v['from_name'],
 					Eleanor::$Language->Date($v['date'],'fdt'),
-					isset($users[ $v['to'] ]) ? '<a href="'.$users[ $v['to'] ]['_a'].'">'.htmlspecialchars($users[ $v['from'] ]['name'],ELENT,CHARSET).'</a>' : '<i>нет</i>',
-					($ist ? '<a href="'.$v['_a'].'" target="_blank">'.$topics[ $v['t'] ]['title'].'</a>' : '<i>нет</i>')
+					isset($users[ $v['to'] ]) ? '<a href="'.$users[ $v['to'] ]['_a'].'">'.htmlspecialchars($users[ $v['from'] ]['name'],ELENT,CHARSET).'</a>' : '<i>РЅРµС‚</i>',
+					($ist ? '<a href="'.$v['_a'].'" target="_blank">'.$topics[ $v['t'] ]['title'].'</a>' : '<i>РЅРµС‚</i>')
 					.($ist && isset($forums[ $v['f'] ][ $v['language'] ]) ? '<br /><span class="small"><a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a></span>' : ''),
 					$v['comment'].($v['value'] ? '<hr />' .$v['value']: ''),
 					$Lst('func',
@@ -1671,7 +1589,7 @@ $(function(){
 			}
 		}
 		else
-			$Lst->empty('Изменения репутации не найдены');
+			$Lst->empty('РР·РјРµРЅРµРЅРёСЏ СЂРµРїСѓС‚Р°С†РёРё РЅРµ РЅР°Р№РґРµРЅС‹');
 
 		$qs+=array(''=>array());
 		$qs['']+=array('fi'=>array());
@@ -1688,13 +1606,13 @@ $(function(){
 			<table class="tabstyle tabform" id="ftable">
 				<tr class="infolabel"><td colspan="4"><a href="#">'.$ltpl['filters'].'</a></td></tr>
 				<tr>
-					<td><b>От кого</b><br />'.Eleanor::$Template->Author(array(''=>$fiufromname),array('fi[from]'=>$qs['']['fi']['from'])).'</td>
-					<td><b>Кому</b><br />'.Eleanor::$Template->Author(array(''=>$fiutoname),array('fi[to]'=>$qs['']['fi']['to'])).'</td>
-					<td><b>'.($fitopic ? '<a href="'.$fitopic['_a'].'">'.$fitopic['title'].'</a>' : 'ID темы').'<br />'.Eleanor::Input('fi[t]',$qs['']['fi']['t'],array('type'=>'number')).'</td>
-					<td><b>Дата<br />'.Dates::Calendar('fi[date]',$qs['']['fi']['date'],false,array('style'=>'width:100px')).'</td>
+					<td><b>РћС‚ РєРѕРіРѕ</b><br />'.Eleanor::$Template->Author(array(''=>$fiufromname),array('fi[from]'=>$qs['']['fi']['from'])).'</td>
+					<td><b>РљРѕРјСѓ</b><br />'.Eleanor::$Template->Author(array(''=>$fiutoname),array('fi[to]'=>$qs['']['fi']['to'])).'</td>
+					<td><b>'.($fitopic ? '<a href="'.$fitopic['_a'].'">'.$fitopic['title'].'</a>' : 'ID С‚РµРјС‹').'<br />'.Eleanor::Input('fi[t]',$qs['']['fi']['t'],array('type'=>'number')).'</td>
+					<td><b>Р”Р°С‚Р°<br />'.Dates::Calendar('fi[date]',$qs['']['fi']['date'],false,array('style'=>'width:100px')).'</td>
 				</tr>
 				<tr>
-					<td colspan="3"><b>Форум<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-не важно-',0).$fiforums).'</td>
+					<td colspan="3"><b>Р¤РѕСЂСѓРј<br />'.Eleanor::Select('fi[forums]',Eleanor::Option('-РЅРµ РІР°Р¶РЅРѕ-',0).$fiforums).'</td>
 					<td style="text-align:center">'.Eleanor::Button($ltpl['apply']).'</td>
 				</tr>
 			</table>
@@ -1711,12 +1629,12 @@ $(function(){
 		</form>
 		<form id="checks-form" action="'.$links['form_items'].'" method="post" onsubmit="return (CheckGroup(this) && ($(\'select\',this).val()==\'dr\' || confirm(\''.$ltpl['are_you_sure'].'\')))">'
 		.$Lst->end()
-		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('Подписок на страницу: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('Удалить','k')).Eleanor::Button('Ok').'</div></form>'
+		.'<div class="submitline" style="text-align:right"><div style="float:left">'.sprintf('РџРѕРґРїРёСЃРѕРє РЅР° СЃС‚СЂР°РЅРёС†Сѓ: %s',$Lst->perpage($pp,$links['pp'])).'</div>'.$ltpl['with_selected'].Eleanor::Select('op',Eleanor::Option('РЈРґР°Р»РёС‚СЊ','k')).Eleanor::Button('Ok').'</div></form>'
 		.Eleanor::$Template->Pages($cnt,$pp,$page,array($links['pages'],$links['first_page'])));
 	}
 
 	/*
-		Страница удаления репутации
+		РЎС‚СЂР°РЅРёС†Р° СѓРґР°Р»РµРЅРёСЏ СЂРµРїСѓС‚Р°С†РёРё
 		#ToDo!
 	*/
 	public static function DeleteReputation()
@@ -1725,7 +1643,7 @@ $(function(){
 	}
 
 	/*
-		Страница обслуживания форума
+		РЎС‚СЂР°РЅРёС†Р° РѕР±СЃР»СѓР¶РёРІР°РЅРёСЏ С„РѕСЂСѓРјР°
 		#ToDo!
 	*/
 	public static function Tasks($values,$statuses,$opforums,$errors,$forums)
@@ -1734,10 +1652,10 @@ $(function(){
 		$progress=false;
 		$Lst=Eleanor::LoadListTemplate('table-form')
 
-		#Пересчет тем в форумах
+		#РџРµСЂРµСЃС‡РµС‚ С‚РµРј РІ С„РѕСЂСѓРјР°С…
 			->form()
 			->begin()
-			->head('Пересчет тем в форумах');
+			->head('РџРµСЂРµСЃС‡РµС‚ С‚РµРј РІ С„РѕСЂСѓРјР°С…');
 		if(isset($statuses['rectop']))
 		{
 			$last='';
@@ -1747,20 +1665,20 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° Р·Р°РІРµСЂС€РµРЅРёСЏ">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РЅР°С‡Р°Р»Р°">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
 				if($v['options']['forums'])
 					foreach($v['options']['forums'] as $f)
@@ -1769,22 +1687,22 @@ $(function(){
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
 					}
 				else
-					$date.=' <i>все форумы</i>';
+					$date.=' <i>РІСЃРµ С„РѕСЂСѓРјС‹</i>';
 				$last.='<li style="color:'.$color.'">'.rtrim($date,', ').'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item('РџСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїСѓСЃРєРё',$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['rectop']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['rectop'],'error'));
-		$Lst->item(array('Форумы',Eleanor::Items('rectop',$opforums['rectop']),'descr'=>'Выберите форумы, в которых нужно пересчитать темы либо не выбирайте ничего для пересчета тем во всех форумах'))
+			$Lst->item('РћС€РёР±РєРё',Eleanor::$Template->Message($errors['rectop'],'error'));
+		$Lst->item(array('Р¤РѕСЂСѓРјС‹',Eleanor::Items('rectop',$opforums['rectop']),'descr'=>'Р’С‹Р±РµСЂРёС‚Рµ С„РѕСЂСѓРјС‹, РІ РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ РїРµСЂРµСЃС‡РёС‚Р°С‚СЊ С‚РµРјС‹ Р»РёР±Рѕ РЅРµ РІС‹Р±РёСЂР°Р№С‚Рµ РЅРёС‡РµРіРѕ РґР»СЏ РїРµСЂРµСЃС‡РµС‚Р° С‚РµРј РІРѕ РІСЃРµС… С„РѕСЂСѓРјР°С…'))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button('Р—Р°РїСѓСЃС‚РёС‚СЊ'))
 			->endform()
 
-		#Пересчет постов в темах
+		#РџРµСЂРµСЃС‡РµС‚ РїРѕСЃС‚РѕРІ РІ С‚РµРјР°С…
 			->form()
 			->begin()
-			->head('Пересчет постов в темах');
+			->head('РџРµСЂРµСЃС‡РµС‚ РїРѕСЃС‚РѕРІ РІ С‚РµРјР°С…');
 		if(isset($statuses['recposts']))
 		{
 			$last='';
@@ -1794,20 +1712,20 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° Р·Р°РІРµСЂС€РµРЅРёСЏ">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РЅР°С‡Р°Р»Р°">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
 				if(isset($v['options']['forums']))
 					foreach($v['options']['forums'] as $f)
@@ -1815,20 +1733,20 @@ $(function(){
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
 				$last.='<li style="color:'.$color.'">'.rtrim($date,', ').'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item('РџСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїСѓСЃРєРё',$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['recposts']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['recposts'],'error'));
-		$Lst->item(array('Форумы',Eleanor::Items('recpostsf',$opforums['recpostsf']),'descr'=>'Выберите форумы, в темах которых нужно пересчитать посты'))
-			->item(array('ИЛИ ID тем',Eleanor::Input('recpostst',$values['recpostst']),'descr'=>'либо введите ID  непосредственно тем'))
+			$Lst->item('РћС€РёР±РєРё',Eleanor::$Template->Message($errors['recposts'],'error'));
+		$Lst->item(array('Р¤РѕСЂСѓРјС‹',Eleanor::Items('recpostsf',$opforums['recpostsf']),'descr'=>'Р’С‹Р±РµСЂРёС‚Рµ С„РѕСЂСѓРјС‹, РІ С‚РµРјР°С… РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ РїРµСЂРµСЃС‡РёС‚Р°С‚СЊ РїРѕСЃС‚С‹'))
+			->item(array('РР›Р ID С‚РµРј',Eleanor::Input('recpostst',$values['recpostst']),'descr'=>'Р»РёР±Рѕ РІРІРµРґРёС‚Рµ ID  РЅРµРїРѕСЃСЂРµРґСЃС‚РІРµРЅРЅРѕ С‚РµРј'))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button('Р—Р°РїСѓСЃС‚РёС‚СЊ'))
 			->endform()
 
-		#Пересчет постов пользователей
+		#РџРµСЂРµСЃС‡РµС‚ РїРѕСЃС‚РѕРІ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 			->form()
 			->begin()
-			->head('Пересчет постов пользователей');
+			->head('РџРµСЂРµСЃС‡РµС‚ РїРѕСЃС‚РѕРІ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№');
 		if(isset($statuses['recuserposts']))
 		{
 			$last='';
@@ -1838,36 +1756,36 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° Р·Р°РІРµСЂС€РµРЅРёСЏ">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РЅР°С‡Р°Р»Р°">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
 				$last.='<li style="color:'.$color.'">'.$date.'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item('РџСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїСѓСЃРєРё',$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['recuserposts']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['recuserposts'],'error'));
-		$Lst->item(array('Пользователи',Eleanor::Input('recuserposts',$values['recuserposts']),'descr'=>'Введите ID пользователей, у которых нужно пересчитать посты, формат: 1,3,5-10 Оставьте поле пустым для пересчета постов у всех.'))
+			$Lst->item('РћС€РёР±РєРё',Eleanor::$Template->Message($errors['recuserposts'],'error'));
+		$Lst->item(array('РџРѕР»СЊР·РѕРІР°С‚РµР»Рё',Eleanor::Input('recuserposts',$values['recuserposts']),'descr'=>'Р’РІРµРґРёС‚Рµ ID РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, Сѓ РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ РїРµСЂРµСЃС‡РёС‚Р°С‚СЊ РїРѕСЃС‚С‹, С„РѕСЂРјР°С‚: 1,3,5-10 РћСЃС‚Р°РІСЊС‚Рµ РїРѕР»Рµ РїСѓСЃС‚С‹Рј РґР»СЏ РїРµСЂРµСЃС‡РµС‚Р° РїРѕСЃС‚РѕРІ Сѓ РІСЃРµС….'))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button('Р—Р°РїСѓСЃС‚РёС‚СЊ'))
 			->endform()
 
-		#Обновление последнего ответившего в тему
+		#РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РІРµС‚РёРІС€РµРіРѕ РІ С‚РµРјСѓ
 			->form()
 			->begin()
-			->head('Обновление последнего ответившего в тему');
+			->head('РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РІРµС‚РёРІС€РµРіРѕ РІ С‚РµРјСѓ');
 		if(isset($statuses['lastposttopic']))
 		{
 			$last='';
@@ -1877,20 +1795,20 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° Р·Р°РІРµСЂС€РµРЅРёСЏ">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РЅР°С‡Р°Р»Р°">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
 				if(isset($v['options']['forums']))
 					foreach($v['options']['forums'] as $f)
@@ -1898,20 +1816,20 @@ $(function(){
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
 				$last.='<li style="color:'.$color.'">'.rtrim($date,', ').'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item('РџСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїСѓСЃРєРё',$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['lastposttopic']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['lastposttopic'],'error'));
-		$Lst->item(array('Форумы',Eleanor::Items('recpostsf',$opforums['lastposttopicf']),'descr'=>'Выберите форумы, в темах которых нужно актуализировать информацию о последнем ответившем'))
-			->item(array('ИЛИ ID тем',Eleanor::Input('recpostst',$values['lastposttopict']),'descr'=>'либо введите ID непосредственно тем'))
+			$Lst->item('РћС€РёР±РєРё',Eleanor::$Template->Message($errors['lastposttopic'],'error'));
+		$Lst->item(array('Р¤РѕСЂСѓРјС‹',Eleanor::Items('lastposttopicf',$opforums['lastposttopicf']),'descr'=>'Р’С‹Р±РµСЂРёС‚Рµ С„РѕСЂСѓРјС‹, РІ С‚РµРјР°С… РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ Р°РєС‚СѓР°Р»РёР·РёСЂРѕРІР°С‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РїРѕСЃР»РµРґРЅРµРј РѕС‚РІРµС‚РёРІС€РµРј'))
+			->item(array('РР›Р ID С‚РµРј',Eleanor::Input('lastposttopict',$values['lastposttopict']),'descr'=>'Р»РёР±Рѕ РІРІРµРґРёС‚Рµ ID РЅРµРїРѕСЃСЂРµРґСЃС‚РІРµРЅРЅРѕ С‚РµРј'))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button('Р—Р°РїСѓСЃС‚РёС‚СЊ'))
 			->endform()
 
-		#Обновление последнего ответившего в форум
+		#РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РІРµС‚РёРІС€РµРіРѕ РІ С„РѕСЂСѓРј
 			->form()
 			->begin()
-			->head('Обновление последнего ответившего в форум');
+			->head('РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РІРµС‚РёРІС€РµРіРѕ РІ С„РѕСЂСѓРј');
 		if(isset($statuses['lastpostforum']))
 		{
 			$last='';
@@ -1921,20 +1839,20 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° Р·Р°РІРµСЂС€РµРЅРёСЏ">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РЅР°С‡Р°Р»Р°">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
 				if($v['options']['forums'])
 					foreach($v['options']['forums'] as $f)
@@ -1943,22 +1861,22 @@ $(function(){
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
 					}
 				else
-					$date.=' <i>все форумы</i>';
+					$date.=' <i>РІСЃРµ С„РѕСЂСѓРјС‹</i>';
 				$last.='<li style="color:'.$color.'">'.rtrim($date,', ').'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item('РџСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїСѓСЃРєРё',$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['lastpostforum']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['lastpostforum'],'error'));
-		$Lst->item(array('Форумы',Eleanor::Items('lastpostforum',$opforums['lastpostforum']),'descr'=>'Выберите форумы, в которых нужно обновить информацию о последнем ответившем либо не выбирайте ничего для пересчета тем во всех форумах'))
+			$Lst->item('РћС€РёР±РєРё',Eleanor::$Template->Message($errors['lastpostforum'],'error'));
+		$Lst->item(array('Р¤РѕСЂСѓРјС‹',Eleanor::Items('lastpostforum',$opforums['lastpostforum']),'descr'=>'Р’С‹Р±РµСЂРёС‚Рµ С„РѕСЂСѓРјС‹, РІ РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ РѕР±РЅРѕРІРёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РїРѕСЃР»РµРґРЅРµРј РѕС‚РІРµС‚РёРІС€РµРј Р»РёР±Рѕ РЅРµ РІС‹Р±РёСЂР°Р№С‚Рµ РЅРёС‡РµРіРѕ РґР»СЏ РїРµСЂРµСЃС‡РµС‚Р° С‚РµРј РІРѕ РІСЃРµС… С„РѕСЂСѓРјР°С…'))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button('Р—Р°РїСѓСЃС‚РёС‚СЊ'))
 			->endform()
 
-		#Удаление мертвых файлов
+		#РЈРґР°Р»РµРЅРёРµ РјРµСЂС‚РІС‹С… С„Р°Р№Р»РѕРІ
 			->form()
 			->begin()
-			->head('Удаление мертвых файлов');
+			->head('РЈРґР°Р»РµРЅРёРµ РјРµСЂС‚РІС‹С… С„Р°Р№Р»РѕРІ');
 		if(isset($statuses['removefiles']))
 		{
 			$last='';
@@ -1968,36 +1886,36 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° Р·Р°РІРµСЂС€РµРЅРёСЏ">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span> ';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РѕС‡РµСЂРµРґРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> ';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
+						$date='<span title="Р”Р°С‚Р° РЅР°С‡Р°Р»Р°">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
 				$last.='<li style="color:'.$color.'">'.$date.'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item('РџСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїСѓСЃРєРё',$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['removefiles']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['removefiles'],'error'));
-		$Lst->item(array('Пользователи',Eleanor::Input('removefilesp',$values['removefilesp']),'descr'=>'Введите ID постовы, у которых нужно искать мертвые файлы, формат: 1,3,5-10. Оставьте поле пустым для поиска мертвых файлов у всех постов.'))
+			$Lst->item('РћС€РёР±РєРё',Eleanor::$Template->Message($errors['removefiles'],'error'));
+		$Lst->item(array('РџРѕР»СЊР·РѕРІР°С‚РµР»Рё',Eleanor::Input('removefilesp',$values['removefilesp']),'descr'=>'Р’РІРµРґРёС‚Рµ ID РїРѕСЃС‚РѕРІС‹, Сѓ РєРѕС‚РѕСЂС‹С… РЅСѓР¶РЅРѕ РёСЃРєР°С‚СЊ РјРµСЂС‚РІС‹Рµ С„Р°Р№Р»С‹, С„РѕСЂРјР°С‚: 1,3,5-10. РћСЃС‚Р°РІСЊС‚Рµ РїРѕР»Рµ РїСѓСЃС‚С‹Рј РґР»СЏ РїРѕРёСЃРєР° РјРµСЂС‚РІС‹С… С„Р°Р№Р»РѕРІ Сѓ РІСЃРµС… РїРѕСЃС‚РѕРІ.'))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button('Р—Р°РїСѓСЃС‚РёС‚СЊ'))
 			->endform()
 
-		#Синхронизация пользователей
+		#РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 			->form()
 			->begin()
-			->head('Синхронизация пользователей');
+			->head(static::$lang['syncusers']);
 		if(isset($statuses['syncusers']))
 		{
 			$last='';
@@ -2007,32 +1925,32 @@ $(function(){
 				{
 					case'done':
 						$color='green';
-						$date='<span title="Дата завершения">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span>';
+						$date='<span title="'.static::$lang['finishdate'].'">'.Eleanor::$Language->Date($v['finish'],'fdt').'</span>';
 					break;
 					case'process':
 						$progress=true;
 						$color='orange';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
+						$date='<span title="'.static::$lang['dateupdate'].'">'.Eleanor::$Language->Date($v['date'],'fdt').'</span> <progress data-id="'.$k.'" value="'.$v['done'].'" max="'.($v['total']>0 ? $v['total'] : 1).'" title="'.($pers=$v['total']>0 ? round($v['done']/$v['total']*100,2) : 0).'%"><span>'.$pers.'</span>%</progress> ';
 					break;
 					case'error':
 						$color='red';
-						$date='<span title="Дата очередного обновления">'.Eleanor::$Language->Date($v['date'],'fdt').'</span>';
+						$date='<span title="'.static::$lang['dateupdate'].'">'.Eleanor::$Language->Date($v['date'],'fdt').'</span>';
 					break;
 					default:
 						$color='black';
-						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span>';
+						$date='<span title="'.static::$lang['begindate'].'">'.Eleanor::$Language->Date($v['start'],'fdt').'</span>';
 				}
 				if(isset($v['options']['date']))
-					$date.=', начало синхронизации: '.Eleanor::$Language->Date($v['options']['date'],'fdt');
+					$date.=', '.static::$lang['startedsync'].': '.Eleanor::$Language->Date($v['options']['date'],'fdt');
 				$last.='<li style="color:'.$color.'">'.$date.'</li>';
 			}
-			$Lst->item('Предыдущие запуски',$last ? '<ul>'.$last.'</ul>' : '');
+			$Lst->item(static::$lang['prevrun'],$last ? '<ul>'.$last.'</ul>' : '');
 		}
 		if(isset($errors['syncusers']))
-			$Lst->item('Ошибки',Eleanor::$Template->Message($errors['syncusers'],'error'));
-		$Lst->item('Начальная дата синхронизации',Dates::Calendar('syncusersdate',$values['syncusersdate']))
+			$Lst->item(static::$lang['error'],Eleanor::$Template->Message($errors['syncusers'],'error'));
+		$Lst->item(static::$lang['sudbs'],Dates::Calendar('syncusersdate',$values['syncusersdate']))
 			->end()
-			->submitline(Eleanor::Button('Запустить'))
+			->submitline(Eleanor::Button(static::$lang['run']))
 			->endform();
 
 		if($progress)
@@ -2041,8 +1959,8 @@ $(function(){
 	}
 
 	/*
-		Обертка для настроек
-		$c Интерфейс настроек
+		РћР±РµСЂС‚РєР° РґР»СЏ РЅР°СЃС‚СЂРѕРµРє
+		$c РРЅС‚РµСЂС„РµР№СЃ РЅР°СЃС‚СЂРѕРµРє
 	*/
 	public static function Options($c)
 	{
@@ -2050,3 +1968,4 @@ $(function(){
 		return$c;
 	}
 }
+TplAdminForum::$lang=Eleanor::$Language->Load(dirname(__DIR__).'/langs/forum-admin-*.php',false);

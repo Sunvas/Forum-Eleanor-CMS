@@ -1,11 +1,9 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.su, http://eleanor-cms.com, http://eleanor-cms.net, http://eleanor.su
-	E-mail: support@eleanor-cms.ru, support@eleanor.su
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Resale is forbidden!
+	Copyright Â© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
 

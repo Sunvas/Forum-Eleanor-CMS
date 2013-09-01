@@ -1,264 +1,349 @@
 <?php
 /*
-	Copyright � Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright © Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
 
 class ForumSubscriptions extends Forum
-{	public function SubscribeTopic($tid,$uid,$type)
-	{		if(in_array($type,array('i','d','w','m','y')))
+{
+	/**
+	 * Подписка на тему / отписка от темы. Возможность доступа в тему не проверяется.
+	 * @param int|array $tid ID темы
+	 * @param int $uid ID пользователя
+	 * @param string $intensity Тип подписки: i (immediately) - немедленная подписка, d (daily) - ежедневная, w (weekly) - еженедельная, m (monthly) - ежемесячная, y (yearly) - ежегодная
+	 * @param int $status Статус темы
+	 */
+	public function SubscribeTopic($tid,$uid,$intensity=0,$status=1)
+	{
+		if(in_array($intensity,array('i','d','w','m','y')))
 		{
-			switch($type)
+			switch($intensity)
 			{
 				case'd':
-					$pl='+INTERVAL 1 DAY';
+					$interval='+INTERVAL 1 DAY';
 				break;
 				case'w':
-					$pl='+INTERVAL 1 WEEK';
+					$interval='+INTERVAL 1 WEEK';
 				break;
 				case'm':
-					$pl='+INTERVAL 1 MONTH';
+					$interval='+INTERVAL 1 MONTH';
 				break;
 				case'y':
-					$pl='+INTERVAL 1 YEAR';
+					$interval='+INTERVAL 1 YEAR';
 				break;
 				default:
-					$pl='';
+					$interval='';
 			}
-			$a=array('uid'=>$uid,'!lastview'=>'NOW()','intensity'=>$type,'!nextsend'=>'NOW()'.$pl);
+			$insert=array('uid'=>$uid,'status'=>$status,'!lastview'=>'NOW()','intensity'=>$intensity,'!nextsend'=>'NOW()'.$interval);
 			if(is_array($tid))
-			{				$cnt=count($tid);
-				foreach($a as &$v)
+			{
+				$cnt=count($tid);
+				foreach($insert as &$v)
 					$v=array_fill(0,$cnt,$v);
 			}
-			$a['t']=$tid;
-			Eleanor::$Db->Query('INSERT INTO `'.$this->config['ts'].'`'.Eleanor::$Db->GenerateInsert($a).' ON DUPLICATE KEY UPDATE `intensity`=\''.$type.'\'');
+			$insert['t']=$tid;
+			Eleanor::$Db->Query('INSERT INTO `'.$this->Forum->config['ts'].'`'.Eleanor::$Db->GenerateInsert($insert).' ON DUPLICATE KEY UPDATE `intensity`=\''.$intensity.'\', `nextsend`=NOW()'.$interval);
 		}
 		else
-			Eleanor::$Db->Delete($this->config['ts'],'`uid`='.$uid.' AND 't''.Eleanor::$Db->In($tid).' LIMIT 1');	}
+			Eleanor::$Db->Delete($this->Forum->config['ts'],'`uid`='.$uid.' AND `t`'.Eleanor::$Db->In($tid).' LIMIT 1');
+	}
 
-	public function SubscribeForum($fid,$lang,$uid,$type)
+	/**
+	 * Подписка на форум / отписка от форума. Возможность доступа не проверяется
+	 * @param int|array $fid ID форума
+	 * @param string $lang язык форума
+	 * @param int $uid ID пользователя
+	 * @param string $intensity Тип подписки: i (immediately) - немедленная подписка, d (daily) - ежедневная, w (weekly) - еженедельная, m (monthly) - ежемесячная, y (yearly) - ежегодная
+	 */
+	public function SubscribeForum($fid,$lang,$uid,$intensity=0)
 	{
-		if(in_array($type,array('i','d','w','m','y')))
+		if(in_array($intensity,array('i','d','w','m','y')))
 		{
-			switch($type)
+			switch($intensity)
 			{
 				case'd':
-					$pl='+INTERVAL 1 DAY';
+					$interval='+INTERVAL 1 DAY';
 				break;
 				case'w':
-					$pl='+INTERVAL 1 WEEK';
+					$interval='+INTERVAL 1 WEEK';
 				break;
 				case'm':
-					$pl='+INTERVAL 1 MONTH';
+					$interval='+INTERVAL 1 MONTH';
 				break;
 				case'y':
-					$pl='+INTERVAL 1 YEAR';
+					$interval='+INTERVAL 1 YEAR';
 				break;
 				default:
-					$pl='';
+					$interval='';
 			}
-			$a=array('uid'=>$uid,'language'=>$lang,'!lastview'=>'NOW()','intensity'=>$type,'!nextsend'=>'NOW()'.$pl);
+			$insert=array('uid'=>$uid,'language'=>$lang,'!lastview'=>'NOW()','intensity'=>$intensity,'!nextsend'=>'NOW()'.$interval);
 			if(is_array($fid))
 			{
 				$cnt=count($fid);
-				foreach($a as &$v)
+				foreach($insert as &$v)
 					$v=array_fill(0,$cnt,$v);
 			}
-			$a['f']=$fid;
-			Eleanor::$Db->Query('INSERT INTO `'.$this->config['fs'].'`'.Eleanor::$Db->GenerateInsert($a).' ON DUPLICATE KEY UPDATE `intensity`=\''.$type.'\'');
+			$insert['f']=$fid;
+			Eleanor::$Db->Query('INSERT INTO `'.$this->Forum->config['fs'].'`'.Eleanor::$Db->GenerateInsert($insert).' ON DUPLICATE KEY UPDATE `intensity`=\''.$intensity.'\', `nextsend`=NOW()'.$interval);
 		}
 		else
-			Eleanor::$Db->Delete($this->config['fs'],'`uid`='.$uid.' AND `f`'.Eleanor::$Db->In($fid).' AND `language`=\''.Eleanor::$Db->Escape($lang).'\' LIMIT 1');
+			Eleanor::$Db->Delete($this->Forum->config['fs'],'`uid`='.$uid.' AND `f`'.Eleanor::$Db->In($fid).' AND `language`=\''.Eleanor::$Db->Escape($lang).'\' LIMIT 1');
 	}
-	public function SendForums($fids=array(),$slimit=100)
-	{		$chtz='';
-		$cache=array();
+
+	/**
+	 * Отправка подписок по форумам. Учитываются ТОЛЬКО активные темы со status=1. А что делать, если на форум подписан
+	 * модератор, который имеет доступ к скрытым и неактивированным темам? Вряд-ли стоит делать и для него отправку
+	 * подписки. Ему скорее нужно делать уведомление о новой теме. Оставим эту задачу на будущее. ToDo?
+	 * @param int|array $fid ID форумов, с которых нужно обработать подписки
+	 * @param int $limit Предел потенциально отправляемых писем
+	 * @return bool Отправка завершена? true - да, false - нет (нужны последующие вызовы этого метода)
+	 */
+	public function SendForums($fid=array(),$limit=100)
+	{
+		$chtz='';#Change TimeZone
+		$oldlang=$this->Core->language;#Old language
+		$cache=$langs=array();#Текстовый кэш первых постов тем, массив языков
+		$sitelink=PROTOCOL.Eleanor::$punycode.Eleanor::$site_path;
 		$Eleanor=Eleanor::getInstance();
-		$R=Eleanor::$Db->Query('SELECT `s`.`f`,`s`.`uid`,`s`.`language`,UNIX_TIMESTAMP(`s`.`lastview`) `lastview`,UNIX_TIMESTAMP(`s`.`lastsend`) `lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone` FROM `'.$this->config['fs'].'` `s` INNER JOIN `'.$this->config['fl'].'` `fl` ON `s`.`f`=`fl`.`id` AND `s`.`language`=`fl`.`language` AND `fl`.`lp_date`>`s`.`lastview` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($fids ? '`s`.`f`'.Eleanor::$Db->In($fids) : '').' LIMIT '.$slimit);		while($a=$R->fetch_assoc())
-		{			$lang=$a['ulanguage'] ? $a['ulanguage'] : Language::$main;			if(!isset($l[$lang]))
-				$l[$lang]=include dirname(__file__).'/letters-'.$lang.'.php';
-			$nl=!$a['language'] || $a['language']==LANGUAGE;
-			$uadd=array('lang'=>$nl ? false : Eleanor::$langs[$a['language']]['uri'],'module'=>$Eleanor->module['name']);
-			#���� UserLink
-			$Eleanor->Url->special=$nl ? '' : $Eleanor->Url->Construct(array('lang'=>Eleanor::$langs[$a['language']]['uri']),false,false);
-			$slimit--;
-			if($a['timezone']!=$chtz)
-			{				date_default_timezone_set($a['timezone'] ? $a['timezone'] : Eleanor::$vars['time_zone']);
-				Eleanor::$Db->SyncTimeZone();
-				$chtz=$a['timezone'];			}
-			if($this->CheckForumAccess($a['f'],$a['groups'] ? explode(',,',trim($a['groups'],',')) : array()))
-			{				$lastview=date('Y-m-d H:i:s');
-				$fl=$uadd+$this->Core->Forums->GetUrl($a['f']);
+
+		$config = $this->Forum->config;
+		$R=Eleanor::$Db->Query('SELECT `s`.`f`,`s`.`uid`,`s`.`language`,`s`.`lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone` FROM `'. $config['fs'].'` `s` INNER JOIN `'. $config['fl'].'` `fl` ON `s`.`f`=`fl`.`id` AND `s`.`language`=`fl`.`language` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `fl`.`lp_date`>`s`.`lastview` AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($fid ? '`s`.`f`'.Eleanor::$Db->In($fid) : '').' ORDER BY `s`.`language` ASC LIMIT '.$limit);
+		while($a=$R->fetch_assoc())
+		{
+			$a['groups']=$a['groups'] ? explode(',,',trim($a['groups'],',')) : array();
+
+			#Проверим, есть ли у нас доступ ко всем темам, а не только к своим
+			$rta=array();#Right All Topic
+			foreach($a['groups'] as $g)
+			{
+				$r=$this->Core->GroupPerms($a['f'],$g);
+				$rta[]=$r['atopics'];
+			}
+
+			if($this->Core->CheckForumAccess($a['f'],$a['groups']) and in_array(1,$rta))
+			{
+				$lang=$a['language'] ? $a['language'] : LANGUAGE;
+				$ulang=$a['ulanguage'] ? $a['ulanguage'] : LANGUAGE;
+				if(!isset($langs[$ulang]))
+					$langs[$ulang]=include __DIR__.'/letters-'.$ulang.'.php';
+
+				#В дальнейшем мы будем генерить ссылки на форумы
+				if($oldlang!=$lang)
+				{
+					$this->Forums->ReDump($lang);
+					$luri=$lang==LANGUAGE ? false : Eleanor::$langs[ $a['language'] ]['uri'];
+					$Eleanor->Url->SetPrefix(array('lang'=>$luri,'module'=>Eleanor::$vars['prefix_free_module']==$Eleanor->module['id'] ? false : $Eleanor->module['name']),false);
+
+					#Костыль ради UserLink
+					$Eleanor->Url->special=$luri ? $Eleanor->Url->Construct(array('lang'=>$luri),false,false) : '';
+
+					$oldlang=$lang;
+				}
+
+				if($a['timezone']!=$chtz)
+				{
+					date_default_timezone_set($a['timezone'] ? $a['timezone'] : Eleanor::$vars['time_zone']);
+					Eleanor::$Db->SyncTimeZone();
+					$chtz=$a['timezone'];
+				}
+
 				if($a['intensity']=='i')
-				{					$R=Eleanor::$Db->Query('SELECT `id`,`uri`,`title`,`author`,`author_id`,`created` FROM `'.$this->config['ft'].'` WHERE `f`='.$a['f'].' AND `language`=\''.$a['language'].'\' AND `status`=1 AND `created`>=FROM_UNIXTIME(\''.$a['lastview'].'\') AND `author_id`!='.$a['uid'].' ORDER BY `created` ASC LIMIT 1');
-					if($temp=$R->fetch_assoc())
-					{						$lastview=$temp['created'];
-						if(!isset($cache[$temp['id']]))
-						{							$R=Eleanor::$Db->Query('SELECT `text` FROM `'.$this->config['fp'].'` WHERE 't'='.$temp['id'].' AND `status`=1 ORDER BY `sortdate` ASC LIMIT 1');
-							if($R->num_rows()==0)
-								continue;
-							list($cache[$temp['id']])=Eleanor::$Db->fetch_row();
-							$cache[$temp['id']]=Strings::CutStr(strip_tags(OwnBB::Parse($cache[$temp['id']])),500);
+				{
+					$R2=Eleanor::$Db->Query('SELECT `id`,`uri`,`title`,`author`,`author_id`,`created` FROM `'. $config['ft'].'` WHERE `f`='.$a['f'].' AND `language`=\''.$a['language'].'\' AND `status`=1 AND `created`>\''.$a['lastview'].'\' AND `author_id`!='.$a['uid'].' ORDER BY `created` ASC LIMIT 1');
+					if($topics=$R2->fetch_assoc())
+					{
+						if(!isset($cache[ $topics['id'] ]))
+						{
+							$R3=Eleanor::$Db->Query('SELECT `text` FROM `'. $config['fp'].'` WHERE `t`='.$topics['id'].' AND `status`=1 ORDER BY `sortdate` ASC LIMIT 1');
+							if(!list($cache[$topics['id']])=$R3->fetch_row())
+									continue;
+							$cache[$topics['id']]=Strings::CutStr(strip_tags(OwnBB::Parse($cache[ $topics['id'] ]),'<br><b><i><span><a>'),500);
 						}
 						$repl=array(
 							'site'=>Eleanor::$vars['site_name'],
-							'sitelink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path,
-							'topiclink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($Eleanor->Url->furl && $temp['uri'] ? $fl+array('t'=>$temp['uri']) : $uadd+array('t'=>array('t'=>$temp['id']))),
-							'forumlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($fl,true,'/'),
-							'author'=>$temp['author'],
-							'authorlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.Eleanor::$Login->UserLink($temp['author'],$temp['author_id']),
-							'created'=>call_user_func(array($lang,'Date'),$temp['created'],'fdt'),
-							'lastview'=>$a['lastview'] ? call_user_func(array($lang,'Date'),$a['lastview'],'fdt') : false,
-							'lastsend'=>$a['lastsend'] ? call_user_func(array($lang,'Date'),$a['lastsend'],'fdt') : false,
-							'forum'=>$this->Core->Forums->dump[$a['f']]['title'],
-							'title'=>$temp['title'],
-							'text'=>$cache[$temp['id']],
+							'sitelink'=>$sitelink,
+							'topiclink'=>$sitelink.$this->Links->Topic($a['f'],$topics['id'],$topics['uri']),
+							'forumlink'=>$sitelink.$this->Links->Forum($a['f']),
+							'authorlink'=>$sitelink.Eleanor::$Login->UserLink($topics['author'],$topics['author_id']),
+							'cflink'=>$this->Links->Forum($a['f'],array('fi'=>array('cf'=>$a['lastview']))),
+							'author'=>htmlspecialchars($topics['author'],ELENT,CHARSET),
+							'created'=>$ulang::Date($topics['created'],'fdt'),
+							'lastview'=>$ulang::Date($a['lastview'],'fdt'),
+							'lastsend'=>$ulang::Date($a['lastsend'],'fdt'),
+							'forum'=>$this->Forums->dump[ $a['f'] ]['title'],
+							'title'=>$topics['title'],
+							'text'=>$cache[ $topics['id'] ],
 							'name'=>htmlspecialchars($a['name'],ELENT,CHARSET),
-							'cancel'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($uadd+array('do'=>'cancelsf','id'=>$a['f']),true,''),
+							'cancel'=>$sitelink.$this->Links->Action('subscribe-forum',$a['f'],array('set'=>0)),
 						);
-						Eleanor::Mail(
+						Email::Simple(
 							$a['email'],
-							Eleanor::ExecHtmlLogic($l[$lang]['subsfi_t'],$repl),
-							Eleanor::ExecHtmlLogic($l[$lang]['subsfi'],$repl)
-						);
-					}				}
-				else
-				{					$R=Eleanor::$Db->Query('SELECT COUNT(`f`) `cnt` FROM `'.$this->config['ft'].'` WHERE `f`='.$a['f'].' AND `status`=1 AND `language`=\''.$a['language'].'\' AND `created`>=FROM_UNIXTIME(\''.$a['lastsend'].'\')');
-					if($temp=$R->fetch_assoc())
-					{
-						$repl=array(
-							'site'=>Eleanor::$vars['site_name'],
-							'sitelink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path,
-							'forumlink'=>$fl=PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($fl,true,'/'),
-							'cblink'=>$fl.($Eleanor->Url->furl ? '?' : '&amp;').Url::Query(array('filter'=>array('cb'=>date('Y-m-d H:i:s',$a['lastview'])))),
-							'forum'=>$this->Core->Forums->dump[$a['f']]['title'],
-							'cnt'=>$temp['cnt'],
-							'lastview'=>$a['lastview'] ? call_user_func(array($lang,'Date'),$a['lastview'],'fdt') : false,
-							'lastsend'=>$a['lastsend'] ? call_user_func(array($lang,'Date'),$a['lastsend'],'fdt') : false,
-							'name'=>htmlspecialchars($a['name'],ELENT,CHARSET),
-							'cancel'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($uadd+array('do'=>'cancelsf','id'=>$a['f'],'lang'=>$a['language'] ? $a['language'] : false),true,''),
-						);
-						Eleanor::Mail(
-							$a['email'],
-							Eleanor::ExecHtmlLogic($l[$lang]['subsf_t'],$repl),
-							Eleanor::ExecHtmlLogic($l[$lang]['subsf'],$repl)
+							Eleanor::ExecBBLogic($langs[$ulang]['subsfi_t'],$repl),
+							Eleanor::ExecBBLogic($langs[$ulang]['subsfi'],$repl)
 						);
 					}
 				}
+				else
+				{
+					$R2=Eleanor::$Db->Query('SELECT COUNT(`f`) `cnt` FROM `'. $config['ft'].'` WHERE `f`='.$a['f'].' AND `status`=1 AND `language`=\''.$a['language'].'\' AND `created`>=\''.$a['lastsend'].'\'');
+					if($topics=$R2->fetch_assoc())
+					{
+						$repl=array(
+							'site'=>Eleanor::$vars['site_name'],
+							'sitelink'=>$sitelink,
+							'forumlink'=>$sitelink.$this->Links->Forum($a['f']),
+							'cflink'=>$this->Links->Forum($a['f'],array('fi'=>array('cf'=>$a['lastsend']))),
+							'cnt'=>$topics['cnt'],
+							'lastview'=>$ulang::Date($a['lastview'],'fdt'),
+							'lastsend'=>$ulang::Date($a['lastsend'],'fdt'),
+							'forum'=>$this->Forums->dump[ $a['f'] ]['title'],
+							'title'=>$topics['title'],
+							'name'=>htmlspecialchars($a['name'],ELENT,CHARSET),
+							'cancel'=>$sitelink.$this->Links->Action('subscribe-forum',$a['f'],array('set'=>0)),
+						);
+						Email::Simple(
+							$a['email'],
+							Eleanor::ExecBbLogic($langs[$ulang]['subsf_t'],$repl),
+							Eleanor::ExecBbLogic($langs[$ulang]['subsf'],$repl)
+						);
+					}
+				}
+				$limit--;
 				switch($a['intensity'])
 				{
 					case'd':
-						$pl='+ INTERVAL 1 DAY';
+						$pl='+INTERVAL 1 DAY';
 					break;
 					case'w':
-						$pl='+ INTERVAL 1 WEEK';
+						$pl='+INTERVAL 1 WEEK';
 					break;
 					case'm':
-						$pl='+ INTERVAL 1 MONTH';
+						$pl='+INTERVAL 1 MONTH';
 					break;
 					case'y':
-						$pl='+ INTERVAL 1 YEAR';
+						$pl='+INTERVAL 1 YEAR';
 					break;
 					default:
 						$pl='';
 				}
-				Eleanor::$Db->Update($this->config['fs'],array('sent'=>1,'!lastsend'=>'NOW()','!nextsend'=>'NOW()'.$pl),'`f`='.$a['f'].' AND `uid`='.$a['uid'].' AND `language`=\''.$a['language'].'\' LIMIT 1');
+				Eleanor::$Db->Update($config['fs'],array('sent'=>1,'!lastsend'=>'NOW()','!nextsend'=>'NOW()'.$pl),'`f`='.$a['f'].' AND `uid`='.$a['uid'].' AND `language`=\''.$a['language'].'\' LIMIT 1');
 			}
 			else
-				Eleanor::$Db->Delete($this->config['fs'],'`f`='.$a['f'].' AND `uid`='.$a['uid'].' AND `language`=\''.$a['language'].'\'');		}
+				Eleanor::$Db->Delete($config['fs'],'`f`='.$a['f'].' AND `uid`='.$a['uid'].' AND `language`=\''.$a['language'].'\'');
+		}
+
 		if($chtz)
 		{
 			date_default_timezone_set(Eleanor::$vars['time_zone']);
 			Eleanor::$Db->SyncTimeZone();
 		}
-		return $slimit>0;
+
+		if($oldlang!=$this->Core->language)
+			$this->Forums->ReDump($this->Core->language);
+
+		return $limit>0;
 	}
 
-	public function SendTopics($tids=array(),$slimit=100)
+	/**
+	 * Отправка подписок по темам
+	 * @param array $tid ID тем, по которым нужно обработать подписки
+	 * @param int $limit Предел потенциально отправляемых писем
+	 * @return bool Отправка завершена? true - да, false - нет (нужны последующие вызовы этого метода)
+	 */
+	public function SendTopics($tid=array(),$limit=100)
 	{
-		$chtz='';
-		$cache=array();
+		$chtz='';#Change TimeZone
+		$oldlang=$this->Core->language;#Old language
+		$cache=$langs=array();#Текстовый кэш первых постов тем, массив языков
+		$sitelink=PROTOCOL.Eleanor::$punycode.Eleanor::$site_path;
 		$Eleanor=Eleanor::getInstance();
-		$R=Eleanor::$Db->Query('SELECT `s`.'t',`s`.`uid`,UNIX_TIMESTAMP(`s`.`lastview`) `lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language`,`u`.`timezone`,`ft`.`f`,`ft`.`uri`,`ft`.`status`,`ft`.`author_id`,`ft`.`title` FROM `'.$this->config['ts'].'` `s` INNER JOIN `'.$this->config['ft'].'` `ft` ON `s`.'t'=`ft`.`id` AND `ft`.`lp_date`>`s`.`lastview` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE (`lp_date`<\''.date('Y-m-d H:i:s').'\' OR `ft`.`pinned`>`s`.`lastview`) AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($tids ? '`s`.'t''.Eleanor::$Db->In($tids) : '').' LIMIT '.$slimit);
+
+		$config = $this->Forum->config;
+		$R=Eleanor::$Db->Query('SELECT `s`.`t`,`s`.`uid`,`s`.`lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone`,`ft`.`f`,`ft`.`language`,`ft`.`uri`,`ft`.`status`,`ft`.`author_id`,`ft`.`title` FROM `'. $config['ts'].'` `s` INNER JOIN `'. $config['ft'].'` `ft` ON `s`.`t`=`ft`.`id` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `ft`.`lp_date`>`s`.`lastview` AND `s`.`status`=1 AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($tid ? '`s`.`t`'.Eleanor::$Db->In($tid) : '').' ORDER BY `ft`.`language` ASC LIMIT '.$limit);
 		while($a=$R->fetch_assoc())
 		{
-			$lang=$a['language'] ? $a['language'] : Language::$main;
-			if(!isset($l[$lang]))
-				$l[$lang]=include dirname(__file__).'/letters-'.$lang.'.php';
-			$nl=!$a['language'] || $a['language']==LANGUAGE;
-			$uadd=array('lang'=>$nl ? false : Eleanor::$langs[$a['language']]['uri'],'module'=>$Eleanor->module['name']);
-			#���� UserLink
-			$Eleanor->Url->special=$nl ? '' : $Eleanor->Url->Construct(array('lang'=>Eleanor::$langs[$a['language']]['uri']),false,false);
-			$slimit--;
-			if($a['timezone']!=$chtz)
+			$a['groups']=$a['groups'] ? explode(',,',trim($a['groups'],',')) : array();
+
+			if($this->Core->CheckTopicAccess(array('author_id'=>$a['author_id'],'id'=>$a['t'],'f'=>$a['f']),array('id'=>$a['uid'],'groups'=>$a['groups'])))
 			{
-				date_default_timezone_set($a['timezone'] ? $a['timezone'] : Eleanor::$vars['time_zone']);
-				Eleanor::$Db->SyncTimeZone();
-				$chtz=$a['timezone'];
-			}
-			if($this->CheckTopicAccess($a))
-			{
-				$lastview=date('Y-m-d H:i:s');
-				$fl=$uadd+$this->Core->Forums->GetUrl($a['f']);
-				$R=Eleanor::$Db->Query('SELECT `id`,`author`,`author_id`,`created`,`text` FROM `'.$this->config['fp'].'` WHERE 't'='.$a['t'].' AND `status`=1 AND `sortdate`>FROM_UNIXTIME(\''.$a['lastview'].'\') AND `author_id`!='.$a['uid'].' ORDER BY `sortdate` ASC LIMIT 1');
-				if($post=$R->fetch_assoc())
+				$lang=$a['language'] ? $a['language'] : LANGUAGE;
+				$ulang=$a['ulanguage'] ? $a['ulanguage'] : LANGUAGE;
+				if(!isset($langs[$ulang]))
+					$langs[$ulang]=include __DIR__.'/letters-'.$ulang.'.php';
+
+				#В дальнейшем мы будем генерить ссылки на форумы
+				if($oldlang!=$lang)
+				{
+					$this->Forums->ReDump($lang);
+					$luri=$lang==LANGUAGE ? false : Eleanor::$langs[ $a['language'] ]['uri'];
+					$Eleanor->Url->SetPrefix(array('lang'=>$luri,'module'=>Eleanor::$vars['prefix_free_module']==$Eleanor->module['id'] ? false : $Eleanor->module['name']),false);
+
+					#Костыль ради UserLink
+					$Eleanor->Url->special=$luri ? $Eleanor->Url->Construct(array('lang'=>$luri),false,false) : '';
+
+					$oldlang=$lang;
+				}
+
+				if($a['timezone']!=$chtz)
+				{
+					date_default_timezone_set($a['timezone'] ? $a['timezone'] : Eleanor::$vars['time_zone']);
+					Eleanor::$Db->SyncTimeZone();
+					$chtz=$a['timezone'];
+				}
+
+				$R2=Eleanor::$Db->Query('SELECT `id`,`author`,`author_id`,`created`,`text` FROM `'. $config['fp'].'` WHERE `t`='.$a['t'].' AND `status`=1 AND `sortdate`>\''.$a['lastview'].'\' AND `author_id`!='.$a['uid'].' ORDER BY `sortdate` ASC LIMIT 1');
+				if($post=$R2->fetch_assoc())
 					if($a['intensity']=='i')
 					{
-						$lastview=$post['created'];
-						if(!isset($cache[$post['id']]))
-							$cache[$post['id']]=Strings::CutStr(strip_tags(OwnBB::Parse($post['text'])),500);
+						if(!isset($cache[ $post['id'] ]))
+							$cache[ $post['id'] ]=Strings::CutStr(strip_tags(OwnBB::Parse($post['text']),'<br><b><i><span><a>'),500);
 						$repl=array(
 							'site'=>Eleanor::$vars['site_name'],
-							'sitelink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path,
-							'topiclink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($Eleanor->Url->furl && $a['uri'] ? $fl+array('t'=>$a['uri']) : $uadd+array('t'=>array('t'=>$a['t']))),
-							'forumlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($fl,true,'/'),
-							'postlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($uadd+array('do'=>'findpost','id'=>$post['id']),true,''),
-							'author'=>$post['author'],
-							'authorlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.Eleanor::$Login->UserLink($post['author'],$post['author_id']),
-							'created'=>call_user_func(array($lang,'Date'),$post['created'],'fdt'),
-							'lastview'=>$a['lastview'] ? call_user_func(array($lang,'Date'),$a['lastview'],'fdt') : false,
-							'lastsend'=>$a['lastsend'] ? call_user_func(array($lang,'Date'),$a['lastsend'],'fdt') : false,
-							'forum'=>$this->Core->Forums->dump[$a['f']]['title'],
+							'sitelink'=>$sitelink,
+							'topiclink'=>$sitelink.$this->Links->Topic($a['f'],$a['t'],$a['uri']),
+							'forumlink'=>$sitelink.$this->Links->Forum($a['f']),
+							'postlink'=>$sitelink.$this->Links->Action('find-post',$post['id']),
+							'author'=>htmlspecialchars($post['author'],ELENT,CHARSET),
+							'authorlink'=>$sitelink.Eleanor::$Login->UserLink($post['author'],$post['author_id']),
+							'created'=>$ulang::Date($post['created'],'fdt'),
+							'lastview'=>$ulang::Date($a['lastview'],'fdt'),
+							'lastsend'=>$ulang::Date($a['lastsend'],'fdt'),
+							'forum'=>$this->Forums->dump[ $a['f'] ]['title'],
 							'title'=>$a['title'],
-							'text'=>$cache[$post['id']],
+							'text'=>$cache[ $post['id'] ],
 							'name'=>htmlspecialchars($a['name'],ELENT,CHARSET),
-							'cancel'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($uadd+array('do'=>'cancelst','id'=>$a['t']),true,''),
+							'cancel'=>$sitelink.$this->Links->Action('subscribe-topic',$a['t'],array('set'=>0)),
 						);
-						Eleanor::Mail(
+						Email::Simple(
 							$a['email'],
-							Eleanor::ExecHtmlLogic($l[$lang]['substi_t'],$repl),
-							Eleanor::ExecHtmlLogic($l[$lang]['substi'],$repl)
+							Eleanor::ExecBbLogic($langs[$lang]['substi_t'],$repl),
+							Eleanor::ExecBbLogic($langs[$lang]['substi'],$repl)
 						);
 					}
 					else
 					{
-						$R=Eleanor::$Db->Query('SELECT COUNT('t') `cnt` FROM `'.$this->config['fp'].'` WHERE 't'='.$a['t'].' AND `status`=1 AND `sortdate`>FROM_UNIXTIME(\''.$a['lastsend'].'\')');
-						if($temp=$R->fetch_assoc())
+						$R2=Eleanor::$Db->Query('SELECT COUNT(`t`) `cnt` FROM `'. $config['fp'].'` WHERE `t`='.$a['t'].' AND `status`=1 AND `sortdate`>FROM_UNIXTIME(\''.$a['lastsend'].'\')');
+						if($posts=$R2->fetch_assoc())
 						{
 							$repl=array(
 								'site'=>Eleanor::$vars['site_name'],
-								'sitelink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path,
-								'topiclink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($Eleanor->Url->furl && $a['uri'] ? $fl+array('t'=>$a['uri']) : $uadd+array('t'=>array('t'=>$a['t']))),
-								'forumlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($fl,true,'/'),
-								'postlink'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($uadd+array('do'=>'findpost','id'=>$post['id']),true,''),
-								'forum'=>$this->Core->Forums->dump[$a['f']]['title'],
-								'cnt'=>$temp['cnt'],
-								'lastview'=>$a['lastview'] ? call_user_func(array($lang,'Date'),$a['lastview'],'fdt') : false,
-								'lastsend'=>$a['lastsend'] ? call_user_func(array($lang,'Date'),$a['lastsend'],'fdt') : false,
+								'sitelink'=>$sitelink,
+								'topiclink'=>$sitelink.$this->Links->Topic($a['f'],$a['t'],$a['uri']),
+								'forumlink'=>$sitelink.$this->Links->Forum($a['f']),
+								'forum'=>$this->Forums->dump[ $a['f'] ]['title'],
+								'cnt'=>$posts['cnt'],
+								'lastview'=>$ulang::Date($a['lastview'],'fdt'),
+								'lastsend'=>$ulang::Date($a['lastsend'],'fdt'),
 								'name'=>htmlspecialchars($a['name'],ELENT,CHARSET),
 								'title'=>$a['title'],
-								'cancel'=>PROTOCOL.Eleanor::$domain.Eleanor::$site_path.$Eleanor->Url->Construct($uadd+array('do'=>'cancelsf','id'=>$a['id']),true,''),
+								'cancel'=>$sitelink.$this->Links->Action('subscribe-topic',$a['t'],array('set'=>0)),
 							);
-							Eleanor::Mail(
+							Email::Simple(
 								$a['email'],
-								Eleanor::ExecHtmlLogic($l[$lang]['subst_t'],$repl),
-								Eleanor::ExecHtmlLogic($l[$lang]['subst'],$repl)
+								Eleanor::ExecBbLogic($langs[$lang]['subst_t'],$repl),
+								Eleanor::ExecBbLogic($langs[$lang]['subst'],$repl)
 							);
 						}
 					}
@@ -279,37 +364,21 @@ class ForumSubscriptions extends Forum
 					default:
 						$pl='';
 				}
-				Eleanor::$Db->Update($this->config['ts'],array('sent'=>1,'!lastsend'=>'NOW()','!nextsend'=>'NOW()'.$pl),''t'='.$a['t'].' AND `uid`='.$a['uid'].' LIMIT 1');
+				Eleanor::$Db->Update($config['ts'],array('sent'=>1,'!lastsend'=>'NOW()','!nextsend'=>'NOW()'.$pl),'`t`='.$a['t'].' AND `uid`='.$a['uid'].' LIMIT 1');
 			}
 			else
-				Eleanor::$Db->Delete($this->config['ts'],'`f`='.$a['f'].' AND `uid`='.$a['uid']);
+				Eleanor::$Db->Delete($config['ts'],'`f`='.$a['f'].' AND `uid`='.$a['uid']);
 		}
+
 		if($chtz)
 		{
 			date_default_timezone_set(Eleanor::$vars['time_zone']);
 			Eleanor::$Db->SyncTimeZone();
 		}
-		return $slimit>0;
-	}
 
-	public function ForumAccess($f,$groups)
-	{		$rights=array();
-		foreach($groups as &$g)
-		{
-			$fr=$this->Core->GroupPerms($f,$g);
-			foreach($fr as $k=>&$v)
-				$rights[$k][]=$v;
-		}
-		if(isset($this->Forums->dump[$f]))
-			return$rights;
-	}
+		if($oldlang!=$this->Core->language)
+			$this->Forums->ReDump($this->Core->language);
 
-	public function CheckForumAccess($f,$groups)
-	{		$r=$this->ForumAccess($f,$groups);
-		return $r && in_array(1,$r['access']);
+		return $limit>0;
 	}
-
-	public function CheckTopicAccess($a)
-	{		$r=$this->ForumAccess($a['f'],$a['groups'] ? explode(',,',trim($a['groups'],',')) : array());
-		return$r && in_array(1,$r['access']) && in_array(1,$r['read']) && (in_array(1,$r['topics']) && $a['uid']==$a['author_id'] && $a['status']!=0 || in_array(1,$r['atopics']) && $a['uid']!=$a['author_id'] && $a['status']==1);	}
 }

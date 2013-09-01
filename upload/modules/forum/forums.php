@@ -1,78 +1,89 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright В© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 
-	Большинство кода сего класса "позаимствовано" из Categories.
+	Р‘РѕР»СЊС€РёРЅСЃС‚РІРѕ РєРѕРґР° СЃРµРіРѕ РєР»Р°СЃСЃР° "РїРѕР·Р°РёРјСЃС‚РІРѕРІР°РЅРѕ" РёР· Categories.
 */
 
 class ForumForums extends Forum
 {
 	public static
-		$rights=array(#Права по глобальному умолчанию
-			'access'=>true,#Полный доступ к форуму
-			'topics'=>true,#Просмотр списка тем
-			'atopics'=>true,#Разершить просмотр списка всех тем, а не только своих (AllTopics)
-			'read'=>true,#Разрешить чтение тем
-			'attach'=>true,#Доступ к аттачам
-			'post'=>true,#Разрешить ответ в свои темы
-			'apost'=>true,#Разрешить ответ в чужие темы
-			'edit'=>true,#Правка сообщений
-			'editlimit'=>0,#Временное ограничение на правку сообщений в секундах
-			'new'=>true,#Позволить создавать новые темы
-			'mod'=>false,#Пользволить править / удалять сообщения в своих темах
-			'close'=>false,#Позволить закрывать свои темы
-			'deletet'=>false,#Позволить удалять свои темы
-			'delete'=>false,#Позволить удалять свои посты
-			'editt'=>true,#Позволить править заголовки своих тем
-			'complaint'=>true,#Позволить использование кнопки "жалоба".
-			'canclose'=>false,#Позволить работать с закрытой темой, как с открытой? (отвечать, править, публиковать)
+		$rights=array(#РџСЂР°РІР° РїРѕ РіР»РѕР±Р°Р»СЊРЅРѕРјСѓ СѓРјРѕР»С‡Р°РЅРёСЋ
+			'access'=>true,#РџРѕР»РЅС‹Р№ РґРѕСЃС‚СѓРї Рє С„РѕСЂСѓРјСѓ
+			'topics'=>true,#РџСЂРѕСЃРјРѕС‚СЂ СЃРїРёСЃРєР° С‚РµРј
+			'atopics'=>true,#Р Р°Р·РµСЂС€РёС‚СЊ РїСЂРѕСЃРјРѕС‚СЂ СЃРїРёСЃРєР° РІСЃРµС… С‚РµРј, Р° РЅРµ С‚РѕР»СЊРєРѕ СЃРІРѕРёС… (AllTopics)
+			'read'=>true,#Р Р°Р·СЂРµС€РёС‚СЊ С‡С‚РµРЅРёРµ С‚РµРј
+			'attach'=>true,#Р”РѕСЃС‚СѓРї Рє Р°С‚С‚Р°С‡Р°Рј
+			'post'=>true,#Р Р°Р·СЂРµС€РёС‚СЊ РѕС‚РІРµС‚ РІ СЃРІРѕРё С‚РµРјС‹
+			'apost'=>true,#Р Р°Р·СЂРµС€РёС‚СЊ РѕС‚РІРµС‚ РІ С‡СѓР¶РёРµ С‚РµРјС‹
+			'edit'=>true,#РџСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№
+			'editlimit'=>0,#Р’СЂРµРјРµРЅРЅРѕРµ РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° РїСЂР°РІРєСѓ СЃРѕРѕР±С‰РµРЅРёР№ РІ СЃРµРєСѓРЅРґР°С…
+			'new'=>true,#РџРѕР·РІРѕР»РёС‚СЊ СЃРѕР·РґР°РІР°С‚СЊ РЅРѕРІС‹Рµ С‚РµРјС‹
+			'mod'=>false,#РџРѕР»СЊР·РІРѕР»РёС‚СЊ РїСЂР°РІРёС‚СЊ / СѓРґР°Р»СЏС‚СЊ СЃРѕРѕР±С‰РµРЅРёСЏ РІ СЃРІРѕРёС… С‚РµРјР°С…
+			'close'=>false,#РџРѕР·РІРѕР»РёС‚СЊ Р·Р°РєСЂС‹РІР°С‚СЊ СЃРІРѕРё С‚РµРјС‹
+			'deletet'=>false,#РџРѕР·РІРѕР»РёС‚СЊ СѓРґР°Р»СЏС‚СЊ СЃРІРѕРё С‚РµРјС‹
+			'delete'=>false,#РџРѕР·РІРѕР»РёС‚СЊ СѓРґР°Р»СЏС‚СЊ СЃРІРѕРё РїРѕСЃС‚С‹
+			'editt'=>true,#РџРѕР·РІРѕР»РёС‚СЊ РїСЂР°РІРёС‚СЊ Р·Р°РіРѕР»РѕРІРєРё СЃРІРѕРёС… С‚РµРј
+			'complaint'=>true,#РџРѕР·РІРѕР»РёС‚СЊ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РєРЅРѕРїРєРё "Р¶Р°Р»РѕР±Р°".
+			'canclose'=>false,#РџРѕР·РІРѕР»РёС‚СЊ СЂР°Р±РѕС‚Р°С‚СЊ СЃ Р·Р°РєСЂС‹С‚РѕР№ С‚РµРјРѕР№, РєР°Рє СЃ РѕС‚РєСЂС‹С‚РѕР№? (РѕС‚РІРµС‡Р°С‚СЊ, РїСЂР°РІРёС‚СЊ, РїСѓР±Р»РёРєРѕРІР°С‚СЊ)
 		),
-		$moder=array(#Права модератора глобальному по умолчанию
-			'movet'=>false,#Перемещение тем
-			'move'=>false,#Перемещение сообщений
-			'deletet'=>false,#Удаление тем
-			'delete'=>false,#Удаление сообщений
-			'editt'=>false,#Правка тем
-			'edit'=>false,#Правка сообщений
-			'chstatust'=>false,#Изменения статуса тем
-			'chstatus'=>false,#Изменение статуса сообщений
-			'pin'=>false,#Закреплять / удалять закрепление с тем
-			'mmovet'=>false,#Перемещать темы
-			'mmove'=>false,#Перемещать сообщения
-			'mdeletet'=>false,#Мульти удаление тем
-			'mdelete'=>false,#Мультиудаление сообщений
-			'user_warn'=>false,#Предупреждение пользователей
-			'viewip'=>false,#Открыть просмотр IP адресов сообщений
-			'opcl'=>false,#Открывать закрывать темы
-			'mopcl'=>false,#Мультиоткрытие / закрытие тем
-			'mpin'=>false,#Мульти закрепление / снятие тем
-			'merget'=>false,#Объединение тем
-			'merge'=>false,#Объединение сообщений
-			'editq'=>false,#Редактирование опросов в сообщениях
-			'mchstatust'=>false,#Мультиизменение статусов тем
-			'mchstatus'=>false,#Мультиизменение статусов сообщений
-			'editrep'=>false,#Редактирование репутации
+		$moder=array(#РџСЂР°РІР° РјРѕРґРµСЂР°С‚РѕСЂР° РіР»РѕР±Р°Р»СЊРЅРѕРјСѓ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+			'movet'=>false,#РџРµСЂРµРјРµС‰РµРЅРёРµ С‚РµРј
+			'move'=>false,#РџРµСЂРµРјРµС‰РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№ (РІРєР»СЋС‡Р°СЏ "РјРµРЅСЏС‚СЊ РјРµСЃС‚Р°РјРё")
+			'deletet'=>false,#РЈРґР°Р»РµРЅРёРµ С‚РµРј
+			'delete'=>false,#РЈРґР°Р»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№
+			'editt'=>false,#РџСЂР°РІРєР° С‚РµРј
+			'edit'=>false,#РџСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№
+			'chstatust'=>false,#РР·РјРµРЅРµРЅРёСЏ СЃС‚Р°С‚СѓСЃР° С‚РµРј
+			'chstatus'=>false,#РР·РјРµРЅРµРЅРёРµ СЃС‚Р°С‚СѓСЃР° СЃРѕРѕР±С‰РµРЅРёР№
+			'pin'=>false,#Р—Р°РєСЂРµРїР»СЏС‚СЊ / СѓРґР°Р»СЏС‚СЊ Р·Р°РєСЂРµРїР»РµРЅРёРµ СЃ С‚РµРј
+			'mmovet'=>false,#РџРµСЂРµРјРµС‰Р°С‚СЊ С‚РµРјС‹
+			'mmove'=>false,#РџРµСЂРµРјРµС‰Р°С‚СЊ СЃРѕРѕР±С‰РµРЅРёСЏ
+			'mdeletet'=>false,#РњСѓР»СЊС‚Рё СѓРґР°Р»РµРЅРёРµ С‚РµРј
+			'mdelete'=>false,#РњСѓР»СЊС‚РёСѓРґР°Р»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№
+			'user_warn'=>false,#РџСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+			'viewip'=>false,#РћС‚РєСЂС‹С‚СЊ РїСЂРѕСЃРјРѕС‚СЂ IP Р°РґСЂРµСЃРѕРІ СЃРѕРѕР±С‰РµРЅРёР№
+			'opcl'=>false,#РћС‚РєСЂС‹РІР°С‚СЊ Р·Р°РєСЂС‹РІР°С‚СЊ С‚РµРјС‹
+			'mopcl'=>false,#РњСѓР»СЊС‚РёРѕС‚РєСЂС‹С‚РёРµ / Р·Р°РєСЂС‹С‚РёРµ С‚РµРј
+			'mpin'=>false,#РњСѓР»СЊС‚Рё Р·Р°РєСЂРµРїР»РµРЅРёРµ / СЃРЅСЏС‚РёРµ С‚РµРј
+			'merget'=>false,#РћР±СЉРµРґРёРЅРµРЅРёРµ С‚РµРј
+			'merge'=>false,#РћР±СЉРµРґРёРЅРµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№
+			'editq'=>false,#Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РѕРїСЂРѕСЃРѕРІ РІ СЃРѕРѕР±С‰РµРЅРёСЏС…
+			'mchstatust'=>false,#РњСѓР»СЊС‚РёРёР·РјРµРЅРµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРІ С‚РµРј
+			'mchstatus'=>false,#РњСѓР»СЊС‚РёРёР·РјРµРЅРµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРІ СЃРѕРѕР±С‰РµРЅРёР№
+			'editrep'=>false,#Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ СЂРµРїСѓС‚Р°С†РёРё
 		);
 
 	public
-		$dump;#Дамп БД категорий, в удобном упорядоченном виде
+		$dump;#Р”Р°РјРї Р‘Р” РєР°С‚РµРіРѕСЂРёР№, РІ СѓРґРѕР±РЅРѕРј СѓРїРѕСЂСЏРґРѕС‡РµРЅРЅРѕРј РІРёРґРµ
 
-	public function __construct()
+	public function __construct($config=false,$Base)
 	{
-		$r=Eleanor::$Cache->Get($this->Forum->config['n'].'_'.Language::$main);
+		parent::__construct($config);
+		$this->ReDump($Base->Core->language);
+	}
+
+	/**
+	 * РџРµСЂРµСЃРѕР·РґР°РЅРёРµ РґР°РјРїР° С„РѕСЂСѓРјРѕРІ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СЏР·С‹РєР°. РќР°РїСЂРёРјРµСЂ, РїСЂРё СЂР°СЃСЃС‹Р»РєРµ РµСЃС‚СЊ РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚СЊ СЂР°Р±РѕС‚Р°С‚СЊ СЃ РґР°РјРїРѕРј
+	 * С„РѕСЂСѓРјРѕРІ РїСЂРѕРёР·РІРѕР»СЊРЅРѕРіРѕ СЏР·С‹РєР°.
+	 * @param $lang РЇР·С‹Рє
+	 * @return array Р”Р°РјРї
+	 */
+	public function ReDump($lang)
+	{
+		$r=Eleanor::$Cache->Get($this->Forum->config['n'].'_'.$lang);
 		if($r===false)
 		{
-			$R=Eleanor::$Db->Query('SELECT `id`,`language`,`parent`,`parents`,`pos`,`is_category`,`moderators`,`permissions`,`title`,`uri`,`hide_attach`,`reputation` FROM `'.$this->Forum->config['f'].'` INNER JOIN `'.$this->Forum->config['fl'].'` USING(`id`) WHERE `language` IN (\'\',\''.Language::$main.'\')');
+			$R=Eleanor::$Db->Query('SELECT `id`,`language`,`parent`,`parents`,`pos`,`is_category`,`inc_posts`,`reputation`,`moderators`,`permissions`,`hide_attach`,`prefixes`,`title`,`uri` FROM `'.$this->Forum->config['f'].'` INNER JOIN `'.$this->Forum->config['fl'].'` USING(`id`) WHERE `language` IN (\'\',\''.$lang.'\')');
 			$maxlen=0;
 			$r=$to2sort=$to1sort=$db=array();
 			while($a=$R->fetch_assoc())
 			{
+				$a['prefixes']=$a['prefixes'] ? explode(',,',trim($a['prefixes'],',')) : array();
+			
 				if($a['parents'])
 				{
 					$cnt=substr_count($a['parents'],',');
@@ -96,26 +107,23 @@ class ForumForums extends Forum
 
 			natsort($to2sort);
 			foreach($to2sort as $k=>&$v)
-			{
-				$db[$k]['parents']=rtrim($db[$k]['parents'],',');
-				$r[(int)$db[$k]['id']]=$db[$k];
-			}
+				$r[(int)$db[$k]['id']]=array_slice($db[$k],1);
+
 			foreach($r as &$v)
 			{
 				$v['permissions']=$v['permissions'] ? (array)unserialize($v['permissions']) : array();
 				$v['moderators']=$v['moderators'] ? explode(',,',trim($v['moderators'],',')) : array();
 			}
-			Eleanor::$Cache->Put($this->Forum->config['n'].'_'.Language::$main,$r,86400,false);
+			Eleanor::$Cache->Put($this->Forum->config['n'].'_'.$lang,$r,86400,false);
 		}
 		return$this->dump=$r;
 	}
 
 	/**
-	 * Функция осуществляет поиск по дампу форумов исходя из переданного ID или последовательности URI конкретного форума
-	 *
-	 * @param int|array $id Числовой идентификатор категории либо массив последовательности URI
+	 * РџРѕРёСЃРє РїРѕ РґР°РјРїСѓ С„РѕСЂСѓРјРѕРІ РёСЃС…РѕРґСЏ РёР· РїРµСЂРµРґР°РЅРЅРѕРіРѕ ID РёР»Рё РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё URI
+	 * @param int|array $id ID Р»РёР±Рѕ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ URI
 	 */
-	public function GetCategory($id)
+	public function GetForum($id)
 	{
 		if(is_array($id))
 		{
@@ -131,53 +139,57 @@ class ForumForums extends Forum
 						break;
 					}
 					$curr=array_shift($id);
-					$parent=$v['id'];
+					$parent=$k;
 				}
 		}
 		if(is_scalar($id) and isset($this->dump[$id]))
-		{
-			$this->dump[$id]['description']=OwnBB::Parse($this->dump[$id]['description']);
-			return$this->dump[$id];
-		}
+			return$this->dump[$id]+array('id'=>$id);
 	}
 
 	/**
-	 * Получение списка форумов в виде option-ов, для select-a: <option value="ID" selected>VALUE</option>
-	 *
-	 * @param int|array $sel Пункты, которые будут отмечены
-	 * @param int|array $no ИДы исключаемых форумов (не попадут и их дети)
+	 * РџРѕР»СѓС‡РµРЅРёРµ СЃРїРёСЃРєР° С„РѕСЂСѓРјРѕРІ РІ РІРёРґРµ option-РѕРІ, РґР»СЏ select-a: <option value="ID" selected>VALUE</option>
+	 * @param int|array $sel РџСѓРЅРєС‚С‹, РєРѕС‚РѕСЂС‹Рµ Р±СѓРґСѓС‚ РѕС‚РјРµС‡РµРЅС‹
+	 * @param int|array $no РР”С‹ РёСЃРєР»СЋС‡Р°РµРјС‹С… С„РѕСЂСѓРјРѕРІ (РЅРµ РїРѕРїР°РґСѓС‚ Рё РёС… РґРµС‚Рё)
+	 * @param bool $actcats РљР°С‚РµРіРѕСЂРёРё С‚Р°Рє Р¶Рµ Р°РєС‚РёРІРЅС‹
 	 */
-	public function SelectOptions($sel=array(),$no=array())
+	public function SelectOptions($sel=array(),$no=array(),$actcats=true)
 	{
 		$opts='';
 		$sel=(array)$sel;
 		$no=(array)$no;
+
+		$nocheck=Eleanor::$service=='admin';
 		foreach($this->dump as $k=>&$v)
 		{
-			$access=false;
-			foreach($this->Core->ug as &$g)
+			if($nocheck)
+				$access=true;
+			else
 			{
-				$r=$this->Core->GroupPerms($k,$g);
-				if($r['access'])
+				$access=false;
+				foreach($this->Core->ug as $g)
 				{
-					$access=true;
-					break;
+					$r=$this->Core->GroupPerms($k,$g);
+					if($r['access'])
+					{
+						$access=true;
+						break;
+					}
 				}
 			}
 
 			$p=$v['parents'] ? explode(',',$v['parents']) : array();
-			$p[]=$v['id'];
+			$p[]=$k;
 			if(!$access or array_intersect($no,$p))
 				continue;
-			$opts.=Eleanor::Option(($v['parents'] ? str_repeat('&nbsp;',substr_count($v['parents'],',')+1).'›&nbsp;' : '').$v['title'],$v['id'],in_array($v['id'],$sel),array(),2);
+			$opts.=Eleanor::Option(($v['parents'] ? str_repeat('&nbsp;',substr_count($v['parents'],',')+1).'вЂє&nbsp;' : '').$v['title'],$k,in_array($k,$sel),array('disabled'=>!$actcats and $v['is_category']),2);
 		}
 		return$opts;
 	}
 
 	/**
-	 * Получение массива URI для дальнейшего передачи его в класс URL с последующей генерации ссылки
+	 * РџРѕР»СѓС‡РµРЅРёРµ РјР°СЃСЃРёРІР° URI РґР»СЏ РґР°Р»СЊРЅРµР№С€РµРіРѕ РїРµСЂРµРґР°С‡Рё РµРіРѕ РІ РєР»Р°СЃСЃ URL СЃ РїРѕСЃР»РµРґСѓСЋС‰РµР№ РіРµРЅРµСЂР°С†РёРё СЃСЃС‹Р»РєРё
 	 *
-	 * @param int $id Числовой идентификатор форума
+	 * @param int $id Р§РёСЃР»РѕРІРѕР№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С„РѕСЂСѓРјР°
 	 */
 	public function GetUri($id)
 	{
@@ -200,5 +212,85 @@ class ForumForums extends Forum
 		}
 		$params[]=array($lastu,'f'=>$id);
 		return$params;
+	}
+
+	/**
+	 * РџРѕР»СѓС‡РµРЅРёРµ РІСЃРµС… РІРѕР·РјРѕР¶РЅС‹С… СЏР·С‹РєРѕРІ С„РѕСЂСѓРјР°
+	 * @param int $id ID С„РѕСЂСѓРјР°
+	 */
+	public function GetLanguages($id)
+	{
+		$forum=&$this->dump[$id];
+		if(!isset($forum['_languages']))
+		{
+			if(Eleanor::$vars['multilang'])
+			{
+				$R=Eleanor::$Db->Query('SELECT `language` FROM `'.$this->Forum->config['fl'].'` WHERE `id`='.$id.' AND `language`'.Eleanor::$Db->In(array_keys(Eleanor::$langs)));
+				$forum['_languages']=$R->num_rows>0 ? array() : false;
+				while($a=$R->fetch_assoc())
+					$forum['_languages'][]=$a['language'];
+			}
+			else
+				$forum['_languages']=false;
+		}
+		return $forum['_languages'];
+	}
+
+	/**
+	 * РџРѕРјРµС‚РєР° РєРѕРЅРєСЂРµС‚РЅРѕРіРѕ С„РѕСЂСѓРјР° РїСЂРѕС‡С‚РµРЅРЅС‹Рј. РљР°РєРёС…-Р»РёР±Рѕ РїСЂРѕРІРµСЂРѕРє РґРѕСЃС‚СѓРїР° РЅРµ РѕСЃСѓС‰РµСЃС‚РІР»СЏРµС‚СЃСЏ. РџСЂРѕС‡РёС‚Р°РЅРЅС‹Рј РїРѕРјРµС‡Р°РµС‚СЃСЏ РІРµСЃСЊ
+	 * С„РѕСЂСѓРј, РІРєР»СЋС‡Р°СЏ РІСЃРµ РµРіРѕ СЏР·С‹РєРё. Р­С‚Рѕ СЃРґРµР»Р°РЅРѕ СЃРїРµС†РёР°Р»СЊРЅРѕ, С‡С‚РѕР±С‹ РїСЂРё РїСЂРѕСЃРјРѕС‚СЂРµ РѕРґРЅРѕР№ СЏР·С‹РєРѕРІРѕР№ РІРµСЂСЃРёРё Р±С‹Р»Рѕ РІРёРґРЅРѕ, С‡С‚Рѕ,
+	 * РІРѕР·РјРѕР¶РЅРѕ РІ РґСЂСѓРіРѕР№ РµСЃС‚СЊ РЅРµРїСЂРѕС‡С‚РµРЅРЅС‹Рµ С‚РµРјС‹.
+	 * @param int $id РР” С„РѕСЂСѓРјР°, РєРѕС‚РѕСЂС‹Р№ РЅСѓР¶РЅРѕ РїРѕРјРµС‚РёС‚СЊ РїСЂРѕС‡С‚РµРЅРЅС‹РјС‹
+	 * @param int $ts TimeStamp РґР°С‚С‹, РѕС‚ РєРѕС‚РѕСЂРѕР№ РЅСѓР¶РЅРѕ СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РїСЂРѕС‡РёС‚Р°РЅРЅРѕСЃС‚СЊ
+	 */
+	public function MarkRead($id,$ts=0)
+	{
+		$Forum=$this->Core;
+		$config=$this->Forum->config;
+
+		if($Forum->user)
+		{
+			if($ts==0)
+				Eleanor::$Db->Replace($config['re'],array('uid'=>$Forum->user['id'],'f'=>$id,'!allread'=>'NOW()'));
+			else
+			{
+				$R=Eleanor::$Db->Query('SELECT `topics` FROM `'.$config['re'].'` WHERE `f`='.$id.' AND `uid`='.$Forum->user['id'].' AND `allread`>FROM_UNIXTIME('.$ts.') LIMIT 1');
+				if($a=$R->fetch_assoc())
+				{
+					$a['topics']=$a['topics'] ? (array)unserialize($a['topics']) : array();
+					foreach($a['topics'] as $k=>$v)
+						if($v<=$ts)
+							unset($a['topics'][$k]);
+					Eleanor::$Db->Update($config['re'],array('allread'=>date('Y-m-d H:i:s',$ts),'topics'=>$a['topics'] ? serialize($a['topics']) : ''),'`f`='.$id.' AND `uid`='.$Forum->user['id'].' LIMIT 1');
+				}
+			}
+		}
+		else
+		{
+			$allread=(int)Eleanor::GetCookie($config['n'].'-ar');
+
+			$read=array();
+			$fr=Eleanor::GetCookie($Forum->config['n'].'-fr');
+			$fr=$fr ? explode(',',$fr) : array();
+			foreach($fr as $v)
+				if(strpos($v,'-')!==false)
+				{
+					$v=explode('-',$v,2);
+					if($v[1]>$allread)
+						$read[ $v[0] ]=(int)$v[1];
+				}
+
+			if($ts==0)
+				$read[$id]=time();
+			elseif(isset($read[$id]) and $read[$id]<$ts)
+				$read[$id]=$ts;
+
+			arsort($read,SORT_NUMERIC);
+			if(count($read)>$config['readslimit'])
+				array_splice($read,$config['readslimit']);
+			foreach($read as $k=>&$v)
+				$v=$k.'-'.$v;
+			Eleanor::SetCookie($Forum->config['n'].'-fr',join(',',$read));
+		}
 	}
 }

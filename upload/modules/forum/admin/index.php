@@ -1,14 +1,11 @@
 <?php
 /*
-	Copyright © Eleanor CMS
-	URL: http://eleanor-cms.ru, http://eleanor-cms.com
-	E-mail: support@eleanor-cms.ru
-	Developing: Alexander Sunvas*
-	Interface: Rumin Sergey
-	=====
+	Copyright В© Alexander Sunvas*
+	http://eleanor-cms.ru
+	a@eleanor-cms.ru
 	*Pseudonym
 */
-if(!defined('CMS'))die;
+defined('CMS')||die;
 global$Eleanor,$title;
 
 $Eleanor->module['config']=$mc=include$Eleanor->module['path'].'config.php';
@@ -18,40 +15,40 @@ include$Eleanor->module['path'].'core.php';
 $Eleanor->Forum=new ForumCore($mc);
 Eleanor::$Template->queue[]=$mc['admintpl'];
 $lang=Eleanor::$Language->Load($Eleanor->module['path'].'admin-*.php',$mc['n']);
-Eleanor::LoadOptions($mc['opts']);
+$Eleanor->Forum->vars=Eleanor::LoadOptions($mc['opts'],true);
 
 $Eleanor->module['links']=array(
-	#Список форумов
+	#РЎРїРёСЃРѕРє С„РѕСЂСѓРјРѕРІ
 	'forums'=>$Eleanor->Url->Prefix(),
-	#Добавить форум
+	#Р”РѕР±Р°РІРёС‚СЊ С„РѕСЂСѓРј
 	'add-forum'=>$Eleanor->Url->Construct(array('do'=>'add-forum')),
-	#Модераторы
+	#РњРѕРґРµСЂР°С‚РѕСЂС‹
 	'moders'=>$Eleanor->Url->Construct(array('do'=>'moders')),
-	#Добавить модератора
+	#Р”РѕР±Р°РІРёС‚СЊ РјРѕРґРµСЂР°С‚РѕСЂР°
 	'add-moder'=>$Eleanor->Url->Construct(array('do'=>'add-moder')),
-	#Базовые права групп
+	#Р‘Р°Р·РѕРІС‹Рµ РїСЂР°РІР° РіСЂСѓРїРї
 	'groups'=>$Eleanor->Url->Construct(array('do'=>'groups')),
-	#Массовое назначение прав
+	#РњР°СЃСЃРѕРІРѕРµ РЅР°Р·РЅР°С‡РµРЅРёРµ РїСЂР°РІ
 	'massrights'=>$Eleanor->Url->Construct(array('do'=>'massrights')),
-	#Пользователи
+	#РџРѕР»СЊР·РѕРІР°С‚РµР»Рё
 	'users'=>$Eleanor->Url->Construct(array('do'=>'users')),
-	#Форматы писем
+	#Р¤РѕСЂРјР°С‚С‹ РїРёСЃРµРј
 	'letters'=>$Eleanor->Url->Construct(array('do'=>'letters')),
-	#Менеджер файлов
+	#РњРµРЅРµРґР¶РµСЂ С„Р°Р№Р»РѕРІ
 	'files'=>$Eleanor->Url->Construct(array('do'=>'files')),
-	#Список префиксов тем
+	#РЎРїРёСЃРѕРє РїСЂРµС„РёРєСЃРѕРІ С‚РµРј
 	'prefixes'=>$Eleanor->Url->Construct(array('do'=>'prefixes')),
-	#Добавить префикс темы
+	#Р”РѕР±Р°РІРёС‚СЊ РїСЂРµС„РёРєСЃ С‚РµРјС‹
 	'add-prefix'=>$Eleanor->Url->Construct(array('do'=>'add-prefix')),
-	#Подписки на форумы
+	#РџРѕРґРїРёСЃРєРё РЅР° С„РѕСЂСѓРјС‹
 	'fsubscriptions'=>$Eleanor->Url->Construct(array('do'=>'fsubscriptions')),
-	#Подписки на темы
+	#РџРѕРґРїРёСЃРєРё РЅР° С‚РµРјС‹
 	'tsubscriptions'=>$Eleanor->Url->Construct(array('do'=>'tsubscriptions')),
-	#Менеджер репутации
+	#РњРµРЅРµРґР¶РµСЂ СЂРµРїСѓС‚Р°С†РёРё
 	'reputation'=>$Eleanor->Url->Construct(array('do'=>'reputation')),
-	#Обслуживание
+	#РћР±СЃР»СѓР¶РёРІР°РЅРёРµ
 	'tasks'=>$Eleanor->Url->Construct(array('do'=>'tasks')),
-	#Настройки
+	#РќР°СЃС‚СЂРѕР№РєРё
 	'options'=>$Eleanor->Url->Construct(array('do'=>'options'))
 );
 
@@ -83,22 +80,20 @@ if(isset($_GET['do']))
 			$parent=isset($_GET['parent']) ? (int)$_GET['parent'] : 0;
 
 			$temp=$items=$subitems=$navi=$where=array();
-			$qs=array('do'=>'groups');
 			$parents='';
 			if($parent>0)
 			{
-				$qs['']['parent']=$parent;
-				$R=Eleanor::$Db->Query('SELECT `parents` FROM `'.$mc['f'].'` WHERE `id`='.$parent.' LIMIT 1');
+				$R=Eleanor::$Db->Query('SELECT `parents` FROM `'.P.'groups` WHERE `id`='.$parent.' LIMIT 1');
 				list($parents)=$R->fetch_row();
 				$parents.=$parent;
-				$temp=array();
-				$R=Eleanor::$Db->Query('SELECT `id`,`title` FROM `'.$mc['f'].'` INNER JOIN `'.$mc['fl'].'` USING(`id`) WHERE `language` IN (\'\',\''.Language::$main.'\') AND `id` IN ('.$parents.')');
+				$R=Eleanor::$Db->Query('SELECT `id`,`title_l` FROM `'.P.'groups` WHERE `id` IN ('.$parents.')');
 				while($a=$R->fetch_assoc())
-					$temp[$a['id']]=$a['title'];
-				$navi[0]=array('title'=>'Список форумов','_a'=>$Eleanor->Url->Prefix());
+					$temp[$a['id']]=$a['title_l'] ? Eleanor::FilterLangValues((array)unserialize($a['title_l'])) : '';
+				$navi[0]=array('title'=>$lang['glist'],'_a'=>$Eleanor->Url->Construct(array('do'=>'groups')));
 				foreach(explode(',',$parents) as $v)
 					if(isset($temp[$v]))
-						$navi[$v]=array('title'=>$temp[$v],'_a'=>$v==$parent ? false : $Eleanor->Url->Construct(array('parent'=>$v)));
+						$navi[$v]=array('title'=>$temp[$v],'_a'=>$v==$parent ? false : $Eleanor->Url->Construct(array('do'=>'groups','parent'=>$v)));
+				$parents.=',';
 			}
 
 			$R=Eleanor::$Db->Query('SELECT `id`,`g`.`title_l` `title`,`g`.`html_pref`,`g`.`html_end`,`g`.`parents`,`gf`.`grow_to`,`gf`.`grow_after`,`gf`.`supermod` FROM `'.P.'groups` `g` INNER JOIN `'.$mc['fg'].'` `gf` USING(`id`) WHERE `g`.`parents`=\''.$parents.'\'');
@@ -144,13 +139,13 @@ if(isset($_GET['do']))
 			foreach($titles as $k=>&$v)
 				$items[$k]=&$temp[$k];
 
-			$title[]='Базовые права групп';
+			$title[]=$lang['bgr'];
 			$c=Eleanor::$Template->Groups($items,$subitems,$navi,$parents);
 			Start();
 			echo$c;
 		break;
 		case'massrights':
-			$title[]='Массовая правка прав групп';
+			$title[]=$lang['massrights'];
 
 			$values=array(
 				'groups'=>isset($_POST['forums']) ? (array)$_POST['forums'] : array(),
@@ -164,10 +159,10 @@ if(isset($_GET['do']))
 			if($post)
 			{
 				if(!$values['forums'])
-					$errors['NO_FORUMS']='Не выбраны форумы!';
+					$errors['NO_FORUMS']=$lang['fsns'];#Р¤РѕСЂСѓРјС‹ РЅРµ РІС‹Р±СЂР°РЅС‹
 
 				if(!$values['groups'])
-					$errors['NO_GROUPS']='Не выбраны группы!';
+					$errors['NO_GROUPS']=$lang['gsns'];#Р“СЂСѓРїРїС‹ РЅРµ РІС‹Р±СЂР°РЅС‹
 
 				$co=$controls;
 				foreach($values['inherit'] as &$v)
@@ -214,99 +209,11 @@ if(isset($_GET['do']))
 			echo$c;
 		break;
 		case'letters':
-			$subf_i='{site} - название сайта<br />
-{sitelink} - ссылка на сайт<br />
-{topic} - название темы<br />
-{topiclink} - ссылка на тему<br />
-{topicnewlink} - ссылка на первый непрочитанный пост темы<br />
-{topiclastlink} - ссылка на последний пост темы<br />
-{forum} - название форума<br />
-{forumlink} - ссылка на форум<br />
-{author} - имя автора<br />
-{authorlink} - ссылка на автора<br />
-{created} - дата создания темы<br />
-{lastview} - дата последнего просмотра форума<br />
-{lastsend} - дата последней отправки<br />
-{text} - текст<br />
-{name} - имя пользователя<br />
-{cancel} - ссылка на отмену подписки';
-
-			$subf='{site} - название сайта<br />
-{sitelink} - ссылка на сайт<br />
-{forum} - название форума<br />
-{forumlink} - ссылка на форум<br />
-{cblink} - ссылка на измененные темы на форум<br />
-{lastview} - дата последнего просмотра форума<br />
-{lastsend} - дата последней отправки<br />
-{cnt} - число новых тем<br />
-{name} - имя пользователя<br />
-{cancel} - ссылка на отмену подписки';
-
-			$subt_i='{site} - название сайта<br />
-{sitelink} - ссылка на сайт<br />
-{forum} - название форума<br />
-{forumlink} - ссылка на форум<br />
-{topiclink} - ссылка на тему<br />
-{topic} - название темы<br />
-{topicnewlink} - ссылка на первый непрочитанный пост темы<br />
-{topiclastlink} - ссылка на последний пост темы<br />
-{postlink} - ссылка на пост<br />
-{author} - имя автора<br />
-{authorlink} - ссылка на автора<br />
-{created} - дата создания поста<br />
-{lastview} - дата последнего просмотра темы<br />
-{lastsend} - дата последней отправки<br />
-{text} - текст<br />
-{name} - имя пользователя<br />
-{cancel} - ссылка на отмену подписки';
-
-			$subt='{site} - название сайта<br />
-{sitelink} - ссылка на сайт<br />
-{forum} - название форума<br />
-{forumlink} - ссылка на форум<br />
-{topic} - название темы<br />
-{topiclink} - ссылка на тему<br />
-{topicnewlink} - ссылка на первый непрочитанный пост темы<br />
-{topiclastlink} - ссылка на последний пост темы<br />
-{lastview} - дата последнего просмотра темы<br />
-{lastsend} - дата последней отправки<br />
-{cnt} - число новых сообщений<br />
-{name} - имя пользователя<br />
-{cancel} - ссылка на отмену подписки';
-
-			$reputation='{site} - название сайта<br />
-{sitelink} - ссылка на сайт<br />
-{forum} - название форума<br />
-{forumlink} - ссылка на форум<br />
-{topic} - название темы<br />
-{topiclink} - ссылка на тему<br />
-{postlink} - ссылка на пост<br />
-{name} - имя пользователя<br />
-{author} - имя автора жалобы<br />
-{authorlink} - ссылка на автора жалобы<br />
-{text} - сопутствующий текст<br />
-{points} - единицы изменения<br />
-{current} - текущая репутация';
-
-			$complaint='{site} - название сайта<br />
-{sitelink} - ссылка на сайт<br />
-{forumlink} - ссылка на форум<br />
-{topiclink} - ссылка на тему<br />
-{postlink} - ссылка на пост<br />
-{username} - имя автора поста<br />
-{userlink} - ссылка на автора поста<br />
-{forum} - название форума<br />
-{topic} - название темы<br />
-{name} - имя пользователя модератора<br />
-{complaint} - текст жалобы<br />
-{author} - имя автора жалобы<br />
-{authorlink} - ссылка на автора жалобы';
-
 			$controls=array(
-				'Уведомление о подписанной теме (немедленное)',
+				$lang['nsti'],
 				'substi_t'=>array(
-					'title'=>'Заголовок письма',
-					'descr'=>$subt_i,
+					'title'=>$lang['ltitle'],
+					'descr'=>$lang['subst_i'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -315,8 +222,8 @@ if(isset($_GET['do']))
 					),
 				),
 				'substi'=>array(
-					'title'=>'Текст письма',
-					'descr'=>$subt_i,
+					'title'=>$lang['ltext'],
+					'descr'=>$lang['subst_i'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -326,10 +233,10 @@ if(isset($_GET['do']))
 						'smiles'=>false,
 					),
 				),
-				'Уведомление о подписанной теме (с задержкой)',
+				$lang['nst'],
 				'subst_t'=>array(
-					'title'=>'Заголовок письма',
-					'descr'=>$subt,
+					'title'=>$lang['ltitle'],
+					'descr'=>$lang['subt'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -338,8 +245,8 @@ if(isset($_GET['do']))
 					),
 				),
 				'subst'=>array(
-					'title'=>'Текст письма',
-					'descr'=>$subf,
+					'title'=>$lang['ltext'],
+					'descr'=>$lang['subt'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -349,10 +256,10 @@ if(isset($_GET['do']))
 						'smiles'=>false,
 					),
 				),
-				'Уведомление о подписанном форуме (немедленное)',
+				$lang['nsfi'],
 				'subsfi_t'=>array(
-					'title'=>'Заголовок письма',
-					'descr'=>$subf_i,
+					'title'=>$lang['ltitle'],
+					'descr'=>$lang['subf_i'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -361,8 +268,8 @@ if(isset($_GET['do']))
 					),
 				),
 				'subsfi'=>array(
-					'title'=>'Текст письма',
-					'descr'=>$subt_i,
+					'title'=>$lang['ltext'],
+					'descr'=>$lang['subf_i'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -372,10 +279,10 @@ if(isset($_GET['do']))
 						'smiles'=>false,
 					),
 				),
-				'Уведомление о подписанном форуме (с задержкой)',
+				$lang['nsf'],
 				'subsf_t'=>array(
-					'title'=>'Заголовок письма',
-					'descr'=>$subt,
+					'title'=>$lang['ltitle'],
+					'descr'=>$lang['subf'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -384,8 +291,8 @@ if(isset($_GET['do']))
 					),
 				),
 				'subsf'=>array(
-					'title'=>'Текст письма',
-					'descr'=>$subt,
+					'title'=>$lang['ltext'],
+					'descr'=>$lang['subf'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -395,10 +302,10 @@ if(isset($_GET['do']))
 						'smiles'=>false,
 					),
 				),
-				'Уведомление модератору по кнопке "жалоба"',
+				$lang['ncompl'],
 				'complaint_t'=>array(
-					'title'=>'Заголовок письма',
-					'descr'=>$complaint,
+					'title'=>$lang['ltitle'],
+					'descr'=>$lang['letcompl'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -407,8 +314,8 @@ if(isset($_GET['do']))
 					),
 				),
 				'complaint'=>array(
-					'title'=>'Текст письма',
-					'descr'=>$complaint,
+					'title'=>$lang['ltext'],
+					'descr'=>$lang['letcompl'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -418,10 +325,10 @@ if(isset($_GET['do']))
 						'smiles'=>false,
 					),
 				),
-				'Уведомление об изменении репутации',
+				$lang['nrep'],
 				'rep_t'=>array(
-					'title'=>'Заголовок письма',
-					'descr'=>$reputation,
+					'title'=>$lang['ltitle'],
+					'descr'=>$lang['letrep'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -430,8 +337,8 @@ if(isset($_GET['do']))
 					),
 				),
 				'rep'=>array(
-					'title'=>'Текст письма',
-					'descr'=>$reputation,
+					'title'=>$lang['ltext'],
+					'descr'=>$lang['letrep'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -488,13 +395,13 @@ if(isset($_GET['do']))
 						$values[$k]['value'][$lng]=$v;
 				}
 			$values=$Eleanor->Controls->DisplayControls($controls,$values)+$values;
-			$title[]='Форматы писем';
+			$title[]=$lang['letters'];
 			$c=Eleanor::$Template->Letters($controls,$values);
 			Start();
 			echo$c;
 		break;
 		case'users':
-			$title[]='Пользователи форума';
+			$title[]=$lang['fusers'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$info=$recount=$items=$where=array();
 			$qs=array('do'=>'users');
@@ -642,7 +549,7 @@ if(isset($_GET['do']))
 			echo$c;
 		break;
 		case'moders':
-			$title[]='Список модераторов';
+			$title[]=$lang['mlist'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$groups=$users=$forums=array();
 			$qs=array('do'=>'moders');
@@ -669,7 +576,7 @@ if(isset($_GET['do']))
 						while($a=$R->fetch_assoc())
 						{
 							if($a['forums'])
-								Eleanor::$Db->Update($mc['f'],array('!moderators'=>'REPLACE(`moderators`,\','.$id.',\',\'\')'),'`id`'.Eleanor::$Db->In(explode(',,',trim($a['forums'],','))));
+								Eleanor::$Db->Update($mc['f'],array('!moderators'=>'REPLACE(`moderators`,\','.$a['id'].',\',\'\')'),'`id`'.Eleanor::$Db->In(explode(',,',trim($a['forums'],','))));
 							if($a['users'])
 								Eleanor::$Db->Update($mc['fu'],array('!moderator'=>'REPLACE(`moderator`,\','.$a['id'].',\',\'\')'),'`id`'.Eleanor::$Db->In(explode(',,',trim($a['users'],','))));
 							if($a['groups'])
@@ -779,7 +686,7 @@ if(isset($_GET['do']))
 			echo$c;
 		break;
 		case'files':
-			$title[]='Список загруженных файлов';
+			$title[]=$lang['uploads'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=$topics=array();
 			$qs=array('do'=>'files');
@@ -886,7 +793,7 @@ if(isset($_GET['do']))
 			echo$s;
 		break;
 		case'prefixes':
-			$title[]='Список префиксов';
+			$title[]=$lang['prefixes'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=array();
 			$qs=array('do'=>'prefixes');
@@ -988,7 +895,7 @@ if(isset($_GET['do']))
 			echo$c;
 		break;
 		case'fsubscriptions':
-			$title[]='Cписок подписок на форумы';
+			$title[]=$lang['fsubscr'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=$users=array();
 			$qs=array('do'=>'fsubscriptions');
@@ -1110,7 +1017,7 @@ if(isset($_GET['do']))
 			echo$s;
 		break;
 		case'tsubscriptions':
-			$title[]='Cписок подписок на темы';
+			$title[]=$lang['tsubscr'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=$users=$topics=$fitopic=array();
 			$qs=array('do'=>'tsubscriptions');
@@ -1255,7 +1162,7 @@ if(isset($_GET['do']))
 			echo$s;
 		break;
 		case'reputation':
-			$title[]='Cписок изменений репутации';
+			$title[]=$lang['~reputation'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=$users=$topics=$fitopic=array();
 			$qs=array('do'=>'reputation');
@@ -1342,7 +1249,7 @@ if(isset($_GET['do']))
 				while($a=$R->fetch_assoc())
 				{
 					$a['_adel']=$Eleanor->Url->Construct(array('delete-reputation'=>$a['id'],'u'=>$a['uid']));
-					$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'findpost'=>$a['p']));
+					$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'find-post'=>$a['p']));
 
 					$forums[$a['f']][]=$a['language'];
 					$topics[]=$a['t'];
@@ -1405,54 +1312,54 @@ if(isset($_GET['do']))
 			echo$s;
 		break;
 		case'tasks':
-			$title[]='Обслуживание форума';
+			$title[]=$lang['service'];
 			$values=$statuses=$errors=$forums=array();
 			if($post)
 			{
 				$run=false;
-				#Пересчет тем в форумах
+				#РџРµСЂРµСЃС‡РµС‚ С‚РµРј РІ С„РѕСЂСѓРјР°С…
 				if(isset($_POST['rectop']))
 				{
 					#ToDo!
-					$errors['rectop']='В разработке...';
+					$errors['rectop']='Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ...';
 				}
 
-				#Пересчет постов в темах
+				#РџРµСЂРµСЃС‡РµС‚ РїРѕСЃС‚РѕРІ РІ С‚РµРјР°С…
 				if(isset($_POST['recpostsf'],$_POST['recpostst']))
 				{
 					#ToDo!
-					$errors['recposts']='В разработке...';
+					$errors['recposts']='Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ...';
 				}
 
-				#Пересчет постов пользователей
+				#РџРµСЂРµСЃС‡РµС‚ РїРѕСЃС‚РѕРІ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 				if(isset($_POST['recuserposts']))
 				{
 					#ToDo!
-					$errors['recuserposts']='В разработке...';
+					$errors['recuserposts']='Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ...';
 				}
 
-				#Обновление последнего ответившего в тему
+				#РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РІРµС‚РёРІС€РµРіРѕ РІ С‚РµРјСѓ
 				if(isset($_POST['recpostsf'],$_POST['recpostst']))
 				{
 					#ToDo!
-					$errors['recposts']='В разработке...';
+					$errors['recposts']='Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ...';
 				}
 
-				#Обновление последнего ответившего в форум
+				#РћР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РІРµС‚РёРІС€РµРіРѕ РІ С„РѕСЂСѓРј
 				if(isset($_POST['lastpostforum']))
 				{
 					#ToDo!
-					$errors['lastpostforum']='В разработке...';
+					$errors['lastpostforum']='Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ...';
 				}
 
-				#Удаление мертвых файлов
+				#РЈРґР°Р»РµРЅРёРµ РјРµСЂС‚РІС‹С… С„Р°Р№Р»РѕРІ
 				if(isset($_POST['removefilesp']))
 				{
 					#ToDo!
-					$errors['removefiles']='В разработке...';
+					$errors['removefiles']='Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ...';
 				}
 
-				#Синхронизация пользователей
+				#РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 				if(isset($_POST['syncusersdate']))
 				{
 					$date=(string)$_POST['syncusersdate'];
@@ -1485,7 +1392,7 @@ if(isset($_GET['do']))
 						$do=date_offset_get(date_create());
 						$task+=array(
 							'task'=>'special_forum.php',
-							'title_l'=>serialize(array(''=>'Модуль форума')),
+							'title_l'=>serialize(array(''=>'Forum')),
 							'name'=>'module_forum',
 							'do'=>$do,
 						);
@@ -1524,13 +1431,13 @@ if(isset($_GET['do']))
 			}
 
 			$values+=array(
-				'recpostst'=>'',#ИДы тем для пересчета постов
-				'recuserposts'=>'',#ИДы пользователей для пересчета постов
-				'lastposttopict'=>'',#ИДы тем для поиска последнего поста
-				'removefilesp'=>'',#ИДы постов для поиска мертвых файлов
-				'syncusersdate'=>'',#Начальная дата синхронизации пользователей
+				'recpostst'=>'',#РР”С‹ С‚РµРј РґР»СЏ РїРµСЂРµСЃС‡РµС‚Р° РїРѕСЃС‚РѕРІ
+				'recuserposts'=>'',#РР”С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ РґР»СЏ РїРµСЂРµСЃС‡РµС‚Р° РїРѕСЃС‚РѕРІ
+				'lastposttopict'=>'',#РР”С‹ С‚РµРј РґР»СЏ РїРѕРёСЃРєР° РїРѕСЃР»РµРґРЅРµРіРѕ РїРѕСЃС‚Р°
+				'removefilesp'=>'',#РР”С‹ РїРѕСЃС‚РѕРІ РґР»СЏ РїРѕРёСЃРєР° РјРµСЂС‚РІС‹С… С„Р°Р№Р»РѕРІ
+				'syncusersdate'=>'',#РќР°С‡Р°Р»СЊРЅР°СЏ РґР°С‚Р° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
 
-				'recpostsf'=>array(),
+				'rectop'=>array(),
 				'recpostsf'=>array(),
 				'lastposttopicf'=>array(),
 				'lastpostforum'=>array(),
@@ -1547,7 +1454,7 @@ if(isset($_GET['do']))
 			}
 
 			$opforums=array(
-				'rectop'=>$Eleanor->Forum->Forums->SelectOptions($values['recpostsf']),
+				'rectop'=>$Eleanor->Forum->Forums->SelectOptions($values['rectop']),
 				'recpostsf'=>$Eleanor->Forum->Forums->SelectOptions($values['recpostsf']),
 				'lastposttopicf'=>$Eleanor->Forum->Forums->SelectOptions($values['lastposttopicf']),
 				'lastpostforum'=>$Eleanor->Forum->Forums->SelectOptions($values['lastpostforum']),
@@ -1664,7 +1571,7 @@ elseif(isset($_GET['g'],$_GET['f']))
 			else
 				$inherit[]=$k;
 
-		$fgp=$Eleanor->Forum->Core->GroupPerms($forum['parent'],$g);
+		$fgp=$Eleanor->Forum->GroupPerms($forum['parent'],$g);
 		foreach($fgp as $k=>&$v)
 			if(isset($controls[$k]))
 				$controls[$k]['default']=$v;
@@ -1675,7 +1582,7 @@ elseif(isset($_GET['g'],$_GET['f']))
 		'forum_groups_rights'=>function($f,$g){ return$GLOBALS['Eleanor']->Url->Construct(array('f'=>$f,'g'=>$g)); },
 	);
 
-	$title[]='Права группы &quot;'.$group['title'].'&quot; в форуме &quot;'.$forum['title'].'&quot;';
+	$title[]=sprintf($lang['rgif'],$group['title'],$forum['title']);
 	$c=Eleanor::$Template->ForumGroupRights($forum,$group,$controls,$values,$haschild,$inherits,$inherit,$navi,$errors,$saved,$back,$links);
 	Start();
 	echo$c;
@@ -1704,6 +1611,7 @@ elseif(isset($_GET['edit-group']))
 			$mc['fg'],
 			array(
 				'id'=>$id,
+				'image'=>isset($_POST['image']) ? (string)$_POST['image'] : '',
 				'grow_to'=>isset($_POST['grow_to']) && !in_array('grow_to',$inherit) ? (int)$_POST['grow_to'] : null,
 				'grow_after'=>in_array('grow_after',$inherit) ? null : (isset($_POST['grow_after']) ? abs((int)$_POST['grow_after']) : 0),
 				'supermod'=>in_array('supermod',$inherit) ? null : isset($_POST['supermod']),
@@ -1751,7 +1659,7 @@ elseif(isset($_GET['edit-user']))
 		$values=array(
 			'posts'=>isset($_POST['posts']) ? (int)$_POST['posts'] : 0,
 			'restrict_post'=>isset($_POST['restrict_post']),
-			'restrict_post_to'=>isset($_POST['restrict_post_to']) ? (string)$_POST['restrict_post_to'] : '',
+			'restrict_post_to'=>isset($_POST['restrict_post_to']) ? (string)$_POST['restrict_post_to'] : '0000-00-00 00:00:00',
 			'descr'=>isset($_POST['descr']) ? (string)$_POST['descr'] : '',
 		);
 		$Eleanor->Forum->Service->UpdateUser($values,$id);
@@ -1826,7 +1734,7 @@ elseif(isset($_GET['delete-forum']))
 
 	$errors=array();
 	$values=array(
-		'trash'=>isset($_POST['trash']) ? (int)$_POST['trash'] : $Eleanor->Forum->Core->vars['trash'],
+		'trash'=>isset($_POST['trash']) ? (int)$_POST['trash'] : $Eleanor->Forum->vars['trash'],
 	);
 	if(isset($_GET['noback']))
 		$back='';
@@ -1879,7 +1787,7 @@ elseif(isset($_GET['delete-forum']))
 	else
 		$s=Eleanor::$Template->DeleteForm($forum,$values,$back,$errors);
 
-	$title[]='Удаление форума';
+	$title[]=$lang['fdel'];
 	Start();
 	echo$s;
 }
@@ -1935,7 +1843,7 @@ elseif(isset($_GET['delete-moder']))
 		Eleanor::$Cache->Lib->DeleteByTag($mc['n'].'_moders_');
 		return GoAway(empty($_POST['back']) ? true : $_POST['back']);
 	}
-	$title='Подтверждение удаления';
+	$title[]=$lang['delc'];
 	if(isset($_GET['noback']))
 		$back='';
 	else
@@ -1973,7 +1881,7 @@ elseif(isset($_GET['delete-prefix']))
 		Eleanor::$Cache->Lib->DeleteByTag($mc['n'].'_prefixes_');
 		return GoAway(empty($_POST['back']) ? true : $_POST['back']);
 	}
-	$title='Подтверждение удаления';
+	$title[]=$lang['delc'];
 	if(isset($_GET['noback']))
 		$back='';
 	else
@@ -1997,7 +1905,7 @@ elseif(isset($_GET['delete-attach']))
 		$Eleanor->Forum->Moderate->DeleteAttach($id);
 		return GoAway(empty($_POST['back']) ? true : $_POST['back']);
 	}
-	$title='Подтверждение удаления файла';
+	$title[]=$lang['delc'];
 	if(isset($_GET['noback']))
 		$back='';
 	else
@@ -2020,7 +1928,7 @@ elseif(isset($_GET['delete-fs'],$_GET['u'],$_GET['l']))
 		$Eleanor->Forum->Subscriptions->SubscribeForum($f,$l,$u,false);
 		return GoAway(empty($_POST['back']) ? true : $_POST['back']);
 	}
-	$title='Подтверждение удаления подписки на форум';
+	$title[]=$lang['delc'];
 	if(isset($_GET['noback']))
 		$back='';
 	else
@@ -2042,7 +1950,7 @@ elseif(isset($_GET['delete-ts'],$_GET['u']))
 		$Eleanor->Forum->Subscriptions->SubscribeTopic($f,$u,false);
 		return GoAway(empty($_POST['back']) ? true : $_POST['back']);
 	}
-	$title='Подтверждение удаления подписки на тему';
+	$title[]=$lang['delc'];
 	if(isset($_GET['noback']))
 		$back='';
 	else
@@ -2064,7 +1972,7 @@ elseif(isset($_GET['delete-reputation']))
 		$Eleanor->Forum->Moderate->DeleteReputation($id);
 		return GoAway(empty($_POST['back']) ? true : $_POST['back']);
 	}
-	$title='Подтверждение удаления репутации';
+	$title[]=$lang['delc'];
 	if(isset($_GET['noback']))
 		$back='';
 	else
@@ -2086,15 +1994,26 @@ elseif(isset($_GET['savedelete']))
 
 	$errors=array();
 	$values=array(
-		'trash'=>isset($_POST['trash']) ? (int)$_POST['trash'] : $Eleanor->Forum->Core->vars['trash'],
+		'trash'=>isset($_POST['trash']) ? (string)$_POST['trash'] : $Eleanor->Forum->vars['trash'],
 	);
 
-	$onelang=$_SESSION['newlangs']==array('');
 	if($post)
 		try
 		{
-			$info=$Eleanor->Forum->Service->DeleteForum($_SESSION['id'],array('langs'=>$_SESSION['langs'],'trash'=>$values['trash'],'trashlangs'=>$_SESSION['newlangs'],'tolang'=>$onelang ? '' : false));
+			if($values['trash']===(string)(int)$values['trash'])#РџРµСЂРµРјРµС‰РµРЅРёРµ РІ РґСЂСѓРіРѕР№ С„РѕСЂСѓРј
+				$_SESSION['deleteforum']=array('langs'=>$_SESSION['langs'],'trash'=>$values['trash']);
+			elseif(in_array($values['trash'],$_SESSION['newlangs']))#РР·РјРµРЅРµРЅРёРµ СЏР·С‹РєР°
+				$_SESSION['deleteforum']=array('langs'=>$_SESSION['langs'],'trash'=>$_SESSION['id'],'tolang'=>$values['trash']);
+			else
+				$_SESSION['deleteforum']=array('langs'=>$_SESSION['langs'],'trash'=>false);
+
+			$info=$Eleanor->Forum->Service->DeleteForum($_SESSION['id'],$_SESSION['deleteforum']);
 			$_SESSION['proccess']=$values;
+		}
+		catch(EE_SQL$E)
+		{
+			$E->Log();
+			$errors[]=$E->getMessage();
 		}
 		catch(EE$E)
 		{
@@ -2103,7 +2022,7 @@ elseif(isset($_GET['savedelete']))
 	elseif(isset($_SESSION['proccess']))
 		try
 		{
-			$info=$Eleanor->Forum->Service->DeleteForum($_SESSION['id'],array('langs'=>$_SESSION['langs'],'trash'=>$_SESSION['proccess']['trash'],'trashlangs'=>$_SESSION['newlangs'],'tolang'=>$onelang ? '' : false));
+			$info=$Eleanor->Forum->Service->DeleteForum($_SESSION['id'],$_SESSION['deleteforum']);
 		}
 		catch(EE$E)
 		{
@@ -2125,21 +2044,23 @@ elseif(isset($_GET['savedelete']))
 	else
 		$s=Eleanor::$Template->SaveDeleteForm($forum,$values,$_SESSION['langs'],$_SESSION['newlangs'],$_SESSION['back'],$errors);
 
-	$title[]='Удаление языковых версий форума';
+	$title[]=$lang['dlvf'];
 	Start();
 	echo$s;
 }
 else
 	Forums();
 
-#Работа с форумами
+#Р Р°Р±РѕС‚Р° СЃ С„РѕСЂСѓРјР°РјРё
 
 function Forums()
 {global$Eleanor,$title;
-	$title[]='Список форумов';
+	$mc=$Eleanor->module['config'];
+	$lang=Eleanor::$Language[$mc['n']];
+
+	$title[]=$lang['flist'];
 	$parent=isset($_GET['parent']) ? (int)$_GET['parent'] : 0;
 
-	$mc=$Eleanor->module['config'];
 	$items=$subitems=$navi=$where=array();
 	$qs=array(
 		'parent'=>$parent>0 ? $parent : false,
@@ -2154,7 +2075,7 @@ function Forums()
 		$R=Eleanor::$Db->Query('SELECT `id`,`title` FROM `'.$mc['f'].'` INNER JOIN `'.$mc['fl'].'` USING(`id`) WHERE `language` IN (\'\',\''.Language::$main.'\') AND `id` IN ('.$parents.')');
 		while($a=$R->fetch_assoc())
 			$temp[$a['id']]=$a['title'];
-		$navi[0]=array('title'=>'Список форумов','_a'=>$Eleanor->Url->Prefix());
+		$navi[0]=array('title'=>$lang['flist'],'_a'=>$Eleanor->Url->Prefix());
 		foreach(explode(',',$parents) as $v)
 			if(isset($temp[$v]))
 				$navi[$v]=array('title'=>$temp[$v],'_a'=>$v==$parent ? false : $Eleanor->Url->Construct(array('parent'=>$v)));
@@ -2245,9 +2166,10 @@ function Forums()
 function AddEditForum($id,$errors=array())
 {global$Eleanor,$title;
 	$mc=$Eleanor->module['config'];
+	$lang=Eleanor::$Language[$mc['n']];
 	if($id)
 	{
-		$title[]='Правка форума';
+		$title[]=$lang['forumedit'];
 		$R=Eleanor::$Db->Query('SELECT '.($errors ? '`id`' : '*').' FROM `'.$mc['f'].'` WHERE id='.$id.' LIMIT 1');
 		if(!$values=$R->fetch_assoc())
 			return GoAway(true);
@@ -2256,7 +2178,7 @@ function AddEditForum($id,$errors=array())
 		{
 			$values['prefixes']=$values['prefixes'] ? explode(',,',trim($values['prefixes'],',')) : array();
 			$values['uri']=$values['title']=$values['description']=$values['meta_title']=$values['meta_descr']=array();
-			$R=Eleanor::$Db->Query('SELECT `language`,`uri`,`title`,`description`,`meta_title`,`meta_descr` FROM `'.$mc['fl'].'` WHERE `id`='.$id);
+			$R=Eleanor::$Db->Query('SELECT `language`,`uri`,`title`,`description`,`meta_title`,`meta_descr`,`rules` FROM `'.$mc['fl'].'` WHERE `id`='.$id);
 			while($temp=$R->fetch_assoc())
 				if(!Eleanor::$vars['multilang'] and (!$temp['language'] or $temp['language']==Language::$main))
 				{
@@ -2295,19 +2217,21 @@ function AddEditForum($id,$errors=array())
 			'reputation'=>true,
 			'image'=>'',
 			'hide_attach'=>false,
-			#Языковые
+			#РЇР·С‹РєРѕРІС‹Рµ
 			'title'=>$dv,
 			'description'=>$dv,
 			'uri'=>$dv,
 			'meta_title'=>$dv,
 			'meta_descr'=>$dv,
+			'rules'=>$dv,
+			'prefixes'=>array(),
 		);
 		if(Eleanor::$vars['multilang'])
 		{
 			$values['_onelang']=true;
 			$values['_langs']=array_keys(Eleanor::$langs);
 		}
-		$title[]='Добавить форум';
+		$title[]=$lang['addforum'];
 	}
 
 	if($errors)
@@ -2321,6 +2245,7 @@ function AddEditForum($id,$errors=array())
 			$values['meta_descr']=isset($_POST['meta_descr']) ? (array)$_POST['meta_descr'] : array();
 			$values['title']=isset($_POST['title']) ? (array)$_POST['title'] : array();
 			$values['description']=isset($_POST['description']) ? (array)$_POST['description'] : array();
+			$values['rules']=isset($_POST['rules']) ? (array)$_POST['rules'] : array();
 			$values['uri']=isset($_POST['uri']) ? (array)$_POST['uri'] : array();
 			$values['_onelang']=isset($_POST['_onelang']);
 			$values['_langs']=isset($_POST['_langs']) ? (array)$_POST['_langs'] : array(Language::$main);
@@ -2331,6 +2256,7 @@ function AddEditForum($id,$errors=array())
 			$values['meta_descr']=isset($_POST['meta_descr']) ? (string)$_POST['meta_descr'] : '';
 			$values['title']=isset($_POST['title']) ? (string)$_POST['title'] : '';
 			$values['description']=isset($_POST['description']) ? (string)$_POST['description'] : '';
+			$values['rules']=isset($_POST['rules']) ? (string)$_POST['rules'] : '';
 			$values['uri']=isset($_POST['uri']) ? (string)$_POST['uri'] : '';
 		}
 
@@ -2411,6 +2337,7 @@ function SaveForum($id)
 			'title'=>array(),
 			'uri'=>array(),
 			'description'=>array(),
+			'rules'=>array(),
 			'meta_title'=>array(),
 			'meta_descr'=>array(),
 		);
@@ -2420,6 +2347,7 @@ function SaveForum($id)
 			$Eleanor->Editor_result->imgalt=$lvalues['title'][$l]=isset($_POST['title'],$_POST['title'][$lng]) && is_array($_POST['title']) ? (string)Eleanor::$POST['title'][$lng] : '';
 			$lvalues['uri'][$l]=isset($_POST['uri'],$_POST['uri'][$lng]) && is_array($_POST['uri']) ? (string)$_POST['uri'][$lng] : '';
 			$lvalues['description'][$l]=isset($_POST['description'],$_POST['description'][$lng]) && is_array($_POST['description']) ? $Eleanor->Editor_result->GetHtml((string)$_POST['description'][$lng],true) : '';
+			$lvalues['rules'][$l]=isset($_POST['rules'],$_POST['rules'][$lng]) && is_array($_POST['rules']) ? $Eleanor->Editor_result->GetHtml((string)$_POST['rules'][$lng],true) : '';
 			$lvalues['meta_title'][$l]=isset($_POST['meta_title'],$_POST['meta_title'][$lng]) && is_array($_POST['meta_title']) ? (string)Eleanor::$POST['meta_title'][$lng] : '';
 			$lvalues['meta_descr'][$l]=isset($_POST['meta_descr'],$_POST['meta_descr'][$lng]) && is_array($_POST['meta_descr']) ? (string)Eleanor::$POST['meta_descr'][$lng] : '';
 		}
@@ -2430,6 +2358,7 @@ function SaveForum($id)
 		$lvalues=array(
 			'title'=>array(''=>$Eleanor->Editor_result->imgalt),
 			'description'=>array(''=>$Eleanor->Editor_result->GetHtml('description')),
+			'rules'=>array(''=>$Eleanor->Editor_result->GetHtml('rules')),
 			'uri'=>array(''=>isset($_POST['uri']) ? (string)$_POST['uri'] : ''),
 			'meta_title'=>array(''=>isset($_POST['meta_title']) ? (string)Eleanor::$POST['meta_title'] : ''),
 			'meta_descr'=>array(''=>isset($_POST['meta_descr']) ? (string)Eleanor::$POST['meta_descr'] : ''),
@@ -2471,7 +2400,7 @@ function SaveForum($id)
 			{
 				$R=Eleanor::$Db->Query('SELECT `id`,`language` FROM `'.$mc['fl'].'` WHERE `id`IN('.$in.') AND `language`!=\'\'');
 				if($R->num_rows>0)
-					$errors['PARENT_HAS_NOT_SAME_LANG']='Ошибка в наследовании языков';
+					$errors[]='PARENT_HAS_NOT_SAME_LANG';
 			}
 			else
 			{
@@ -2489,7 +2418,7 @@ function SaveForum($id)
 							unset($check[ $a['id'] ]);
 					}
 				if($check)
-					$errors['PARENT_HAS_NOT_SAME_LANG']='Ошибка в наследовании языков';
+					$errors[]='PARENT_HAS_NOT_SAME_LANG';
 			}
 		}
 	}
@@ -2517,7 +2446,6 @@ function SaveForum($id)
 			}
 		}
 
-
 		$oldlangs=array();
 		$R=Eleanor::$Db->Query('SELECT `language` FROM `'.$mc['fl'].'` WHERE `id`='.$id);
 		while($a=$R->fetch_assoc())
@@ -2525,7 +2453,7 @@ function SaveForum($id)
 
 		if($oldlangs=array_diff($oldlangs,$langs))
 		{
-			#Переход к интерфейсу удаления форума
+			#РџРµСЂРµС…РѕРґ Рє РёРЅС‚РµСЂС„РµР№СЃСѓ СѓРґР°Р»РµРЅРёСЏ С„РѕСЂСѓРјР°
 			Eleanor::StartSession();
 			$_SESSION=array(
 				'id'=>$id,
@@ -2567,16 +2495,18 @@ function SaveForum($id)
 			$values['description'][]=$lvalues['description'][$v];
 			$values['meta_title'][]=$lvalues['meta_title'][$v];
 			$values['meta_descr'][]=$lvalues['meta_descr'][$v];
+			$values['rules'][]=$lvalues['rules'][$v];
 		}
 		Eleanor::$Db->Insert($mc['fl'],$values);
 
-		Eleanor::$Db->Update($mc['pr'],array('!forums'=>'CONCAT(`forums`,\','.$id.',\')'),'`id`'.Eleanor::$Db->In($prefixes));
+		if($prefixes)
+			Eleanor::$Db->Update($mc['pr'],array('!forums'=>'CONCAT(`forums`,\','.$id.',\')'),'`id`'.Eleanor::$Db->In($prefixes));
 	}
 	Eleanor::$Cache->Lib->DeleteByTag($mc['n'].'_');
 	GoAway($back);
 }
 
-#Обновление существущего форума
+#РћР±РЅРѕРІР»РµРЅРёРµ СЃСѓС‰РµСЃС‚РІСѓС‰РµРіРѕ С„РѕСЂСѓРјР°
 function UpdateForum($id,$values,$lvalues,$langs)
 {global$Eleanor;
 	$mc=$Eleanor->module['config'];
@@ -2599,7 +2529,7 @@ function UpdateForum($id,$values,$lvalues,$langs)
 	Eleanor::$Db->Update($mc['f'],$values,'id='.$id.' LIMIT 1');
 	Eleanor::$Db->Delete($mc['fl'],'`id`='.$id.' AND `language`'.Eleanor::$Db->In($langs,true));
 
-	#Помним, что в таблице форума могут быть еще и сторонние поля: количество сообщений, количество тем. Эти поля нужно сохранить.
+	#РџРѕРјРЅРёРј, С‡С‚Рѕ РІ С‚Р°Р±Р»РёС†Рµ С„РѕСЂСѓРјР° РјРѕРіСѓС‚ Р±С‹С‚СЊ РµС‰Рµ Рё СЃС‚РѕСЂРѕРЅРЅРёРµ РїРѕР»СЏ: РєРѕР»РёС‡РµСЃС‚РІРѕ СЃРѕРѕР±С‰РµРЅРёР№, РєРѕР»РёС‡РµСЃС‚РІРѕ С‚РµРј. Р­С‚Рё РїРѕР»СЏ РЅСѓР¶РЅРѕ СЃРѕС…СЂР°РЅРёС‚СЊ.
 	$othf=array();
 	$R=Eleanor::$Db->Query('SELECT * FROM `'.$mc['fl'].'` WHERE `id`='.$id);
 	while($a=$R->fetch_assoc())
@@ -2615,6 +2545,7 @@ function UpdateForum($id,$values,$lvalues,$langs)
 			'description'=>$lvalues['description'][$v],
 			'meta_title'=>$lvalues['meta_title'][$v],
 			'meta_descr'=>$lvalues['meta_descr'][$v],
+			'rules'=>$lvalues['rules'][$v],
 		)+(isset($othf[$v]) ? $othf[$v] : array());
 	Eleanor::$Db->Replace($mc['fl'],$values);
 }
@@ -2632,7 +2563,7 @@ function OptimizeForums($p='')
 	}
 }
 
-#Работа с группами
+#Р Р°Р±РѕС‚Р° СЃ РіСЂСѓРїРїР°РјРё
 
 function EditGroup($id,$errors=array())
 {global$Eleanor,$title;
@@ -2649,6 +2580,7 @@ function EditGroup($id,$errors=array())
 		if($errors===true)
 			$errors=array();
 		$values=array(
+			'image'=>isset($_POST['image']) ? (string)$_POST['image'] : '',
 			'grow_to'=>isset($_POST['grow_to']) ? (int)$_POST['grow_to'] : 0,
 			'grow_after'=>isset($_POST['grow_after']) ? (int)$_POST['grow_after'] : 0,
 			'supermod'=>isset($_POST['supermod']),
@@ -2682,7 +2614,7 @@ function EditGroup($id,$errors=array())
 	$controls=GroupsControls($bypost,20);
 	if(!$bypost)
 		foreach($values['permissions'] as &$v)
-			$v=array('value'=>$values['permissions'][$k]);
+			$v=array('value'=>$v);
 	$values['permissions']=$Eleanor->Controls->DisplayControls($controls,$values['permissions']);
 
 	$grows=array();
@@ -2701,13 +2633,23 @@ function EditGroup($id,$errors=array())
 				$exclude[]=$k;
 			}
 
+	$imagopts='';
+	$images=glob(Eleanor::$root.$mc['glogos'].'*.{jpg,jpeg,bmp,ico,gif,png}',GLOB_BRACE | GLOB_MARK);
+	foreach($images as $v)
+	{
+		if(substr($v,-1)==DIRECTORY_SEPARATOR)
+			continue;
+		$v=basename($v);
+		$imagopts.=Eleanor::Option($v,false,$v==$values['image']);
+	}
+
 	if(isset($_GET['noback']))
 		$back='';
 	else
 		$back=isset($_POST['back']) ? (string)$_POST['back'] : getenv('HTTP_REFERER');
 
-	$title[]='Редактирование группы &quot;'.$group['title'].'&quot;';
-	$c=Eleanor::$Template->EditGroup($group,$values,$controls,Usermanager::GroupsOpts($values['grow_to'],$exclude),$min,$bypos,$back,$errors);
+	$title[]=sprintf(Eleanor::$Language[$mc['n']]['editgroup'],$group['title']);
+	$c=Eleanor::$Template->EditGroup($group,$values,$imagopts,$controls,Usermanager::GroupsOpts($values['grow_to'],$exclude),$min,$bypost,$back,$errors);
 	Start();
 	echo$c;
 }
@@ -2716,10 +2658,12 @@ function GroupsControls(&$post,$ti=13)
 {global$Eleanor;
 	if(!class_exists('ForumForums',false))
 		include$Eleanor->module['path'].'forums.php';
+	$mc=$Eleanor->module['config'];
+	$lang=Eleanor::$Language[$mc['n']];
 	return array(
 		'access'=>array(
-			'title'=>'Общая доступность форума',
-			'descr'=>'Форум виден группе',
+			'title'=>$lang['caccess'],
+			'descr'=>$lang['caccess_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['access'],
 			'bypost'=>&$post,
@@ -2730,8 +2674,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'topics'=>array(
-			'title'=>'Просмотр списка тем',
-			'descr'=>'Пользователи группы смогут просматривать список тем',
+			'title'=>$lang['ctopics'],
+			'descr'=>$lang['ctopics_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['topics'],
 			'bypost'=>&$post,
@@ -2742,8 +2686,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'antopics'=>array(
-			'title'=>'Отображать не только свои, но и чужие темы',
-			'descr'=>'В списке тем будут присутствовать темы других пользователей',
+			'title'=>$lang['cantopics'],
+			'descr'=>$lang['cantopics_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['atopics'],
 			'bypost'=>&$post,
@@ -2754,8 +2698,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'read'=>array(
-			'title'=>'Позволить читать темы',
-			'descr'=>'Пользователи смогут читать темы и отдельные сообщения в них',
+			'title'=>$lang['cread'],
+			'descr'=>$lang['cread_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['read'],
 			'bypost'=>&$post,
@@ -2766,8 +2710,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'attach'=>array(
-			'title'=>'Открыть доступ к вложениям',
-			'descr'=>'Пользователи смогут получать доступ к файловым вложениям',
+			'title'=>$lang['cattach'],
+			'descr'=>$lang['cattach_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['attach'],
 			'bypost'=>&$post,
@@ -2778,8 +2722,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'post'=>array(
-			'title'=>'Позволить отвечать в свои темы',
-			'descr'=>'Пользователи смогут отвечать в свои темы.',
+			'title'=>$lang['cpost'],
+			'descr'=>$lang['cpost_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['post'],
 			'bypost'=>&$post,
@@ -2790,8 +2734,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'apost'=>array(
-			'title'=>'Позволить отвечать в чужие темы',
-			'descr'=>'Пользователи смогут отвечать в чужие темы.',
+			'title'=>$lang['capost'],
+			'descr'=>$lang['capost_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['apost'],
 			'bypost'=>&$post,
@@ -2802,8 +2746,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'edit'=>array(
-			'title'=>'Позволить править свои сообщения',
-			'descr'=>'Пользователи смогут отредактировать или удалить свои сообщения',
+			'title'=>$lang['cedit'],
+			'descr'=>$lang['cedit_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['edit'],
 			'bypost'=>&$post,
@@ -2814,8 +2758,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'editlimit'=>array(
-			'title'=>'Временное ораничение правки/удаления сообщения',
-			'descr'=>'После публикации, пользователь сможет отредактировать или удалить своё сообщение только в течении указанного количества секунд. 0 - отключено',
+			'title'=>$lang['ceditlimit'],
+			'descr'=>$lang['ceditlimit_'],
 			'type'=>'input',
 			'default'=>ForumForums::$rights['editlimit'],
 			'bypost'=>&$post,
@@ -2827,8 +2771,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'new'=>array(
-			'title'=>'Позволить создавать темы',
-			'descr'=>'Пользователи смогут создавать темы',
+			'title'=>$lang['cnew'],
+			'descr'=>$lang['cnew_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['new'],
 			'bypost'=>&$post,
@@ -2839,8 +2783,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'mod'=>array(
-			'title'=>'Позволить править/удалять чужие сообщения в своих темах',
-			'descr'=>'Пользователи смогут отредактировать или удалить чужие сообщения в своих темах. Внимание! При включении этой опции, пользователи смогут править/удалять свои сообщения в своих темах без ограничений!',
+			'title'=>$lang['cmod'],
+			'descr'=>$lang['cmod_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['mod'],
 			'bypost'=>&$post,
@@ -2851,8 +2795,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'close'=>array(
-			'title'=>'Позволить открывать/закрывать свои темы',
-			'descr'=>'Пользователи смогут открывать/закрывать свои темы',
+			'title'=>$lang['cclose'],
+			'descr'=>$lang['cclose_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['close'],
 			'bypost'=>&$post,
@@ -2863,8 +2807,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'deletet'=>array(
-			'title'=>'Позволить удалять свои темы',
-			'descr'=>'Пользователи смогут удалять свои темы. Если эта опция отключена, то удалить первое сообщение пользователи не смогут.',
+			'title'=>$lang['cdeletet'],
+			'descr'=>$lang['cdeletet_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['deletet'],
 			'bypost'=>&$post,
@@ -2875,8 +2819,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'delete'=>array(
-			'title'=>'Позволить удалять свои сообщений',
-			'descr'=>'Пользователи смогут удалять свои свообщения.',
+			'title'=>$lang['cdelete'],
+			'descr'=>$lang['cdelete_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['deletet'],
 			'bypost'=>&$post,
@@ -2887,7 +2831,7 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'editt'=>array(
-			'title'=>'Позволить править заголовки своих тем',
+			'title'=>$lang['ceditt'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$rights['editt'],
@@ -2899,7 +2843,7 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'complaint'=>array(
-			'title'=>'Позволить пользоваться кнопкой "жалоба"',
+			'title'=>$lang['ccomplaint'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$rights['complaint'],
@@ -2911,8 +2855,8 @@ function GroupsControls(&$post,$ti=13)
 			),
 		),
 		'canclose'=>array(
-			'title'=>'Позволить работать с закрытой темой, как с открытой',
-			'descr'=>'Публиковать/править/удалять посты',
+			'title'=>$lang['ccanclose'],
+			'descr'=>$lang['ccanclose_'],
 			'type'=>'check',
 			'default'=>ForumForums::$rights['complaint'],
 			'bypost'=>&$post,
@@ -2925,10 +2869,11 @@ function GroupsControls(&$post,$ti=13)
 	);
 }
 
-#Работа с пользователями
+#Р Р°Р±РѕС‚Р° СЃ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРјРё
 
 function EditUser($id,$errors=array())
 {global$Eleanor,$title;
+	$mc=$Eleanor->module['config'];
 	$R=Eleanor::$Db->Query('SELECT `id`,`groups` `group`,`name`,`full_name` FROM `'.P.'users_site` WHERE `id`='.$id.' LIMIT 1');
 	if(!$user=$R->fetch_assoc())
 	{
@@ -2953,7 +2898,7 @@ function EditUser($id,$errors=array())
 	else
 	{
 		$bypost=false;
-		$R=Eleanor::$Db->Query('SELECT * FROM `'.$Eleanor->module['config']['fu'].'` WHERE `id`='.$id.' LIMIT 1');
+		$R=Eleanor::$Db->Query('SELECT * FROM `'.$mc['fu'].'` WHERE `id`='.$id.' LIMIT 1');
 		if(!$values=$R->fetch_assoc())
 			return GoAway();
 		if((int)$values['restrict_post_to']==0)
@@ -2966,17 +2911,18 @@ function EditUser($id,$errors=array())
 	else
 		$back=isset($_POST['back']) ? (string)$_POST['back'] : getenv('HTTP_REFERER');
 
-	$title[]='Редактирование пользователя &quot;'.htmlspecialchars($user['name'],ELENT,CHARSET).'&quot;';
+	$title[]=sprintf(Eleanor::$Language[$mc['n']]['edituser'],htmlspecialchars($user['name'],ELENT,CHARSET));
 	$c=Eleanor::$Template->EditUser($user,$values,$bypost,$back,$errors);
 	Start();
 	echo$c;
 }
 
-#Работа с префиксами тем
+#Р Р°Р±РѕС‚Р° СЃ РїСЂРµС„РёРєСЃР°РјРё С‚РµРј
 
 function AddEditPrefix($id,$errors=array())
 {global$Eleanor,$title;
 	$mc=$Eleanor->module['config'];
+	$lang=Eleanor::$Language[$mc['n']];
 	if($id)
 	{
 		$R=Eleanor::$Db->Query('SELECT * FROM `'.$mc['pr'].'` WHERE `id`='.$id.' LIMIT 1');
@@ -3013,13 +2959,13 @@ function AddEditPrefix($id,$errors=array())
 				$values['_langs']=array_keys($values['title']);
 			}
 		}
-		$title[]='Редактирование префикса тем';
+		$title[]=$lang['editprefix'];
 	}
 	else
 	{
 		$values=array(
 			'forums'=>'',
-			#Языковые
+			#РЇР·С‹РєРѕРІС‹Рµ
 			'title'=>Eleanor::$vars['multilang'] ? array(''=>'') : '',
 
 		);
@@ -3028,7 +2974,7 @@ function AddEditPrefix($id,$errors=array())
 			$values['_onelang']=true;
 			$values['_langs']=array_keys(Eleanor::$langs);
 		}
-		$title[]='Добавление префикса тем';
+		$title[]=$lang['addprefix'];
 	}
 
 	if($errors)
@@ -3054,7 +3000,7 @@ function AddEditPrefix($id,$errors=array())
 	else
 		$back=isset($_POST['back']) ? (string)$_POST['back'] : getenv('HTTP_REFERER');
 
-	$c=Eleanor::$Template->AddEditPrefix($id,$values,$Eleanor->Forum->Forums->SelectOptions($values['forums']),$errors,$bypost,$back,$links);
+	$c=Eleanor::$Template->AddEditPrefix($id,$values,$Eleanor->Forum->Forums->SelectOptions($values['forums'],array(),false),$errors,$bypost,$back,$links);
 	Start();
 	echo$c;
 }
@@ -3159,13 +3105,15 @@ function SavePrefix($id)
 	GoAway(empty($_POST['back']) ? true : $_POST['back']);
 }
 
-#Работа с модераторами
+#Р Р°Р±РѕС‚Р° СЃ РјРѕРґРµСЂР°С‚РѕСЂР°РјРё
 
 function AddEditModer($id,$errors=array())
 {global$Eleanor,$title;
+	$mc=$Eleanor->module['config'];
+	$lang=Eleanor::$Language[$mc['n']];
 	if($id)
 	{
-		$R=Eleanor::$Db->Query('SELECT * FROM `'.$Eleanor->module['config']['fm'].'` WHERE `id`='.$id.' LIMIT 1');
+		$R=Eleanor::$Db->Query('SELECT * FROM `'.$mc['fm'].'` WHERE `id`='.$id.' LIMIT 1');
 		if(!$values=$R->fetch_assoc())
 			return GoAway();
 		if(!$errors)
@@ -3181,7 +3129,7 @@ function AddEditModer($id,$errors=array())
 					$values['users'][ $a['id'] ]=$a['name'];
 			}
 		}
-		$title[]='Редактирование модератора';
+		$title[]=$lang['editmoder'];
 	}
 	else
 	{
@@ -3191,7 +3139,7 @@ function AddEditModer($id,$errors=array())
 			'forums'=>'',
 			'descr'=>'',
 		);
-		$title[]='Добавление модератора';
+		$title[]=$lang['addmoder'];
 	}
 
 	if($errors)
@@ -3255,9 +3203,9 @@ function SaveModer($id)
 
 	$errors=array();
 	if(!$forums)
-		$errors['EMPTY_FORUMS']='Не выбраны форумы';
-	if(!$groups and !$user)
-		$errors['EMPTY_MODERS']='Не ни пользователи, ни группы';
+		$errors[]='EMPTY_FORUMS';
+	if(!$groups and !$users)
+		$errors[]='EMPTY_MODERS';
 
 	try
 	{
@@ -3272,7 +3220,7 @@ function SaveModer($id)
 	if($errors)
 		return AddEditModer($id,$errors);
 
-	$values+=array(
+	$values=array(
 		'groups'=>$groups ? ','.join(',,',$groups).',' : '',
 		'users'=>$users ? ','.join(',,',$users).',' : '',
 		'forums'=>$forums ? ','.join(',,',$forums).',' : '',
@@ -3351,10 +3299,12 @@ function ModerPermissions(&$post,$ti=1)
 {global$Eleanor;
 	if(!class_exists('ForumForums',false))
 		include$Eleanor->module['path'].'forums.php';
+	$mc=$Eleanor->module['config'];
+	$lang=Eleanor::$Language[$mc['n']];
 	return array(
-		'Одиночная модерация',
+		$lang['mcsingle'],
 		'movet'=>array(
-			'title'=>'Перемещение тем',
+			'title'=>$lang['mcmovet'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['movet'],
@@ -3366,7 +3316,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'move'=>array(
-			'title'=>'Перемещение сообщений',
+			'title'=>$lang['mcmove'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['move'],
@@ -3378,7 +3328,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'deletet'=>array(
-			'title'=>'Удаление тем',
+			'title'=>$lang['mcdeletet'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['deletet'],
@@ -3390,7 +3340,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'delete'=>array(
-			'title'=>'Удаление сообщений',
+			'title'=>$lang['mcdelete'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['delete'],
@@ -3402,7 +3352,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'editt'=>array(
-			'title'=>'Правка заголовков тем',
+			'title'=>$lang['mceditt'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['editt'],
@@ -3414,7 +3364,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'edit'=>array(
-			'title'=>'Правка сообщений',
+			'title'=>$lang['mcedit'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['edit'],
@@ -3426,7 +3376,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'chstatust'=>array(
-			'title'=>'Изменение статуса тем',
+			'title'=>$lang['mcchstatust'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['chstatust'],
@@ -3438,7 +3388,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'chstatus'=>array(
-			'title'=>'Изменение статуса сообщений',
+			'title'=>$lang['mcchstatus'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['chstatus'],
@@ -3450,7 +3400,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'merget'=>array(
-			'title'=>'Объединение тем',
+			'title'=>$lang['mcmerget'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['merget'],
@@ -3462,7 +3412,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'merge'=>array(
-			'title'=>'Объединение сообщений',
+			'title'=>$lang['mcmerge'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['merge'],
@@ -3474,7 +3424,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'pin'=>array(
-			'title'=>'Закрепление / открепление тем',
+			'title'=>$lang['mcpin'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['pin'],
@@ -3486,7 +3436,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'opcl'=>array(
-			'title'=>'Открытие / закрытие тем',
+			'title'=>$lang['mcopcl'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['opcl'],
@@ -3498,7 +3448,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'editq'=>array(
-			'title'=>'Разрешить редактирование опросов в сообщениях',
+			'title'=>$lang['mceditq'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['editq'],
@@ -3510,7 +3460,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'viewip'=>array(
-			'title'=>'Отображать IP адреса сообщений',
+			'title'=>$lang['mcviewip'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['viewip'],
@@ -3522,7 +3472,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'user_warn'=>array(
-			'title'=>'Разрешить предупреждать пользователей',
+			'title'=>$lang['mcuser_warn'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['user_warn'],
@@ -3533,9 +3483,9 @@ function ModerPermissions(&$post,$ti=1)
 				),
 			),
 		),
-		'Мультимодерация',
+		$lang['multimod'],
 		'mmovet'=>array(
-			'title'=>'Мультиперемещение тем',
+			'title'=>$lang['mcmmovet'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mmovet'],
@@ -3547,7 +3497,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mmove'=>array(
-			'title'=>'Мультиперемещение сообщений',
+			'title'=>$lang['mcmmove'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mmove'],
@@ -3559,7 +3509,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mdeletet'=>array(
-			'title'=>'Мультиудаление тем',
+			'title'=>$lang['mcmdeletet'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mdeletet'],
@@ -3571,7 +3521,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mdelete'=>array(
-			'title'=>'Мультиудаление сообщений',
+			'title'=>$lang['mcmdelete'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mdelete'],
@@ -3583,7 +3533,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mchstatust'=>array(
-			'title'=>'Мультиизменение статусов тем',
+			'title'=>$lang['mcmchstatust'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mchstatust'],
@@ -3595,7 +3545,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mchstatus'=>array(
-			'title'=>'Мультиизменение статусов сообщений',
+			'title'=>$lang['mcmchstatus'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mchstatus'],
@@ -3607,7 +3557,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mopcl'=>array(
-			'title'=>'Мультиоткрытие / закрытие тем',
+			'title'=>$lang['mcmopcl'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mopcl'],
@@ -3619,7 +3569,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'mpin'=>array(
-			'title'=>'Мультизакрепление / открепление тем',
+			'title'=>$lang['mcmpin'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['mpin'],
@@ -3631,7 +3581,7 @@ function ModerPermissions(&$post,$ti=1)
 			),
 		),
 		'editrep'=>array(
-			'title'=>'Разрешить править репутацию',
+			'title'=>$lang['mceditrep'],
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['editrep'],
