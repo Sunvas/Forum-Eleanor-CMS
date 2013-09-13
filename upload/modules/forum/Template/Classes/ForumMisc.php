@@ -21,10 +21,10 @@ class TplForumMisc
 	public static function ForumOptions($values,$saved,$errors)
 	{
 		$C=Eleanor::$Template->ForumMenu(array(
-			array(false,static::$lang['options'])
+			array(false,static::$lang['settings'])
 		),null);
 		if($saved)
-			$C->Message(static::$lang['savedoptions'],'info',20);
+			$C->Message(static::$lang['savedsettings'],'info',20);
 		if($errors)
 		{
 			foreach($errors as $k=>&$v)
@@ -37,7 +37,7 @@ class TplForumMisc
 		$Lst=Eleanor::LoadListTemplate('table-form')
 			->form()
 			->begin()
-			->head(static::$lang['options'])
+			->head(static::$lang['settings'])
 			->item(static::$lang['hideme'],Eleanor::Check('hidden',$values['hidden']))
 			->item(static::$lang['statustext'],Eleanor::Input('statustext',$values['statustext'],array('maxlength'=>15)))
 			->button(Eleanor::Button())

@@ -6,6 +6,7 @@
 	*Pseudonym
 */
 defined('CMS')||die;
+$module=isset($GLOBALS['Eleanor']->module,$GLOBALS['Eleanor']->module['name']) ? $GLOBALS['Eleanor']->module['name'] : 'forum';
 return array(
 	'n'=>'forum',#Название модуля
 	'f'=>P.'forums',#Таблица форумов
@@ -40,7 +41,7 @@ return array(
 
 	'attachroot'=>Eleanor::$root.Eleanor::$uploads.'/forum/',#Путь к каталогу с аттачами на сервере
 	'attachpath'=>Eleanor::$site_path.Eleanor::$uploads.'/forum/',#Путь к каталогу с аттачами на сайте
-	'download'=>Eleanor::$services['download']['file'].'?'.Url::Query(array('module'=>$GLOBALS['Eleanor']->module['name'])).'&amp;id=',#Префикс ссылки на скачивание
+	'download'=>Eleanor::$services['download']['file'].'?'.Url::Query(array('module'=>$module)).'&amp;id=',#Префикс ссылки на скачивание
 
 	'psign'=>__file__,#Posts Signature - подпись для постов
 	'tsign'=>__file__.P,#Topic Signature - подпись для тем

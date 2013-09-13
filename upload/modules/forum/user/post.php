@@ -6,7 +6,7 @@
 	*Pseudonym
 */
 defined('CMS')||die;
-
+#ToDo! Разрешить редактирование опросов в сообщениях (право)
 function NewTopic($forum,$rights,$errors=array())
 {global$Eleanor,$title;
 	$Forum=$Eleanor->Forum;
@@ -94,10 +94,11 @@ function NewTopic($forum,$rights,$errors=array())
 		$quotes=Eleanor::GetCookie($Forum->config['n'].'-qp');
 		if($quotes)
 		{
-			$waitview=in_array(1,$forum['_moderator']['chstatus']) || in_array(1,$forum['_moderator']['mchstatus']);
+			$waitview=$Forum->ugr['supermod'] || $forum['_moderator'] && (in_array(1,$forum['_moderator']['chstatus']) || in_array(1,$forum['_moderator']['mchstatus']));
 			$quotes=array_map(function($v){ return(int)$v; },explode(',',$quotes));
 			$R=Eleanor::$Db->Query('SELECT `t`.`language`,`t`.`status` `tstatus`,`t`.`created` `tcreated`,`t`.`author_id` `taid`,`t`.`state`,`p`.`id`,`p`.`f`,`p`.`t`,`p`.`status`,`p`.`author`,`p`.`author_id`,`p`.`created`,`p`.`text` FROM `'.$Forum->config['fp'].'` `p` INNER JOIN `'.$Forum->config['ft'].'` `t` ON `p`.`t`=`t`.`id` WHERE `p`.`id`'.Eleanor::$Db->In($quotes));
 			$quotes=array();
+			$hasquote=false;
 			$gp=$Forum->user ? array() : $Forum->GuestSign('p');
 			while($a=$R->fetch_assoc())
 			{
@@ -126,6 +127,8 @@ function NewTopic($forum,$rights,$errors=array())
 						continue;
 				}
 
+				$hasquote|=strpos($a['text'],'[quote')!==false;
+
 				if($langs)
 					$quotes[ $a['language'] ][ $a['id'] ]=array_slice($a,6);
 				else
@@ -134,7 +137,7 @@ function NewTopic($forum,$rights,$errors=array())
 
 			if($quotes)
 			{
-				if(!isset(OwnBB::$replace['quote']))
+				if(!isset(OwnBB::$replace['quote']) and $hasquote)
 				{
 					if(!class_exists('ForumBBQoute',false))
 						include$Eleanor->module['path'].'Misc/bb-quote.php';
@@ -147,7 +150,7 @@ function NewTopic($forum,$rights,$errors=array())
 						foreach($quote as $id=>$data)
 						{
 							$values['extra']['quotes'][]=$id;
-							$values['text'][$lng].='[quote name="'.$data['author'].'" date="'.$data['created'].'" p='.$id."]\n".$Eleanor->Editor_result->GetEdit($data['text'])."\n[/quote]\n\n";
+							$values['text'][$lng].='[quote name="'.$data['author'].'" date="'.$data['created'].'" p='.$id."]\n".$Eleanor->Editor->GetEdit($data['text'])."\n[/quote]\n\n";
 						}
 
 						if($quote)
@@ -158,11 +161,10 @@ function NewTopic($forum,$rights,$errors=array())
 					foreach($quotes as $id=>$data)
 					{
 						$values['_extra']['quotes'][]=$id;
-						$values['text'].='[quote name="'.$data['author'].'" date="'.$data['created'].'" p='.$id."]\n".$Eleanor->Editor_result->GetEdit($data['text'])."\n[/quote]\n\n";
+						$values['text'].='[quote name="'.$data['author'].'" date="'.$data['created'].'" p='.$id."]\n".$Eleanor->Editor->GetEdit($data['text'])."\n[/quote]\n\n";
 					}
 					$values['text']=rtrim($values['text'])."\n";
 				}
-				$values['extra']['quotes']=join(',',$values['extra']['quotes']);
 			}
 		}
 	}
@@ -206,12 +208,6 @@ function NewTopic($forum,$rights,$errors=array())
 	echo$c;
 }
 
-function AddFloodLimit()
-{global$Eleanor;
-	if($fl=Eleanor::$Permissions->FloodLimit())
-		$Eleanor->TimeCheck->Add($Eleanor->Forum->config['n'],1,true,$fl);
-}
-
 $post=$_SERVER['REQUEST_METHOD']=='POST' && Eleanor::$our_query;
 Eleanor::$Template->queue[]=$Forum->config['posttpl'];
 $Forum->LoadUser();
@@ -223,7 +219,7 @@ switch($do)
 			return ExitPage();
 
 		$errors=array();
-		$Eleanor->origurl=PROTOCOL.Eleanor::$punycode.Eleanor::$site_path.$Forum->Links->Action('new-topic',$forum['id']);
+		$Eleanor->origurl=$Forum->Links->Action('new-topic',$forum['id']);
 		$pre=$Forum->Post->Possibility();
 		if($pre)
 		{
@@ -235,6 +231,12 @@ switch($do)
 						$errors['FLOOD_WAIT']=$lang['FLOOD_WAIT'](Eleanor::$Permissions->FloodLimit(),$l);
 				}
 		}
+
+		#В этой переменной хранятся все модераторы форума + наши права, как модератора
+		if($forum['moderators'])
+			list($forum['moderators'],$forum['_moderator'])=$this->Moderator->ByIds($forum['moderators'],array('movet','move','delete','deletet','edit','editt','chstatust','chstatus','pin','opcl'),$this->Forum->config['n'].'_moders_p'.$forum['id']);
+		else
+			$forum['moderators']=$forum['_moderator']=array();
 
 		if($errors and !$post)
 		{
@@ -326,17 +328,12 @@ switch($do)
 			if(!$cach)
 				$errors[]='WRONG_CAPTCHA';
 
-			if($Forum->user)
-				$me=Eleanor::$Login->GetUserValue(array('name','id'));
-			else
+			if(!$Forum->user)
 			{
-				$me=array(
-					'id'=>0,
-					'name'=>isset($_POST['name']) ? (string)$_POST['name'] : '',
-				);
+				$name=isset($_POST['name']) ? (string)$_POST['name'] : '';
 
-				if($me['name'])
-					Eleanor::SetCookie($Forum->config['n'].'-name',$me['name']);
+				if($name)
+					Eleanor::SetCookie($Forum->config['n'].'-name',$name);
 				else
 					$errors[]='ENTER_NAME';
 			}
@@ -374,11 +371,9 @@ switch($do)
 
 			try
 			{
-				$values+=array(
-					'f'=>$forum['id'],
-					'author'=>$me['name'],
-					'author_id'=>$me['id'],
-				);
+				$values['f']=$forum['id'];
+				if(!$Forum->user)
+					$values['author']=$name;
 				$topic=$Forum->Post->Topic($values);
 			}
 			catch(EE_SQL$E)
@@ -403,7 +398,7 @@ switch($do)
 				{
 					$Forum->Topic->MarkRead($topic['t'],$forum['id']);
 					if($subscr)
-						$Forum->Subscriptions->SubscribeTopic($topic['t'],$me['id'],$subscr,$values['status']);
+						$Forum->Subscriptions->SubscribeTopic($topic['t'],$Forum->user['id'],$subscr,$values['status']);
 				}
 				else
 				{
@@ -417,7 +412,7 @@ switch($do)
 					{
 						$Forum->Topic->MarkRead($data['t'],$forum['id']);
 						if($subscr)
-							$Forum->Subscriptions->SubscribeTopic($topic['t'],$me['id'],$subscr,$values['status']);
+							$Forum->Subscriptions->SubscribeTopic($topic['t'],$Forum->user['id'],$subscr,$values['status']);
 					}
 				else
 				{
@@ -435,7 +430,6 @@ switch($do)
 				$topic=$data ? $data : reset($topic);
 			}
 
-			AddFloodLimit();
 			#Just-created нужно для отправки реализации крона по отправке сообщений
 			GoAway($Forum->Links->Topic($forum['id'],$topic['t'],$topic['uri'],array('event'=>'just-created')),301,'post'.$topic['p']);
 		}
@@ -816,7 +810,6 @@ function SavePost($forum,$topic,$rights,$trights,$prights,$bv)
 		$values=$Forum->Post->SavePost($values);
 		if(!$edit and !$Forum->user)
 			$Forum->GuestSign('p',$values['id']);
-		AddFloodLimit();
 	}
 	catch(EE_SQL$E)
 	{

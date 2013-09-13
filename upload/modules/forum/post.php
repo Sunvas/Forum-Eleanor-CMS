@@ -51,6 +51,16 @@ class ForumPost extends Forum
 		return$errors;
 	}
 
+	#ToDo!
+	public function AddFloodLimit()
+	{
+		if($fl=Eleanor::$Permissions->FloodLimit())
+		{
+			$TC=new TimeCheck;
+			$TC->Add($this->Forum->config['n'],1,true,$fl);
+		}
+	}
+
 	/**
 	 * Получение прав по взаимодействию с конкретным постом с точки зрения пользователя. Спецификой данного метода
 	 * является определение тех прав, который нельзя проверить банальным in_array('value',$rights).
@@ -162,7 +172,7 @@ class ForumPost extends Forum
 `text` mediumtext NOT NULL,
 `last_mod` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,*/
 		}
-		elseif(isset($values['f'],$values['title'],$values['text'],$values['author']))
+		elseif(isset($values['f'],$values['title'],$values['text']))
 		{
 			$created=isset($values['created']) ? $values['created'] : date('Y-m-d H:i:s');
 			$forum=$this->Forums->GetForum($values['f']);
@@ -171,8 +181,6 @@ class ForumPost extends Forum
 				'prefix'=>isset($values['prefix']) ? $values['prefix'] : 0,
 				'status'=>isset($values['status']) ? $values['status'] : 1,
 				'created'=>$created,
-				'author'=>$values['author'],
-				'author_id'=>isset($values['author_id']) ? $values['author_id'] : null,
 				'state'=>isset($values['state']) ? $values['state'] : 'open',
 				'sortdate'=>isset($values['pinned']) ? $values['pinned'] : $created,
 				'pinned'=>isset($values['pinned']) ? $values['pinned'] : '0000-00-00 00:00:00',
@@ -183,6 +191,21 @@ class ForumPost extends Forum
 				'last_mod'=>$created,
 			);
 
+			#Авторство темы
+			if(!isset($topic['author']) or !array_key_exists('author_id',$topic))
+			{
+				if(isset($values['author']) and array_key_exists('author_id',$values))
+					$topic['author']=$values['author'];
+				else
+				{
+					$me=$this->Forum->user ? Eleanor::$Login->GetUserValue(array('name','id')) : array('name'=>'Guest','id'=>null);
+					$topic+=array(
+						'author'=>$me['name'],
+						'author_id'=>$me['id'],
+					);
+				}
+			}
+
 			if(isset($values['status']) and $values['status']!=1)
 				$status=$values['status']==-1 ? -3 : -2;
 			else
@@ -191,8 +214,8 @@ class ForumPost extends Forum
 			$post+=array(
 				'f'=>$values['f'],
 				'status'=>$status,
-				'author'=>$values['author'],
-				'author_id'=>isset($values['author_id']) ? $values['author_id'] : null,
+				'author'=>$topic['author'],
+				'author_id'=>isset($topic['author_id']) ? $values['author_id'] : null,
 				'ip'=>isset($values['ip']) ? $values['ip'] : Eleanor::$ip,
 				'created'=>$created,
 				'sortdate'=>$created,
@@ -256,7 +279,7 @@ class ForumPost extends Forum
 				throw new EE('MISSING_LANGUAGE',EE::USER);
 
 			if($cnt>0 and $forum['inc_posts'] and $post['status']==1 and $post['author_id'])
-				Eleanor::$Db->Update($this->Forum->config['fu'],array('!posts'=>'`posts`+'.$cnt),'`id`='.$post['author_id'].' LIMIT 1');
+				$this->IncUserPosts($cnt,$post['author_id']);
 
 			return$topic;
 		}
@@ -308,7 +331,7 @@ class ForumPost extends Forum
 				switch($topic['status'])
 				{
 					case 1:
-						Eleanor::$Db->Update($config['fl'],array('lp_date'=>$topic['lp_date'],'lp_id'=>$p,'lp_title'=>$topic['title'],'lp_uri'=>$topic['uri'],'lp_author'=>$post['author'],'lp_author_id'=>$post['author_id'],'!topics'=>'`topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
+						Eleanor::$Db->Update($config['fl'],array('lp_date'=>$topic['lp_date'],'lp_id'=>$t,'lp_title'=>$topic['title'],'lp_uri'=>$topic['uri'],'lp_author'=>$post['author'],'lp_author_id'=>$post['author_id'],'!topics'=>'`topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
 					break;
 					case -1:
 						Eleanor::$Db->Update($config['fl'],array('!queued_topics'=>'`queued_topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
@@ -377,18 +400,19 @@ class ForumPost extends Forum
 			Files::Delete($dest);
 		if(!rename($dirpath,$dest))
 			return false;
+		$data['!date']='NOW()';
 
 		$from=rtrim(substr(Eleanor::$os=='w' ? str_replace('\\','/',$dirpath) : $dirpath,strlen(Eleanor::$root)),'/').'/';
 
 		$config=$this->Forum->config;
 		$dbf=array();
-		$R=Eleanor::$Db->Query('SELECT `id`,`name`,`file`,`hash` FROM `'.$config['fa'].'` WHERE `p`='.$data['p']);
+		$R=Eleanor::$Db->Query('SELECT `id`,`name`,`file`,`date`,`hash` FROM `'.$config['fa'].'` WHERE `p`='.$data['p']);
 		while($a=$R->fetch_assoc())
-			$dbf[$a['name'] ? $a['name'] : $a['file']]=array($a['id'],$a['hash'],$a['file'] and $a['name']);
+			$dbf[$a['name'] ? $a['name'] : $a['file']]=array($a['id'],$a['hash'],$a['file'] and $a['name'],$a['date']);
 
 		$todb=$remdb=$rfrom=$rto=array();#Массив для записи в БД, удаления из БД, замены $rfrom=>$rto в $text
 		if($hide)
-			foreach($files as $k=>&$v)
+			foreach($files as $v)
 			{
 				#Если имя файла в системе начинается с -xxxxx-, где x - случайные символы, этот "префикс" нужно отбросить
 				$un='-'.substr(uniqid(),-5).'-';
@@ -449,5 +473,76 @@ class ForumPost extends Forum
 		}
 
 		return false;
+	}
+
+
+	/**
+	 * Увеличение счетчика постов пользователю и возможный перевод его в другую группу.
+	 * @param $cnt Число, на которое нужно увеличить счетчик постов
+	 * @param $uid ID поьзователя
+	 */
+	public function IncUserPosts($cnt,$uid=false)
+	{
+		$Forum = $this->Forum;
+		$config = $Forum->config;
+
+		if(!$uid)
+			if($Forum->user)
+				$uid=$Forum->user['id'];
+			else
+				return;
+
+		Eleanor::$Db->Update($config['fu'],array('!posts'=>'`posts`+'.$cnt),'`id`='.$uid.' LIMIT 1');
+
+		if($Forum->user and $uid==$Forum->user['id'])
+		{
+			$Forum->user['posts']+=$cnt;
+
+			$posts=$Forum->user['posts'];
+			$groups=$Forum->ug;
+		}
+		else
+		{
+			$R=Eleanor::$Db->Query('SELECT `s`.`groups`,`f`.`posts` FROM `'.$config['fu'].'` INNER JOIN `'.P.'users_site` USING(`id`) WHERE `id`='.$uid.' LIMIT 1');
+			if(!list($groups,$posts)=$R->fetch_row())
+				return;
+
+			$posts+=$cnt;
+			$groups=explode(',,',trim($groups,','));
+		}
+		$group=reset($groups);
+
+		#Продвижение в другую группу
+		$R=Eleanor::$Db->Query('SELECT `parents` FROM `'.$config['fg'].'` WHERE `id`='.$group.' LIMIT 1');
+		if(list($parents)=$R->fetch_row())
+		{
+			$grows=array();
+			$R=Eleanor::$Db->Query('SELECT `id`,`grow_to`,`grow_after` FROM `'.$config['fg'].'` WHERE `id`'.($parents ? 'IN('.$parents.$group.')' : '='.$group.' LIMIT 1'));
+			while($a=$R->fetch_assoc())
+				$grows[ $a['id'] ]=array_slice($a,1);
+
+			$parents=$parents ? explode(',',rtrim($parents,',')) : array();
+			$parents[]=$group;
+			$parents=array_reverse($parents);
+
+			$growto=$after=false;
+			foreach($parents as $v)
+				if(isset($grows[$v]) and (!$growto or !$after))
+				{
+					if(!$growto and $grows[$v]['grow_to']!==null)
+						$growto=$grows[$v]['grow_to'];
+
+					if(!$after and $grows[$v]['grow_after']!==null)
+						$after=$grows[$v]['grow_after'];
+				}
+				else
+					break;
+
+			if($after and $growto and $after<=$posts)
+			{
+				array_splice($groups,0,1,$growto);
+				UserManager::Update(array('groups'=>$groups),$uid);
+			}
+		}
 	}
 }

@@ -138,6 +138,10 @@ return array(
 	{
 		return'Ви дійсно хчете видалити префікс тем &quot;'.$prefix.'&quot; який викоритовується в '.Ukrainian::Plural(count($forums),array('форумі','форумах','форумах ')).join(', ',$forums).'?';
 	},
+	'save-forum'=>'Зберегти форум',
+	'add-forum'=>'Додати форум',
+	'save-prefix'=>'Зберегти префікс',
+	'add-prefix'=>'Додати префікс',
 
 	'syncusers'=>'Синхронизація користувачів',
 	'finishdate'=>'Дата завершення',
@@ -152,5 +156,5 @@ return array(
 	#Ошибки
 	'PARENT_HAS_NOT_SAME_LANG'=>'Помилка в послідовності мов',
 	'EMPTY_FORUMS'=>'Не вибрані форуми',
-	'EMPTY_MODERS'=>'ні Користувачі, ні групи',
+	'EMPTY_MODERS'=>'Ані користувачів, ані груп не вибрано',
 );

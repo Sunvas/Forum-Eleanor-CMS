@@ -50,8 +50,7 @@ function ShowForum($id)
 		$gp= $Forum->GuestSign('p');
 	}
 
-	$errors=$links=array();
-	$info=false;
+	$errors=$links=$info=array();
 	if(!$forum['is_category'] and in_array(1,$rights['topics']))
 	{
 		#В этой переменной хранятся все модераторы форума + наши права, как модератора
@@ -368,7 +367,7 @@ function ShowForum($id)
 			{
 				#Попытаемся извлечь хоть одну тему, которую мы не читали, но у которой lp_date>$allread.
 				#key! mark_forum_read
-				$R=Eleanor::$Db->Query('SELECT UNIT_TIMESTAMP(`lp_date`) `lp_date` FROM `'. $config['ft'].'` WHERE `f`='.$forum['id'].' AND `status`=1 AND `lp_date`>FROM_UNIXTIME('.$allread.') ORDER BY `lp_date` ASC LIMIT 1');
+				$R=Eleanor::$Db->Query('SELECT UNIX_TIMESTAMP(`lp_date`) `lp_date` FROM `'. $config['ft'].'` WHERE `f`='.$forum['id'].' AND `status`=1 AND `lp_date`>FROM_UNIXTIME('.$allread.') ORDER BY `lp_date` ASC LIMIT 1');
 				if($a=$R->fetch_assoc())
 					$Forum->Forums->MarkRead($forum['id'],$a['lp_date']-1);
 				else
@@ -428,12 +427,14 @@ function ShowForum($id)
 				}
 			}
 		}
+		elseif($forum['_page']<1)
+			$forum['_page']=1;
 
 		if($forum['meta_descr'])
 			$forum['meta_descr']=Eleanor::ExecBBLogic($forum['meta_descr'],array('page'=>$forum['_pages']==$forum['_page'] ? false : $forum['_page']));
 
-		$links['rss_topics']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'show'=>'topics'));
-		$links['rss_posts']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id']));
+		$links['rss_topics']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] ? $forum['language'] : false,'show'=>'topics'));
+		$links['rss_posts']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] ? $forum['language'] : false));
 		$links['first_page']= $Forum->Links->Forum($forum['id'],array('fi'=>$forum['_filter']));
 		$links['form_items']= $Forum->Links->Forum($forum['id'],array(
 			'fi'=>$forum['_filter'],
@@ -442,13 +443,15 @@ function ShowForum($id)
 		$links['pages']=function($n)use($forum,$Forum){ return $Forum->Links->Forum($forum['id'],array('fi'=>$forum['_filter'])+array('page'=>$n)); };
 		$links['new-topic']=!$forum['_trash'] && in_array(1,$rights['new']) && (!$Forum->user or !$Forum->user['restrict_post']) ? $Forum->Links->Action('new-topic',$forum['id']) : false;
 		$links['wait-topics']=$forum['_statuses'][-1]>0 ? $Forum->Links->Forum($forum['id'],array('fi'=>array('status'=>-1))) : false;
+
+		if(!$forum['_filter'])
+			$Eleanor->origurl=$links['form_items'];
 	}
+	else
+		$Eleanor->origurl=$Forum->Links->Forum($forum['id']);
 
 	$Eleanor->module['description']=$forum['meta_descr'] ? $forum['meta_descr'] : Strings::CutStr(strip_tags(str_replace("\n",' ',$forum['description'])),250);
 
-	if(!$forum['_filter'])
-		$Eleanor->origurl=PROTOCOL.Eleanor::$punycode.Eleanor::$site_path
-			.(isset($links['forum_items']) ? $links['forum_items'] : $Forum->Links->Forum($forum['id']));
 	#Реверс страниц
 	if(isset($forum['_page']))
 		$forum['_page']=-$forum['_page'];
@@ -699,15 +702,20 @@ function Forums($parent=0)
 		$preforums[ $a['id'] ]=$lp+array_slice($a,$offset);
 	}
 
-	if(Eleanor::$caching and $parent==0)
+	if(Eleanor::$caching)
 	{
-		Eleanor::$last_mod=$lastview;
-		$etag=Eleanor::$etag;
-		$uid= $Forum->user ? $Forum->user['id'] : 0;
-		Eleanor::$etag=md5($Forum->config['n'].$uid.$Eleanor->module['etag']);
-		if(Eleanor::$modified and Eleanor::$last_mod and Eleanor::$last_mod<=Eleanor::$modified and $etag and $etag==Eleanor::$etag)
-			return Start();
-		Eleanor::$modified=false;
+		#В etag пропишем последнее изменение: возможно мы отображаем подфорумы конкретного форума и в подфоруме опубликовался ответ.
+		$Eleanor->module['etag'].=$lastview;
+		if($parent==0)
+		{
+			Eleanor::$last_mod=$lastview;
+			$etag=Eleanor::$etag;
+			$uid= $Forum->user ? $Forum->user['id'] : 0;
+			Eleanor::$etag=md5($Forum->config['n'].$uid.$Eleanor->module['etag']);
+			if(Eleanor::$modified and Eleanor::$last_mod and Eleanor::$last_mod<=Eleanor::$modified and $etag and $etag==Eleanor::$etag)
+				return Start();
+			Eleanor::$modified=false;
+		}
 	}
 
 	#Извлечение модераторов

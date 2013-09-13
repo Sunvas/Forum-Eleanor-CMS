@@ -36,7 +36,7 @@ class ForumSubscriptions extends Forum
 				default:
 					$interval='';
 			}
-			$insert=array('uid'=>$uid,'status'=>$status,'!lastview'=>'NOW()','intensity'=>$intensity,'!nextsend'=>'NOW()'.$interval);
+			$insert=array('uid'=>$uid,'status'=>$status,'!lastview'=>'NOW()','intensity'=>$intensity,'!nextsend'=>'NOW()'.$interval,'!date'=>'NOW()');
 			if(is_array($tid))
 			{
 				$cnt=count($tid);
@@ -78,7 +78,7 @@ class ForumSubscriptions extends Forum
 				default:
 					$interval='';
 			}
-			$insert=array('uid'=>$uid,'language'=>$lang,'!lastview'=>'NOW()','intensity'=>$intensity,'!nextsend'=>'NOW()'.$interval);
+			$insert=array('uid'=>$uid,'language'=>$lang,'!lastview'=>'NOW()','intensity'=>$intensity,'!nextsend'=>'NOW()'.$interval,'!date'=>'NOW()');
 			if(is_array($fid))
 			{
 				$cnt=count($fid);
@@ -109,7 +109,7 @@ class ForumSubscriptions extends Forum
 		$Eleanor=Eleanor::getInstance();
 
 		$config = $this->Forum->config;
-		$R=Eleanor::$Db->Query('SELECT `s`.`f`,`s`.`uid`,`s`.`language`,`s`.`lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone` FROM `'. $config['fs'].'` `s` INNER JOIN `'. $config['fl'].'` `fl` ON `s`.`f`=`fl`.`id` AND `s`.`language`=`fl`.`language` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `fl`.`lp_date`>`s`.`lastview` AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($fid ? '`s`.`f`'.Eleanor::$Db->In($fid) : '').' ORDER BY `s`.`language` ASC LIMIT '.$limit);
+		$R=Eleanor::$Db->Query('SELECT `s`.`f`,`s`.`uid`,`s`.`language`,`s`.`lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone` FROM `'. $config['fs'].'` `s` INNER JOIN `'. $config['fl'].'` `fl` ON `s`.`f`=`fl`.`id` AND `s`.`language`=`fl`.`language` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `fl`.`lp_date`>`s`.`lastview` AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($fid ? ' AND `s`.`f`'.Eleanor::$Db->In($fid) : '').' ORDER BY `s`.`language` ASC LIMIT '.$limit);
 		while($a=$R->fetch_assoc())
 		{
 			$a['groups']=$a['groups'] ? explode(',,',trim($a['groups'],',')) : array();
@@ -167,7 +167,7 @@ class ForumSubscriptions extends Forum
 							'topiclink'=>$sitelink.$this->Links->Topic($a['f'],$topics['id'],$topics['uri']),
 							'forumlink'=>$sitelink.$this->Links->Forum($a['f']),
 							'authorlink'=>$sitelink.Eleanor::$Login->UserLink($topics['author'],$topics['author_id']),
-							'cflink'=>$this->Links->Forum($a['f'],array('fi'=>array('cf'=>$a['lastview']))),
+							'createdlink'=>$this->Links->Forum($a['f'],array('fi'=>array('cf'=>$a['lastview']))),
 							'author'=>htmlspecialchars($topics['author'],ELENT,CHARSET),
 							'created'=>$ulang::Date($topics['created'],'fdt'),
 							'lastview'=>$ulang::Date($a['lastview'],'fdt'),
@@ -194,7 +194,7 @@ class ForumSubscriptions extends Forum
 							'site'=>Eleanor::$vars['site_name'],
 							'sitelink'=>$sitelink,
 							'forumlink'=>$sitelink.$this->Links->Forum($a['f']),
-							'cflink'=>$this->Links->Forum($a['f'],array('fi'=>array('cf'=>$a['lastsend']))),
+							'createdlink'=>$this->Links->Forum($a['f'],array('fi'=>array('cf'=>$a['lastsend']))),
 							'cnt'=>$topics['cnt'],
 							'lastview'=>$ulang::Date($a['lastview'],'fdt'),
 							'lastsend'=>$ulang::Date($a['lastsend'],'fdt'),
@@ -261,7 +261,7 @@ class ForumSubscriptions extends Forum
 		$Eleanor=Eleanor::getInstance();
 
 		$config = $this->Forum->config;
-		$R=Eleanor::$Db->Query('SELECT `s`.`t`,`s`.`uid`,`s`.`lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone`,`ft`.`f`,`ft`.`language`,`ft`.`uri`,`ft`.`status`,`ft`.`author_id`,`ft`.`title` FROM `'. $config['ts'].'` `s` INNER JOIN `'. $config['ft'].'` `ft` ON `s`.`t`=`ft`.`id` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `ft`.`lp_date`>`s`.`lastview` AND `s`.`status`=1 AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($tid ? '`s`.`t`'.Eleanor::$Db->In($tid) : '').' ORDER BY `ft`.`language` ASC LIMIT '.$limit);
+		$R=Eleanor::$Db->Query('SELECT `s`.`t`,`s`.`uid`,`s`.`lastview`,`s`.`lastsend`,`s`.`intensity`,`u`.`email`,`u`.`groups`,`u`.`name`,`u`.`language` `ulanguage`,`u`.`timezone`,`ft`.`f`,`ft`.`language`,`ft`.`uri`,`ft`.`status`,`ft`.`author_id`,`ft`.`title` FROM `'. $config['ts'].'` `s` INNER JOIN `'. $config['ft'].'` `ft` ON `s`.`t`=`ft`.`id` INNER JOIN `'.P.'users_site` `u` ON `u`.`id`=`s`.`uid` WHERE `ft`.`lp_date`>`s`.`lastview` AND `s`.`status`=1 AND `s`.`sent`=0 AND `s`.`nextsend`<=\''.date('Y-m-d H:i:s').'\''.($tid ? ' AND `s`.`t`'.Eleanor::$Db->In($tid) : '').' ORDER BY `ft`.`language` ASC LIMIT '.$limit);
 		while($a=$R->fetch_assoc())
 		{
 			$a['groups']=$a['groups'] ? explode(',,',trim($a['groups'],',')) : array();

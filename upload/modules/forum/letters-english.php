@@ -1,47 +1,67 @@
 <?php return array (
-  'substi_t' => 'Новый ответ в тему {title}',
-  'substi' => 'Здравствуйте, {name}!<br />
+	'substi_t' => 'A new answer in {title}',
+	'substi' => 'Hello, {name}!<br />
 <br />
-Уведомляем, пользователь <a target="_blank" href="{authorlink}">{author}</a> только что ответил в тему <a target="_blank" href="{topiclink}">{title}</a>:<br />
-<br />
+You got this message because you follow on our <a target="_blank" href="{forumlink}">forum {site}</a> this topic <a target="_blank" href="{topiclink}">{title}</a>. User <a target="_blank" href="{authorlink}">{author}</a> has answered in that topic:<br />
+====<br />
 {text}<br />
-<a target="_blank" href="{postlink}">Перейти</a><br />
+====<br />
+There can be more new messages: you won&#39;t get new notification until you visit this topic.<br />
 <br />
-<a target="_blank" href="{cancel}">Кликнув сюда</a>, Вы можете отписаться от рассылки.<br />
+<a target="_blank" href="{topicnewlink}">Click here</a>, if you want to view the first new post.<br />
 <br />
-C уважением,<br />
-команда сайта {site}',
-  'subst_t' => 'Сводка по теме {title}',
-  'subst' => 'Здравствуйте, {name}!<br />
+If you want to view this topic from the begin, than <a target="_blank" href="{topiclink}">click here</a>.<br />
 <br />
-Уведомляем, что с {lastview} в теме <a target="_blank" href="{topiclink}">{title}</a> опубликовано {cnt} ответов. <a target="_blank" href="{postlink}">Перейти к первому непрочтенному сообщению.</a>. В теме может быть гораздо больше новых сообщений. Вы не будете получать новые уведомления, пока не ознакомитесь с существующими непрочтенными сообщениями.<br />
+If you want to stop the follow, so click there on "Nofollow" or <a target="_blank" href="{cancel}">click here.</a><br />
 <br />
-<a target="_blank" href="{cancel}">Кликнув сюда</a>, Вы можете отписаться от рассылки.<br />
+Greez,<br />
+Team {site}',
+	'subst_t' => 'Summary of {title}',
+	'subst' => 'Hello, {name}!<br />
 <br />
-C уважением,<br />
-команда сайта {site}',
-  'subsfi_t' => 'Новая тема на форуме сайта {site}',
-  'subsfi' => 'Здравствуйте, {name}!<br />
+We want to notify you, that from your last visit ({lastview}) in topic <a target="_blank" href="{topiclink}">{title}</a> [cnt=plural]were published {cnt} replies|were published {cnt} replies|were published {cnt} replies[/cnt]. <a target="_blank" href="{postlink}">View the newest reply</a>. There can be more new messages: you won&#39;t get new notification until you visit this topic.<br />
 <br />
-Уведомляем, что в форуме <a target="_blank" href="{forumlink}">{forum}</a> пользователь <a target="_blank" href="{authorlink}">{author}</a> только что создал тему <a target="_blank" href="{topiclink}">{title}</a>:<br />
+If you want to stop the follow, so click there on "Nofollow" or <a target="_blank" href="{cancel}">click here.</a><br />
 <br />
+Greez,<br />
+Team {site}',
+	'subsfi_t' => 'New topic at {site}',
+	'subsfi' => 'Hello, {name}!<br />
+<br />
+We want to notify you, that in forum <a target="_blank" href="{forumlink}">{forum}</a> <a target="_blank" href="{authorlink}">{author}</a>started new topic (<a target="_blank" href="{topiclink}">{title}</a>):<br />
+====<br />
 {text}<br />
+====<br />
+There can be more than one new topic.
+<a target="_blank" href="{cancel}">Click here</a> to stop follow.<br />
 <br />
-<a target="_blank" href="{cancel}">Кликнув сюда</a>, Вы можете отписаться от рассылки.<br />
+Greez,<br />
+Team {site}',
+	'subsf_t' => 'Summary of {forum}',
+	'subsf' => 'Hello, {name}!<br />
 <br />
-C уважением,<br />
-команда сайта {site}',
-  'subsf_t' => 'Сводка по форуму {forum}',
-  'subsf' => 'Здравствуйте, {name}!<br />
+We want to notify you, that from your last visit ({lastview}) in forum <a target="_blank" href="{forumlink}">{forum}</a> [cnt=plural]has been {cnt} topics created|has been {cnt} topics created[/cnt]. <a target="_blank" href="{createdlink}">Click here</a>, to view them. There can be more new topics in that forum: you won&#39;t get new notification until you visit this topic.<br />
 <br />
-Уведомляем, что с {lastview} в форуме <a target="_blank" href="{forumlink}">{forum}</a> создано {cnt} тем(ы). Вы можете просмотреть их, <a target="_blank" href="{cblink}">кликнув сюда</a>. На форуме может быть гораздо больше новых тем. Вы не будете получать новые уведомления, пока не ознакомитесь с существующими темами.<br />
+If you want to stop the follow, so click there on "Nofollow" or <a target="_blank" href="{cancel}">click here.</a><br />
 <br />
-<a target="_blank" href="{cancel}">Кликнув сюда</a>, Вы можете отписаться от рассылки.<br />
+Greez,<br />
+Team {site}',
+	'complaint_t' => 'Some posts have got complains',
+	'complaint' => 'Hello, {name}!<br />
 <br />
-C уважением,<br />
-команда сайта {site}',
-  'complaint_t' => '',
-  'complaint' => '',
-  'rep_t' => '',
-  'rep' => '',
+User <a target="_blank" href="{authorlink}">{author}</a> reported that <a target="_blank" href="{postlink}">the post</a> of user <a target="_blank" href="{userlink}">{user}</a> in topic <a target="_blank" href="{topiclink}">{topic}</a> in forum <a target="_blank" href="{forumlink}">{forum}</a> have spam. Complain:<br />
+====<br />
+{text}<br />
+====<br />
+Greez,<br />
+Team {site}',
+	'rep_t' => 'Reputation changes in {forum}',
+	'rep' => 'Hello, {name}!<br />
+<br />
+User <a target="_blank" href="{authorlink}">{author}</a> [points&gt;0]increased[-points]decreased[/points] your reputation for <a target="_blank" href="{postlink}">a post</a> in topic <a target="_blank" href="{topiclink}">{topic}</a> in forum <a target="_blank" href="{forumlink}">{forum}</a>. Reputation text:<br />
+====<br />
+{text}<br />
+====<br />
+Greez,<br />
+Team {site}',
 );

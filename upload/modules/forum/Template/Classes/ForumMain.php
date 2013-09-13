@@ -68,11 +68,11 @@ class TplForumMain
 </div>
 <table class="tabstyle" id="fcst">
 	<tr>
-		<td class="fimg"><img src="images/categories/spy.png" /></td>
+		<td class="img"><img src="images/categories/spy.png" /></td>
 		<td>'.static::$lang['nowonforum'].$whoon($g,$u,$h,$b).($onforum ? ': '.rtrim($onforum,', ') : '').'</td>
 	</tr>
 	<tr>
-		<td class="fimg"><img src="images/categories/cookies.png" /></td>
+		<td class="img"><img src="images/categories/cookies.png" /></td>
 		<td>
 			<b>'.static::$lang['quantity'].'</b><br />'.$tau($stats['topics'],$stats['posts']-$stats['topics'],$stats['users']).'</td>
 	</tr>
@@ -130,6 +130,8 @@ class TplForumMain
 	 *   bool _toggle Возможность просматривать чужие темы с разными статусами и менять эти статусы (модератор)
 	 * @param array|false $forums подфорумы, содержимое массива идентично одноименному массиву метода ForumMain
 	 * @param array $online Список пользователей, просматривающих форум, содержимое массива идентично одноименному массиву метода ForumMain
+	 * @param array $errors Ошибки
+	 * @param array $info Информационные сообщения
 	 * @param array $links ссылки, ключи:
 	 *   string rss_topics Ссылка на RSS поток тем форума (только для форума)
 	 *   string rss_posts Ссылка на RSS потом постов форума (только для форума)
@@ -159,7 +161,13 @@ class TplForumMain
 			$c.='<fieldset class="forums"><legend>'.static::$lang['rules'].'</legend>'.$forum['rules'].'</fieldset>';
 
 		if($errors)
+		{
+			foreach($errors as $k=>&$v)
+				if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+					$v=static::$lang[$v];
+
 			$c.=Eleanor::$Template->Message($errors,'error');
+		}
 		if($forums)
 			$c.=static::DrawCategories($forums,!$forum['is_category']);
 
@@ -292,12 +300,12 @@ class TplForumMain
 						$img='<img src="images/forum/merged.gif" alt="'.static::$lang['merged'].'" title="'.static::$lang['merged'].'" />';
 					break;
 					default:
-						$img='<img'.($v['_read'] ? ' title="'.static::$lang['tread'].'" class="topicimg read"' : ' title="'.static::$lang['tunread'].'" alt="'.static::$lang['tunread'].'" class="topicimg new" data-t="'.$k.'"').' src="images/forum/'
+						$img='<img'.($v['_read'] ? ' title="'.static::$lang['tread'].'" class="topicimg read"' : ' title="'.static::$lang['hasnp'].'" alt="'.static::$lang['hasnp'].'" class="topicimg new" data-t="'.$k.'"').' src="images/forum/'
 							.($v['_wmp'] ? 'mytopic.gif' : 'topic.gif').'"  />';
 				}
 
 				$Lst->item(
-					array($img,'style'=>'width:1px'),
+					array($img,'class'=>'img'),
 					($v['_anp'] ? '<a href="'.$v['_anp'].'" title="'.static::$lang['gnp'].'" class="get-new-post"><img src="images/forum/newpost.gif" alt="" /></a> ' : '')
 					.($v['status']==-1 ? static::$lang['waits'].' ' : '')
 					.($v['_pin'] ? static::$lang['imp'].' ' : '')
@@ -323,9 +331,18 @@ class TplForumMain
 			$c.='<div class="forum-read"><a href="#" id="forum-read" data-f="'.$forum['id'].'">'.static::$lang['mfr'].'</a></div>';
 
 		if($moder)
-			$c.=$info
-				.'<fieldset id="topics-mm-panel" class="forums"><legend>'.static::$lang['moder_panel'].'</legend><span id="with-selected"></span>'
-				.Eleanor::Select('mm[do]',$moder).Eleanor::Button('Ok')
+		{
+			if($info)
+			{
+				foreach($info as $k=>&$v)
+					if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+						$v=static::$lang[$v];
+
+				$c.=Eleanor::$Template->Message($info,'info');
+			}
+
+			$c.='<fieldset id="topics-mm-panel" class="moderator"><legend>'.static::$lang['moder-topics'].'</legend><span id="with-selected"></span> '
+				.Eleanor::Select('mm[do]',$moder).' '.Eleanor::Button('Ok')
 				.($move ? '<div class="move extra" style="display:none"><ul class="moder"><li>'
 						.Eleanor::Select('mm[to]', $Forum->Forums->SelectOptions(0,$forum['id'],false))
 						.'</li><li><label>'.Eleanor::Check('mm[link]').static::$lang['leave_link'].'</label></li></ul></div>'
@@ -334,7 +351,8 @@ class TplForumMain
 						.'</li><li id="merge-other">'.Eleanor::Input('mm[to]','',array('placeholder'=>static::$lang['id_or_url_ot']))
 						.'</li><li><label>'.Eleanor::Check('mm[link]').static::$lang['leave_link'].'</li></ul></label></div>'
 					: '')
-				.'</fieldset></form>';
+				.'</fieldset></form><div class="clr"></div>';
+		}
 
 		$ld=isset($forum['_filter']['ld']) ? $forum['_filter']['ld'] : 0;
 		$lds='';
@@ -413,7 +431,7 @@ class TplForumMain
 		foreach($forums as $k=>&$v)
 		{
 			$c.='<tr>
-	<td class="fimg"><img'.($v['_read'] ? ' class="forumimg read" title="'.static::$lang['nonewposts'].'"' : ' class="forumimg new" title="'.static::$lang['hasnp'].'" data-f="'.$k.'"').'src="'.$GLOBALS['Eleanor']->Forum->config['logos'].($v['image'] ? $v['image'] : 'none.png').'" /></td>
+	<td class="img"><img'.($v['_read'] ? ' class="forumimg read" title="'.static::$lang['nonewposts'].'"' : ' class="forumimg new" title="'.static::$lang['hasnp'].'" data-f="'.$k.'"').'src="'.$GLOBALS['Eleanor']->Forum->config['logos'].($v['image'] ? $v['image'] : 'none.png').'" /></td>
 	<td class="ftitle"><a href="'.$v['_a'].'" style="font-weight:bold">'.$v['title'].'</a><br /><span>'.$v['description'].'</span>';
 
 			$ism=$GLOBALS['Eleanor']->Forum->ugr['supermod'];
@@ -486,8 +504,8 @@ class TplForumMain
 			elseif($lp)#Есть последний пост
 			{
 				$sa=htmlspecialchars($lp['author'],ELENT,CHARSET);
-				$c.='<a href="'.$v['_alp'].'" title="'.static::$lang['golast'].'"><img src="images/forum/lastpost.png" /></a> '.Eleanor::$Language->Date($lp['date'],'fdt').'
-<br /><b>'.static::$lang['topic:'].'</b> <a href="'.$v['_anp'].'" title="'.sprintf(static::$lang['gonew'],$lp['title']).'">'.Strings::CutStr($lp['title'],300).'</a>
+				$c.='<a href="'.$v['_alp'].'" title="'.static::$lang['glp'].'"><img src="images/forum/lastpost.png" /></a> '.Eleanor::$Language->Date($lp['date'],'fdt').'
+<br /><b>'.static::$lang['topic:'].'</b> <a href="'.$v['_anp'].'" title="'.$lp['title'].'">'.Strings::CutStr($lp['title'],300).'</a>
 <br /><b>'.static::$lang['author:'].'</b> '.($lp['_alpa'] ? '<a href="'.$lp['_alpa'].'">'.$sa.'</a>' : $sa);
 			}
 			else#Нету последнего поста

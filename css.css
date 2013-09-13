@@ -1,4 +1,4 @@
-/*FORUM*/
+﻿/*FORUM*/
 table.forums { margin-bottom: 15px; }
 nav.forums { margin: 0 0 10px 10px; }
 fieldset.forums, fieldset.moderator  { margin: 0 10px 10px; padding:5px; }
@@ -16,7 +16,6 @@ ul.moder { list-style:none; }
 
 th.topics, th.posts { width:70px; }
 td.topics, td.posts { text-align:center; }
-td.fimg { width:1px; }
 
 .read { opacity:0.5; }
 .new { cursor:pointer; }
@@ -43,8 +42,8 @@ th.lastpost { width:32%; }
 #posts .post tr > td.author div { text-align:center; }
 #posts .post tr > td.author div img { max-width:100px;max-height:100px; }
 
-#topics-mm-panel { text-align:right; }
-#posts-mm-panel { float:right; width:280px; text-align:right; }
-#topic-mm-panel { float:left; width:280px; }
+#posts-mm-panel,#topics-mm-panel { float:right; text-align:right; }
+#topic-mm-panel { float:left; }
+fieldset.moderator  { width:260px; }
 
 #post-buttons { text-align:center; font-size:20px; }

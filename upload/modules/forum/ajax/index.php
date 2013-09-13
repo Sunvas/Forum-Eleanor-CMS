@@ -15,9 +15,10 @@ include$Eleanor->module['path'].'core.php';
 Eleanor::LoadOptions($mc['opts']);
 $Eleanor->Forum=new ForumCore($mc);
 $Forum=$Eleanor->Forum;
-$Forum->config=$Forum->Forum->config;
+$Forum->config=$config=$Forum->Forum->config;
 $Forum->Language=new Language(true);
 $Forum->Language->loadfrom=dirname(__DIR__);
+$paths=Eleanor::$Template->paths;#Бэкап всех путей к шаблонам перед BeAs();
 
 $ev=isset($_POST['event']) ? (string)$_POST['event'] : '';
 switch($ev)
@@ -77,11 +78,13 @@ switch($ev)
 	case'new-post':#Новый пост
 	case'lnp':#Load New Posts
 		BeAs('user');
+		Eleanor::$Template->paths+=$paths;
 		$Forum->LoadUser();
 		include __DIR__.'/post.php';
 	break;
 	case'preview':
 		BeAs('user');
+		Eleanor::$Template->paths+=$paths;
 		$Forum->LoadUser();
 
 		$Eleanor->Editor_result->type='bb';
@@ -93,7 +96,29 @@ switch($ev)
 				include$Eleanor->module['path'].'Misc/bb-quote.php';
 			OwnBB::$replace['quote']='ForumBBQoute';
 		}
-		Result($Eleanor->Editor_result->GetHtml($s,true,false));
+
+		$replace=false;
+		$attaches=$Forum->Attach->GetFromText($s);
+		if($attaches)
+		{
+			$R=Eleanor::$Db->Query('SELECT `id`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE `id`'.Eleanor::$Db->In($attaches));
+			$attaches=array();
+			while($a=$R->fetch_assoc())
+				$attaches[ $a['id'] ]=array_slice($a,1);
+			if($attaches)
+			{
+				$s=array('text'=>$s);
+				$replace=$Forum->Attach->DecodePosts($s,$attaches,true);
+				$s=$s['text'];
+			}
+		}
+
+		$s=$Eleanor->Editor_result->GetHtml($s,true,false);
+
+		if($replace)
+			$s=str_replace($replace['from'],$replace['to'],$s);
+
+		Result($s);
 	break;
 	default:
 		Error(Eleanor::$Language['main']['unknown_event']);

@@ -52,7 +52,7 @@ class ForumLinks extends Forum
 		if($this->Url->furl)
 		{
 			$r=$uri=='' ? array() : $this->ForumArr($f);
-			$r[]=$r ? $uri :'topic-'.$t;
+			$r[]=$r ? $uri : 'topic-'.$t;
 			return$this->Url->Construct($r+array(''=>$a),true,'');
 		}
 		return $this->Url->Construct(array('topic'=>$t,''=>$a));
@@ -67,10 +67,14 @@ class ForumLinks extends Forum
 	{
 		if($this->Url->furl)
 		{
+			$ending=false;
 			$r=$this->ForumArr($id);
 			if(!$r)
+			{
 				$r[]='forum-'.$id;
-			return$this->Url->Construct($r+array(''=>$a),true,false);
+				$ending='';
+			}
+			return$this->Url->Construct($r+array(''=>$a),true,$ending);
 		}
 		if(isset($this->Forums->dump[$id]))
 			return$this->Url->Construct(array('forum'=>$id,''=>$a));
@@ -98,7 +102,10 @@ class ForumLinks extends Forum
 					else
 						return array();
 
-		$r[]=$Forums->dump[$id]['uri'];
-		return$Forums->dump[$id]['_uri']=$r;
+		if($Forums->dump[$id]['uri'])
+		{
+			$r[]=$Forums->dump[$id]['uri'];
+			return$Forums->dump[$id]['_uri']=$r;
+		}
 	}
 }

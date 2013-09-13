@@ -140,7 +140,7 @@ switch($do)
 			else
 				$moder=false;
 
-			if(($topic['status']==0 or $Forum->user and $Forum->user['id']!=$topic['author_id']) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+			if(($topic['status']==0 or $Forum->user and $Forum->user['id']!=$topic['author_id']) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 				goto ExitPage;
 
 			$active=$topic['status']==1;
@@ -330,7 +330,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	if($topic['_page']<1)
 		$topic['_page']=1;
 
-	$errors=$checked=$authors=$attaches=$posts=$where=array();
+	$errors=$checked=$authors=$attaches=$posts=$where=$info=array();
 	if(isset($_POST['mm']) and ($forum['_moderator'] or $Forum->ugr['supermod']))
 	{
 		isset($_POST['mm']['p']) ? (array)$_POST['mm']['p'] : array();
@@ -572,9 +572,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 		$tread=$topic['_read'];
 		$hasquote=false;
 
-		$quotes=Eleanor::GetCookie($config['n'].'-qp');
-		$quotes=$quotes ? array_map(function($v){ return(int)$v; },explode(',',$quotes)) : array();
-
+		#ToDo! Пользователи смогут удалять свои темы. Если эта опция отключена, то удалить первое сообщение пользователи не смогут.
 		$R=Eleanor::$Db->Query('SELECT `id`,`status`,`author`,`author_id`,`ip`,`created`,`sortdate`,`edited`,`edited_by`,`edited_by_id`,`edit_reason`,`approved`,`approved_by`,`approved_by_id`,`text`,`last_mod`'.$where.' ORDER BY `sortdate` ASC LIMIT '.$offset.','.$Forum->vars['ppp']);
 		while($a=$R->fetch_assoc())
 		{
@@ -587,7 +585,6 @@ function ShowTopic($furi,$turi='',$filter=array())
 					$a['status']=1;
 			}
 
-			$a['_quoted']=in_array($a['id'],$quotes);#Пост процитирован
 			$a['_approved']=$a['_rejected']=array();#Одобрено и отвергнуто
 			$a['_my']=$Forum->user && $a['author_id']== $Forum->user['id'] || !$Forum->user && in_array($a['id'],$gp);
 			if($a['_my'])
@@ -670,6 +667,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 		$inp=$posts ? Eleanor::$Db->In(array_keys($posts)) : false;
 		if($inp)
 		{
+			#Отключим возможность менять репутацию постам, за которые мы уже меняли репутацию
 			if($Forum->user)
 			{
 				$R=Eleanor::$Db->Query('SELECT `p` FROM `'.$config['fr'].'` WHERE `from`='.$Forum->user['id'].' AND `p`'.$inp);
@@ -677,6 +675,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 					$posts[ $a['p'] ]['_r+']=$posts[ $a['p'] ]['_r-']=false;
 			}
 
+			#ToDo! право доступа к вложениям attach
 			$q='SELECT `id`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE ';
 			$q1=$q.'`p`'.$inp;
 			$q2=$attaches ? $q.'`id`'.Eleanor::$Db->In($attaches) : false;
@@ -752,7 +751,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	);
 
 	if(!$topic['_filter'])
-		$Eleanor->origurl=PROTOCOL.Eleanor::$punycode.Eleanor::$site_path.$links['form_items'];
+		$Eleanor->origurl=$links['form_items'];
 
 	SetData();
 	Eleanor::$Template->queue[]=$config['topictpl'];
@@ -776,7 +775,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	);
 
 	$Eleanor->Editor->preview=array('module'=>$Eleanor->module['name'],'event'=>'preview');
-	$c=Eleanor::$Template->ShowTopic($forum,$rights,$topic,$posts,$attaches,$authors ? GetAuthors($authors,$forum) : array(),$errors,$Forum->GetOnline('-f'.$forum['id'].'-t'.$topic['id']),$links,$voting,$values,$captcha);
+	$c=Eleanor::$Template->ShowTopic($forum,$rights,$topic,$posts,$attaches,$authors ? GetAuthors($authors,$forum) : array(),$errors,$info,$Forum->GetOnline('-f'.$forum['id'].'-t'.$topic['id']),$links,$voting,$values,$captcha);
 	Start();
 	echo$c;
 }
@@ -884,6 +883,7 @@ function ShowPost($id,$ajax=false)
 	else
 		$medit=$mdelete=false;
 
+	#ToDo! Пользователи смогут удалять свои темы. Если эта опция отключена, то удалить первое сообщение пользователи не смогут.
 	$post+=array(
 		#Одобрено и отвергнуто
 		'_rejected'=>array(),

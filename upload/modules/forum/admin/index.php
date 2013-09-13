@@ -41,15 +41,15 @@ $Eleanor->module['links']=array(
 	#Добавить префикс темы
 	'add-prefix'=>$Eleanor->Url->Construct(array('do'=>'add-prefix')),
 	#Подписки на форумы
-	'fsubscriptions'=>$Eleanor->Url->Construct(array('do'=>'fsubscriptions')),
+	'fsubscriptions'=>$Eleanor->Url->Construct(array('do'=>'forum-subscriptions')),
 	#Подписки на темы
-	'tsubscriptions'=>$Eleanor->Url->Construct(array('do'=>'tsubscriptions')),
+	'tsubscriptions'=>$Eleanor->Url->Construct(array('do'=>'topic-subscriptions')),
 	#Менеджер репутации
 	'reputation'=>$Eleanor->Url->Construct(array('do'=>'reputation')),
 	#Обслуживание
 	'tasks'=>$Eleanor->Url->Construct(array('do'=>'tasks')),
 	#Настройки
-	'options'=>$Eleanor->Url->Construct(array('do'=>'options'))
+	'settings'=>$Eleanor->Url->Construct(array('do'=>'settings'))
 );
 
 $post=$_SERVER['REQUEST_METHOD']=='POST' && Eleanor::$our_query;
@@ -302,10 +302,10 @@ if(isset($_GET['do']))
 						'smiles'=>false,
 					),
 				),
-				$lang['ncompl'],
+				$lang['abuse-letter'],
 				'complaint_t'=>array(
 					'title'=>$lang['ltitle'],
-					'descr'=>$lang['letcompl'],
+					'descr'=>$lang['labuse'],
 					'type'=>'input',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -315,7 +315,7 @@ if(isset($_GET['do']))
 				),
 				'complaint'=>array(
 					'title'=>$lang['ltext'],
-					'descr'=>$lang['letcompl'],
+					'descr'=>$lang['labuse'],
 					'type'=>'editor',
 					'multilang'=>true,
 					'bypost'=>&$post,
@@ -737,11 +737,11 @@ if(isset($_GET['do']))
 
 			if($cnt>0)
 			{
-				$R=Eleanor::$Db->Query('SELECT `id`,`f`,`language`,`t`,`p`,`downloads`,`size`,`name`,`preview`,`date` FROM `'.$mc['fa'].'`'.$where.' ORDER BY `'.$sort.'` '.$so.' LIMIT '.$offset.','.$pp);
+				$R=Eleanor::$Db->Query('SELECT `id`,`f`,`language`,`t`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file`,`date` FROM `'.$mc['fa'].'`'.$where.' ORDER BY `'.$sort.'` '.$so.' LIMIT '.$offset.','.$pp);
 				while($a=$R->fetch_assoc())
 				{
+					$a['_aorig']=$mc['attachpath'].'p'.$a['p'].'/'.$a['file'];
 					$a['_adown']=Eleanor::$services['download']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'id'=>$a['id']));
-					$a['_aprev']=$a['preview'] ? Eleanor::$services['download']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'id'=>$a['id'],'do'=>'preview')) : false;
 					$a['_adel']=$Eleanor->Url->Construct(array('delete-attach'=>$a['id']));
 
 					$topics[]=$a['t'];
@@ -758,7 +758,7 @@ if(isset($_GET['do']))
 				while($a=$R->fetch_assoc())
 					if(in_array($a['language'],$forums[ $a['id'] ]))
 					{
-						$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$a['id']));
+						$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'forum'=>$a['id']));
 						$a['_aedit']=$Eleanor->Url->Construct(array('edit-forum'=>$a['id']));
 						$temp[ $a['id'] ][ $a['language'] ]=array_slice($a,2);
 					}
@@ -771,7 +771,7 @@ if(isset($_GET['do']))
 				$topics=array();
 				while($a=$R->fetch_assoc())
 				{
-					$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'t'=>$a['id']));
+					$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'topic'=>$a['id']));
 					$topics[ $a['id'] ]=array_slice($a,1);
 				}
 			}
@@ -894,11 +894,11 @@ if(isset($_GET['do']))
 			Start();
 			echo$c;
 		break;
-		case'fsubscriptions':
+		case'forum-subscriptions':
 			$title[]=$lang['fsubscr'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=$users=array();
-			$qs=array('do'=>'fsubscriptions');
+			$qs=array('do'=>'forum-subscriptions');
 			$fiuname='';
 			if(isset($_REQUEST['fi']) and is_array($_REQUEST['fi']))
 			{
@@ -1016,11 +1016,11 @@ if(isset($_GET['do']))
 			Start();
 			echo$s;
 		break;
-		case'tsubscriptions':
+		case'topic-subscriptions':
 			$title[]=$lang['tsubscr'];
 			$page=isset($_GET['page']) ? (int)$_GET['page'] : 1;
 			$items=$where=$forums=$users=$topics=$fitopic=array();
-			$qs=array('do'=>'tsubscriptions');
+			$qs=array('do'=>'topic-subscriptions');
 			$fiuname='';
 			if(isset($_REQUEST['fi']) and is_array($_REQUEST['fi']))
 			{
@@ -1096,12 +1096,11 @@ if(isset($_GET['do']))
 
 			if($cnt>0)
 			{
-				$R=Eleanor::$Db->Query('SELECT `date`,`t`,`uid`,`sent`,`lastsend`,`nextsend`,`intensity`,`t`,`language` FROM `'.$mc['fs'].'`'.$where.($sort ? ' ORDER BY `'.$sort.'` '.$so : '').' LIMIT '.$offset.','.$pp);
+				$R=Eleanor::$Db->Query('SELECT `date`,`t`,`uid`,`sent`,`lastsend`,`nextsend`,`intensity` FROM `'.$mc['ts'].'`'.$where.($sort ? ' ORDER BY `'.$sort.'` '.$so : '').' LIMIT '.$offset.','.$pp);
 				while($a=$R->fetch_assoc())
 				{
-					$a['_adel']=$Eleanor->Url->Construct(array('delete-ts'=>$a['id'],'u'=>$a['uid']));
+					$a['_adel']=$Eleanor->Url->Construct(array('delete-ts'=>$a['t'],'u'=>$a['uid']));
 
-					$forums[$a['f']][]=$a['language'];
 					$users[]=$a['uid'];
 					$topics[]=$a['t'];
 
@@ -1122,10 +1121,11 @@ if(isset($_GET['do']))
 
 			if($topics)
 			{
-				$R=Eleanor::$Db->Query('SELECT `id`,`title` FROM `'.$mc['ft'].'` WHERE `id`'.Eleanor::$Db->In($topics));
+				$R=Eleanor::$Db->Query('SELECT `id`,`f`,`language`,`title` FROM `'.$mc['ft'].'` WHERE `id`'.Eleanor::$Db->In($topics));
 				$topics=array();
 				while($a=$R->fetch_assoc())
 				{
+					$forums[$a['f']][]=$a['language'];
 					$a['_a']=Eleanor::$services['user']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'t'=>$a['id']));
 					$topics[ $a['id'] ]=array_slice($a,1);
 				}
@@ -2112,13 +2112,14 @@ function Forums()
 	if($cnt>0)
 	{
 		$R=Eleanor::$Db->Query('SELECT `id`,`title`,`parent`,`pos`,`image`,`moderators` FROM `'.$mc['f'].'` INNER JOIN `'.$mc['fl'].'` USING(`id`) WHERE `language` IN (\'\',\''.Language::$main.'\') AND `parent`='.$parent.' ORDER BY `'.$sort.'` '.$so.' LIMIT '.$offset.','.$pp);
+		$canup=$offset>0;
 		while($a=$R->fetch_assoc())
 		{
 			$a['_aedit']=$Eleanor->Url->Construct(array('edit-forum'=>$a['id']));
 			$a['_adel']=$Eleanor->Url->Construct(array('delete-forum'=>$a['id']));
 			$a['_aparent']=$Eleanor->Url->Construct(array('parent'=>$a['id']));
-			$a['_aup']=$a['pos']>1 ? $Eleanor->Url->Construct(array('up-forum'=>$a['id'])) : false;
-			$a['_adown']=$a['pos']<$cnt ? $Eleanor->Url->Construct(array('down-forum'=>$a['id'])) : false;
+			$a['_aup']=$canup ? $Eleanor->Url->Construct(array('up-forum'=>$a['id'])) : false;
+			$a['_adown']=$cnt>++$offset ? $Eleanor->Url->Construct(array('down-forum'=>$a['id'])) : false;
 			$a['_aaddp']=$Eleanor->Url->Construct(array('do'=>'add-forum','parent'=>$a['id']));
 
 			if($a['image'])
@@ -2126,6 +2127,7 @@ function Forums()
 
 			$subitems[]=$a['id'];
 			$items[$a['id']]=array_slice($a,1);
+			$canup=true;
 		}
 	}
 
@@ -2393,8 +2395,9 @@ function SaveForum($id)
 		$R=Eleanor::$Db->Query('SELECT `parents` FROM `'.$mc['f'].'` WHERE `id`='.(int)$values['parent'].' LIMIT 1');
 		if(!list($parents)=$R->fetch_row() or $parents and strpos(','.$parents,','.$id.',')!==false)
 			$errors['ERROR_PARENT']='Error parent';
-		elseif($id>0)
+		else
 		{
+			$values['parents']=$parents.$values['parent'].',';
 			$in=$parents.$values['parent'];
 			if(in_array('',$langs))
 			{

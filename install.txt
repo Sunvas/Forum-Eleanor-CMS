@@ -14,7 +14,7 @@ $blocks=Blocks::Get(array('right','left','center_up','center_down'));
 
 Заменить на:
 
-$blocks=$GLOBALS['Eleanor']->module['name']=='forum' ? array('right'=>false)+Blocks::Get(array('left','center_up','center_down')) : Blocks::Get(array('right','left','center_up','center_down'));
+$blocks=$GLOBALS['Eleanor']->module['section']=='forum' ? array('right'=>false)+Blocks::Get(array('left','center_up','center_down')) : Blocks::Get(array('right','left','center_up','center_down'));
 
 Это отключит правые блоки в модуле.
 

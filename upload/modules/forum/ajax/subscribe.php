@@ -42,7 +42,7 @@ if($Forum->user)
 				if(!$Forum->user)
 					$gt=$Forum->GuestSign('t');
 
-				if(($topic['status']==0 or $Forum->user['id']!=$topic['author_id']) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+				if(($topic['status']==0 or $Forum->user['id']!=$topic['author_id']) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 					return Error();
 			}
 			$Forum->Subscriptions->SubscribeTopic($t, $Forum->user['id'],$type,$topic['status']);

@@ -8,6 +8,6 @@ echo'<blockquote class="extend"><div class="top">',
 	Eleanor::$Language['forum-global']['quote'],
 	$name || $date ? ' ('.$name.' @ '.$date.')' : '',
 	$_a ? ' <a href="'.$_a.'" target="_blank"><img src="images/forum/findpost.gif" /></a>' : '',
-	'</div><div class="text">',
+	'</div><div class="text"><!-- NOBR -->',
 	$text,
-	'</div></blockquote>';
+	'</div></blockquote><!-- NOBR -->';

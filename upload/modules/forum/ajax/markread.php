@@ -49,7 +49,7 @@ switch($ev)
 			if(!$Forum->user)
 				$gt=$Forum->GuestSign('t');
 
-			if(($topic['status']==0 or $Forum->user and $Forum->user['id']!=$topic['author_id'] or !$Forum->user and !in_array($t,$gt)) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+			if(($topic['status']==0 or $Forum->user and $Forum->user['id']!=$topic['author_id'] or !$Forum->user and !in_array($t,$gt)) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 				return Error();
 		}
 		$Forum->Topic->MarkRead($t,$topic['f']);

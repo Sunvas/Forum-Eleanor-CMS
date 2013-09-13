@@ -1,4 +1,4 @@
-SET FOREIGN_KEY_CHECKS=0;
+п»їSET FOREIGN_KEY_CHECKS=0;
 
 CREATE TABLE `el_forums` (
 	`id` smallint unsigned NOT NULL auto_increment,
@@ -29,6 +29,7 @@ CREATE TABLE `el_forum_files` (
 	`size` varchar(10) NOT NULL,
 	`name` tinytext NOT NULL COMMENT 'Original file name',
 	`file` tinytext NOT NULL COMMENT 'Real file name on hdd',
+	`date` timestamp NOT NULL default '0000-00-00 00:00:00',
 	`hash` varchar(32) NOT NULL,
 	PRIMARY KEY  (`id`),
 	KEY `p` (`p`),
@@ -59,6 +60,7 @@ CREATE TABLE `el_forum_subscribers` (
 	`lastsend` timestamp NOT NULL default '0000-00-00 00:00:00',
 	`nextsend` timestamp NOT NULL default '0000-00-00 00:00:00',
 	`intensity` enum('i','d','w','m','y') NOT NULL,
+	`date` timestamp NOT NULL default '0000-00-00 00:00:00',
 	PRIMARY KEY  (`f`,`language`,`uid`),
 	KEY `uid` (`uid`),
 	KEY `tosend` (`sent`,`nextsend`,`language`,`f`),
@@ -288,6 +290,7 @@ CREATE TABLE `el_forum_topics_subscribers` (
 	`lastsend` timestamp NOT NULL default '0000-00-00 00:00:00',
 	`nextsend` timestamp NOT NULL default '0000-00-00 00:00:00',
 	`intensity` enum('i','d','w','m','y') NOT NULL,
+	`date` timestamp NOT NULL default '0000-00-00 00:00:00',
 	PRIMARY KEY (`t`,`uid`),
 	KEY `uid` (`uid`),
 	KEY `tosend` (`status`,`sent`,`nextsend`,`t`),
@@ -338,26 +341,26 @@ INSERT INTO `el_forums` (`id`,`parent`,`parents`,`pos`,`is_category`,`inc_posts`
 (7, 0, '', 4, 0, 0, 0, 'spam.png', '', 'a:5:{i:3;a:1:{s:6:"access";b:0;}i:6;a:1:{s:6:"access";b:0;}i:5;a:1:{s:6:"access";b:0;}i:4;a:1:{s:6:"access";b:0;}i:2;a:1:{s:6:"access";b:0;}}', 0);
 
 INSERT INTO `el_forums_l` (`id`,`language`,`uri`,`title`,`description`,`meta_title`,`meta_descr`, `rules`,`lp_date`,`lp_id`,`lp_title`,`lp_uri`,`lp_author`,`topics`,`posts`,`queued_topics`,`queued_posts`) VALUES
-(1, '', 'основная-категория', 'Основная категория', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
-(2, '', 'форум-в-категории', 'Форум в категории', 'Описание форума', '', '', '...Правила форума...', NOW(), 1, 'Первая тема', 'первая-тема', 'Admin', 1, 1, 0, 0),
-(3, '', 'подфорум', 'Подфорум', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
+(1, '', 'РѕСЃРЅРѕРІРЅР°СЏ-РєР°С‚РµРіРѕСЂРёСЏ', 'РћСЃРЅРѕРІРЅР°СЏ РєР°С‚РµРіРѕСЂРёСЏ', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
+(2, '', 'С„РѕСЂСѓРј-РІ-РєР°С‚РµРіРѕСЂРёРё', 'Р¤РѕСЂСѓРј РІ РєР°С‚РµРіРѕСЂРёРё', 'РћРїРёСЃР°РЅРёРµ С„РѕСЂСѓРјР°', '', '', '...РџСЂР°РІРёР»Р° С„РѕСЂСѓРјР°...', NOW(), 1, 'РџРµСЂРІР°СЏ С‚РµРјР°', 'РїРµСЂРІР°СЏ-С‚РµРјР°', 'Admin', 1, 1, 0, 0),
+(3, '', 'РїРѕРґС„РѕСЂСѓРј', 'РџРѕРґС„РѕСЂСѓРј', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
 
-(4, '', 'форум-вне-категории', 'Форум вне категории', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
-(5, '', 'подфорум-2', 'Подфорум2', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
-(6, '', 'без-картинки', 'Форум без картинки', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
-(7, '', 'корзина', 'Корзина', 'Мусорник', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0);
+(4, '', 'С„РѕСЂСѓРј-РІРЅРµ-РєР°С‚РµРіРѕСЂРёРё', 'Р¤РѕСЂСѓРј РІРЅРµ РєР°С‚РµРіРѕСЂРёРё', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
+(5, '', 'РїРѕРґС„РѕСЂСѓРј-2', 'РџРѕРґС„РѕСЂСѓРј2', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
+(6, '', 'Р±РµР·-РєР°СЂС‚РёРЅРєРё', 'Р¤РѕСЂСѓРј Р±РµР· РєР°СЂС‚РёРЅРєРё', '', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0),
+(7, '', 'РєРѕСЂР·РёРЅР°', 'РљРѕСЂР·РёРЅР°', 'РњСѓСЃРѕСЂРЅРёРє', '', '', '', '0000-00-00 00:00:00', 0, '', '', '', 0, 0, 0, 0);
 
 INSERT INTO `el_forum_lastpost` (`uid`, `f`, `language`, `lp_date`, `lp_id`, `lp_title`, `lp_author`, `lp_author_id`) VALUES
-(1, 2, '', NOW(), 4, 'Первая тема', 'Admin', 1);
+(1, 2, '', NOW(), 4, 'РџРµСЂРІР°СЏ С‚РµРјР°', 'Admin', 1);
 
 INSERT INTO `el_forum_posts` (`id`,`f`,`language`,`t`,`status`,`author`,`author_id`,`ip`,`created`,`sortdate`,`text`,`last_mod`) VALUES
-(1, '', 2, 1, 1, 'Admin', 1, '127.0.0.1', NOW(), NOW(), 'Это первое сообщение на Вашем новом форуме. Forum <a href="http://eleanor-cms.ru">Eleanor CMS</a>', NOW());
+(1, '', 2, 1, 1, 'Admin', 1, '127.0.0.1', NOW(), NOW(), 'Р­С‚Рѕ РїРµСЂРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ РЅР° Р’Р°С€РµРј РЅРѕРІРѕРј С„РѕСЂСѓРјРµ. Forum <a href="http://eleanor-cms.ru">Eleanor CMS</a>', NOW());
 
 INSERT INTO `el_forum_topics` (`id`,`uri`,`f`,`status`,`language`,`lrelated`,`created`,`author`,`author_id`,`state`,`moved_to`,`moved_to_forum`,`who_moved`, `who_moved_id`,`when_moved`, `trash`,`title`,`description`,`posts`,`queued_posts`,`views`,`pinned`,`lp_date`,`lp_id`,`lp_author`,`lp_author_id`,`voting`) VALUES
-(1, 'первая-тема', 2, 1, '', '', NOW(), 'Admin', 1, 'open', 0, 0, '', 0, '0000-00-00 00:00:00', 0, 'Первая тема', '', 0, 0, 0, NULL, NOW(), 1, 'Admin', 1, 0);
+(1, 'РїРµСЂРІР°СЏ-С‚РµРјР°', 2, 1, '', '', NOW(), 'Admin', 1, 'open', 0, 0, '', 0, '0000-00-00 00:00:00', 0, 'РџРµСЂРІР°СЏ С‚РµРјР°', '', 0, 0, 0, NULL, NOW(), 1, 'Admin', 1, 0);
 
 INSERT INTO `el_forum_prefixes` (`id`, `forums`) VALUES
 (1, ',2,');
 
 INSERT INTO `el_forum_prefixes_l` (`id`, `language`, `title`) VALUES
-(1, '', 'Демо-префикс');
+(1, '', 'Р”РµРјРѕ-РїСЂРµС„РёРєСЃ');

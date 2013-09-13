@@ -29,7 +29,7 @@ switch($do)
 		Start();
 		echo$s;
 	break;
-	case'options':#Опции пользователя на форуме
+	case'settings':#Настройки пользователя на форуме
 		$Eleanor->Forum->LoadUser();
 		if(!$Eleanor->Forum->user)
 			return ExitPage();
@@ -61,8 +61,8 @@ switch($do)
 			$values+=$R->fetch_assoc();
 		}
 		SetData();
-		$title[]=$lang['options'];
-		$c=Eleanor::$Template->ForumOptions($values,$saved,$errors);
+		$title[]=$lang['settings'];
+		$c=Eleanor::$Template->ForumSettings($values,$saved,$errors);
 		Start();
 		echo$c;
 	break;

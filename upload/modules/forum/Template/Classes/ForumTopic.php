@@ -12,21 +12,64 @@ class TplForumTopic
 
 	/**
 	 * Отображение темы.
-	 * @param $forum
-	 * @param $rights
-	 * @param $topic
-	 * @param $posts
+	 * @param array $forum Частичный дамп форума с полями из БД, которые теоретически нужны при просмотре темы +
+	 *   int _read Timestamp чтения форума
+	 *   bool _trash Является ли форум мусорником
+	 * @param array $rights наши права на форуме, описание прав дано в классе ForumForums +
+	 *   bool _mod Возможность "модерировать" свою тему: править / удалять / перемещать сообщения в этой теме
+	 *   bool _status Возможность просматривать свои посты с разными статусами
+	 *   bool _toggle Возможность просматривать чужие посты с разными статусами и менять эти статусы (модератор)
+	 *   bool _mchstatus Мультиизменение статуса постов
+	 *   bool _mdelete Мультиудаление постов
+	 *   bool _mmove Мультиперемещение постов
+	 *   bool _merge Мультиобъединение постов
+	 * @param array $topic Частичный дамп тем с полями из БД, которые теоретически нужны при просмотре темы +
+	 *   int _read TimeStamp прочтения темы
+	 *   int _cnt Количество постов в теме
+	 *   int _page Номер текущей страницы
+	 *   int _pages Количество страниц
+	 *   int _pp Количество постов на страницу
+	 *   int _my Флаг принадлежности темы нам
+	 *   bool _open Тема для нас открыта или нет?
+	 *   array _filter Фильтры, ключи:
+	 *     array status Статусы постов, которые нужно отображать, значения массива идентичны ключам этих значений, например array(1=>1)
+	 *     bool my Просмотр только своих постов внутри темы
+	 *   array _statuses Сводка количества постов в теме с определенным статусом, формат статус=>количество постов
+	 * @param array $posts Посты темы, формат id=>дамп поста +
+	 *   array _approved Пользователи, повысившие репутацию автору за текущий пост, ключи
+	 *     int from ID пользователя, изменившего репутацию
+	 *     string from_name Имя пользователя, изменившего репутацию, не безопасный HTML!
+	 *     int value Число, на которое изменена репутация
+	 *   array _rejected Пользователи, понизившие репутацию автору за текущий пост, аналогично _approved
+	 *   bool _my Флаг принадлежности поста нам
+	 *   bool r+
+	 *   bool r-
+	$a['_atp']=$Forum->Links->Action('find-post',$a['id']);#Ссылка на пост в теме
+	$a['_ap']=$Forum->Links->Action('post',$a['id']);#Ссылка на пост
+	$a['_checked']=in_array($a['id'],$checked);
+	$a['_n']=++$offset;
+	$a['_attached']=array();#ID прикрепленных аттачей
+	#Аттачи, используемые в тексте
+	$a['_attaches']=$Forum->Attach->GetFromText($a['text']);
+	if($a['_attaches'])
+	$attaches=array_merge($attaches,$a['_attaches']);
+
+	$a['_answer']=$links['new-post'] ? $Forum->Links->Action('answer',$a['id']) : false;
+	$a['_edit']=$mod || $medit;
+	$a['_delete']=$mod || $mdelete;
 	 * @param $attaches
 	 * @param $ag
 	 * @param $errors
 	 * @param $online
+	 * @param array $errors Ошибки
+	 * @param array $info Информационные сообщения
 	 * @param $links
 	 * @param $voting
 	 * @param $values
 	 * @param $captcha
 	 * @return string
 	 */
-	public static function ShowTopic($forum,$rights,$topic,$posts,$attaches,$ag,$errors,$online,$links,$voting,$values,$captcha)
+	public static function ShowTopic($forum,$rights,$topic,$posts,$attaches,$ag,$errors,$info,$online,$links,$voting,$values,$captcha)
 	{
 		#Шапка
 		$nav=array();
@@ -40,7 +83,13 @@ class TplForumTopic
 		$Header=Eleanor::$Template->ForumMenu($nav,array($links['rss'],'RSS '.$topic['title']));
 
 		if($errors)
+		{
+			foreach($errors as $k=>&$v)
+				if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+					$v=static::$lang[$v];
+
 			$Header->Message($errors,'error');
+		}
 
 		$fistatus=isset($topic['_filter']['status']) ? $topic['_filter']['status'] : array(1=>1);
 		if($links['wait-posts'] and !isset($fistatus[-1]))
@@ -126,7 +175,7 @@ class TplForumTopic
 		#[E] Модераторские опции
 
 		#Генерация списка постов
-		$info=array(
+		$postinfo=array(
 			'ltp'=>true,#Отображать ссылку на пост
 			'multi'=>(bool)$mposts,#Включить опции модерирования
 			'viewip'=>$Forum->ugr['supermod'] or $forum['_moderator'] and in_array(1,$forum['_moderator']['viewip']),#Отображать IP
@@ -138,7 +187,7 @@ class TplForumTopic
 			#Пусть ссылка первого поста темы ведет на редактирование самой темы
 			if($id==$first)
 				$post['_edit']=$links['edit'];
-			$posthtml.=static::Post($id,$post,$attaches,$forum,$ag,$info);
+			$posthtml.=static::Post($id,$post,$attaches,$forum,$ag,$postinfo);
 		}
 
 		if(isset($post))
@@ -200,10 +249,18 @@ class TplForumTopic
 				.Eleanor::Check(false,false,array('id'=>'mass-check')).'</div>';
 
 		$c.=$voting.$posthtml.$pages;
+		if($info)
+		{
+			foreach($info as $k=>&$v)
+				if(is_int($k) and is_string($v) and isset(static::$lang[$v]))
+					$v=static::$lang[$v];
+
+			$c.=Eleanor::$Template->Message($info,'info');
+		}
 
 		if($mposts)
-			$c.='<fieldset id="posts-mm-panel" class="moderator"><legend>'.static::$lang['moder-posts'].'</legend><span id="with-selected"></span>'
-				.Eleanor::Select('mm[do]',$mposts).Eleanor::Button('Ok')
+			$c.='<fieldset id="posts-mm-panel" class="moderator"><legend>'.static::$lang['moder-posts'].'</legend><span id="with-selected"></span> '
+				.Eleanor::Select('mm[do]',$mposts).' '.Eleanor::Button('Ok')
 				.($move
 					? '<div class="move extra" style="display:none"><ul class="moder"><li>'
 						.Eleanor::Input('mm[to]','',array('placeholder'=>static::$lang['moveposts'])).'</li></ul></div>'
@@ -465,7 +522,7 @@ class TplForumTopic
 		foreach($post['_approved'] as $v)
 		{
 			$from=isset($ag[0][ $v['from'] ]) ? $ag[0][ $v['from'] ] : false;
-			$name=htmlspecialchars($from ? $from['name'] : $v['from'],ELENT,CHARSET);
+			$name=htmlspecialchars($from ? $from['name'] : $v['from_name'],ELENT,CHARSET);
 			$pref=$from && isset($ag[1][ $from['_group'] ]) ? $ag[1][ $from['_group'] ]['html_pref'] : false;
 			$end=$pref===false ? false : $ag[1][ $from['_group'] ]['html_end'];
 
@@ -474,7 +531,7 @@ class TplForumTopic
 		foreach($post['_rejected'] as $v)
 		{
 			$from=isset($ag[0][ $v['from'] ]) ? $ag[0][ $v['from'] ] : false;
-			$name=htmlspecialchars($from ? $from['name'] : $v['from'],ELENT,CHARSET);
+			$name=htmlspecialchars($from ? $from['name'] : $v['from_name'],ELENT,CHARSET);
 			$pref=$from && isset($ag[1][ $from['_group'] ]) ? $ag[1][ $from['_group'] ]['html_pref'] : false;
 			$end=$pref===false ? false : $ag[1][ $from['_group'] ]['html_end'];
 
@@ -541,7 +598,7 @@ $(function(){
 			.($author
 				? '<a href="'.$author['_a'].'">'.static::$lang['profile'].'</a>'
 					.($group ? '<br />'.sprintf(static::$lang['group%'],'<a href="'.$group['_a'].'">'.$pref.$group['title'].$end.'</a>') : '')
-					.'<br /><span class="user-posts-'.$post['author_id'].'">'.sprintf(static::$lang['posts%'],$author['posts']).'</span><br />'.sprintf(static::$lang['register%'],Eleanor::$Language->Date($author['register'],'fd'))
+					.'<br />'.sprintf(static::$lang['posts%'],'<span class="user-posts-'.$post['author_id'].'">'.$author['posts'].'</span').'><br />'.sprintf(static::$lang['register%'],Eleanor::$Language->Date($author['register'],'fd'))
 					.'<br />'.($author['location'] ? sprintf(static::$lang['from%'],$author['location']).'<br />' : '')
 					.'<br />'.sprintf(static::$lang['repa%'],($post['_r-'] ? '<a href="#" class="fb-minus" data-id="'.$id.'">&minus</a>' : '&minus;')
 						.' <a href="'.$author['_afrep'].'" class="user-rep-f'.$forum['id'].'-'.$post['author_id'].'">'

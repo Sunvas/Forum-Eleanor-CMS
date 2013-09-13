@@ -119,7 +119,7 @@ return array(
 	'moderrights'=>'Права модератора',
 	'gdc'=>function($forums,$groups,$users)
 	{
-		return'Вы действительно хотить удалить модераторов '.rtrim($forums,' ,')
+		return'Вы действительно хотите удалить модераторов '.rtrim($forums,' ,')
 			.' в лице '.($groups ? 'групп '.rtrim($groups,', ') : '')
 			.($users ? ($groups ? ' и ' : '').'пользователей '.rtrim($users,', ') : '')
 			.'?';
@@ -138,6 +138,10 @@ return array(
 	{
 		return'Вы действительно хотить префикс тем &quot;'.$prefix.'&quot; используемый в '.Russian::Plural(count($forums),array('форуме','форумах','форумах ')).join(', ',$forums).'?';
 	},
+	'save-forum'=>'Сохранить форум',
+	'add-forum'=>'Добавить форум',
+	'save-prefix'=>'Сохранить префикс',
+	'add-prefix'=>'Добавить префикс',
 
 	'syncusers'=>'Синхронизация пользователей',
 	'finishdate'=>'Дата завершения',
@@ -152,5 +156,5 @@ return array(
 	#Ошибки
 	'PARENT_HAS_NOT_SAME_LANG'=>'Ошибка в наследовании языков',
 	'EMPTY_FORUMS'=>'Не выбраны форумы',
-	'EMPTY_MODERS'=>'Не ни пользователи, ни группы',
+	'EMPTY_MODERS'=>'Ни пользователи, ни группы не выбраны',
 );

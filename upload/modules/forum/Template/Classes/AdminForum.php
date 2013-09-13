@@ -41,7 +41,7 @@ class TplAdminForum
 			array($links['fsubscriptions'],static::$lang['fsubscr'],'act'=>$act=='fsubscriptions'),
 			array($links['tsubscriptions'],static::$lang['tsubscr'],'act'=>$act=='tsubscriptions'),
 			array($links['tasks'],static::$lang['service'],'act'=>$act=='tasks'),
-			array($links['options'],Eleanor::$Language['main']['options'],'act'=>$act=='options'),
+			array($links['settings'],Eleanor::$Language['main']['options'],'act'=>$act=='settings'),
 		);
 	}
 
@@ -240,7 +240,7 @@ class TplAdminForum
 			->submitline((string)$uploader)
 			->submitline(
 				$back
-				.Eleanor::Button('Ok','submit',array('tabindex'=>15))
+				.Eleanor::Button($id>0 ? static::$lang['save-forum'] : static::$lang['add-forum'],'submit',array('tabindex'=>15))
 				.($id ? ' '.Eleanor::Button($ltpl['delete'],'button',array('onclick'=>'window.location=\''.$links['delete'].'\'')) : '')
 			)
 			->endform();
@@ -565,6 +565,7 @@ class TplAdminForum
 		$info Массив информационных сообщений, возможные ключи и значения:
 			REPUTATION Наличие ключа сообщает о том, что пересчитана репутация у пользователей, которые содержатся в массиве значения. Ключи:
 				_aedit Ссылка на редактирование пользователя
+				_asedit Ссылка на редактирование пользователя в системе
 				name Имя пользователя. Небезопасный HTML!
 				full_name Полное имя пользователя
 	*/
@@ -613,14 +614,14 @@ class TplAdminForum
 			$images=Eleanor::$Template->default['theme'].'images/';
 			foreach($items as $k=>&$v)
 				$Lst->item(
-					'<a href="'.$v['_afedit'].'" id="it'.$k.'">'.$v['name'].'</a>'.($v['name']==$v['full_name'] ? '' : '<br /><i>'.$v['full_name'].'</i>'),
+					'<a href="'.$v['_aedit'].'" id="it'.$k.'">'.$v['name'].'</a>'.($v['name']==$v['full_name'] ? '' : '<br /><i>'.$v['full_name'].'</i>'),
 					array($v['posts'],'right'),
 					array($v['rep']===null ? '<i>'.static::$lang['no'].'</i>' : '<a href="'.$v['_arep'].'">'.$v['rep'].'</a>','right'),
 					array($v['email'],'center'),
 					array($v['ip'],'center','href'=>'http://eleanor-cms.ru/whois/'.$v['ip'],'hrefextra'=>array('target'=>'_blank')),
 					$Lst('func',
 						array($v['_arecount'],static::$lang['recrep'],$images.'sort.png'),
-						array($v['_afedit'],$ltpl['edit'],$images.'edit.png'),
+						array($v['_asedit'],$ltpl['edit'],$images.'edit.png'),
 						$v['_adel'] ? array($v['_adel'],$ltpl['delete'],$images.'delete.png') : false
 					),
 					Eleanor::Check('mass[]',false,array('value'=>$k))
@@ -1239,7 +1240,7 @@ $(function(){
 		$Lst->end()
 			->submitline(
 				$back
-				.Eleanor::Button('Ok','submit',array('tabindex'=>14))
+				.Eleanor::Button($id>0 ? static::$lang['save-prefix'] : static::$lang['add-prefix'],'submit',array('tabindex'=>14))
 				.($id ? ' '.Eleanor::Button($ltpl['delete'],'button',array('onclick'=>'window.location=\''.$links['delete'].'\'')) : '')
 			)
 			->endform();
@@ -1297,14 +1298,13 @@ $(function(){
 		if($items)
 		{
 			$images=Eleanor::$Template->default['theme'].'images/';
-			foreach($items as $k=>&$v)
+			foreach($items as $k=>$v)
 				$Lst->item(
-					'<a href="'.$v['_adown'].'">'.$v['filename'].'</a><br /><span class="small">'.Files::BytesToSize($v['filesize']).'</span>',
+					'<a href="'.$v['_adown'].'">'.$v['name'].'</a><br /><span class="small">'.$v['size'].'</span>',#$v['_orig']
 					Eleanor::$Language->Date($v['date'],'fdt'),
 					isset($forums[ $v['f'] ][ $v['language'] ]) ? '<a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a>' : '<i>нет</i>',
-					isset($topics[ $v['t'] ]) ? '<a href="'.$topics[ $v['f'] ]['_a'].'" target="_blank">'.$topics[ $v['f'] ]['title'].'</a>' : '<i>нет</i>',
+					isset($topics[ $v['t'] ]) ? '<a href="'.$topics[ $v['t'] ]['_a'].'" target="_blank">'.$topics[ $v['t'] ]['title'].'</a>' : '<i>нет</i>',
 					$Lst('func',
-						array($v['_aprev'],'Просмотр превьюшки',$images.'viewfile.png'),
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					),
 					Eleanor::Check('mass[]',false,array('value'=>$k))
@@ -1480,18 +1480,19 @@ $(function(){
 			);
 			foreach($items as &$v)
 			{
-				$ist=isset($topics[ $v['t'] ]);
+				$topic=isset($topics[ $v['t'] ]) ? $topics[ $v['t'] ] : false;
+				$forum=$topic && isset($forums[ $topic['f'] ][ $topic['language'] ]) ? $forums[ $topic['f'] ][ $topic['language'] ] : false;
 				$Lst->item(
 					Eleanor::$Language->Date($v['date'],'fdt'),
-					($ist ? '<a href="'.$topics[ $v['t'] ]['_a'].'" target="_blank">'.$topics[ $v['t'] ]['title'].'</a>' : '<i>нет</i>')
-					.($ist && isset($forums[ $v['f'] ][ $v['language'] ]) ? '<br /><span class="small"><a href="'.$forums[ $v['f'] ][ $v['language'] ]['_a'].'" target="_blank">'.$forums[ $v['f'] ][ $v['language'] ]['title'].'</a></span>' : ''),
+					($topic ? '<a href="'.$topic['_a'].'" target="_blank">'.$topic['title'].'</a>' : '<i>нет</i>')
+					.($forum ? '<br /><span class="small"><a href="'.$forum['_a'].'" target="_blank">'.$forum['title'].'</a></span>' : ''),
 					isset($users[ $v['uid'] ]) ? '<a href="'.$users[ $v['uid'] ]['_aedit'].'">'.htmlspecialchars($users[ $v['uid'] ]['name'],ELENT,CHARSET).'</a>' : '<i>нет</i>',
-					array(isset($intencity[ $v['intencity'] ]) ? $intencity[ $v['intencity'] ] : '<i>нет</i>','center'),
-					'<span title="Следующая отправка '.Eleanor::$Language->Date($v['nextsend'],'fdt').'">'.Eleanor::$Language->Date($v['lastsend'],'fdt').'</span>',
+					array(isset($intencity[ $v['intensity'] ]) ? $intencity[ $v['intensity'] ] : '<i>нет</i>','center'),
+					array((int)$v['lastsend']>0 ? '<span title="Следующая отправка '.Eleanor::$Language->Date($v['nextsend'],'fdt').'">'.Eleanor::$Language->Date($v['lastsend'],'fdt').'</span>' : '<i>нет</i>','center'),
 					$Lst('func',
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					),
-					Eleanor::Check('mass[]',false,array('value'=>$v['t'].'-'.$v['u']))
+					Eleanor::Check('mass[]',false,array('value'=>$v['t'].'-'.$v['uid']))
 				);
 			}
 		}
@@ -1584,7 +1585,7 @@ $(function(){
 					$Lst('func',
 						array($v['_adel'],$ltpl['delete'],$images.'delete.png')
 					),
-					Eleanor::Check('mass[]',false,array('value'=>$v['f'].'-'.$v['language'].'-'.$v['u']))
+					Eleanor::Check('mass[]',false,array('value'=>$v['f'].'-'.$v['language'].'-'.$v['uid']))
 				);
 			}
 		}
@@ -1680,8 +1681,8 @@ $(function(){
 						$color='black';
 						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
-				if($v['options']['forums'])
-					foreach($v['options']['forums'] as $f)
+				if($v['settings']['forums'])
+					foreach($v['settings']['forums'] as $f)
 					{
 						if(isset($forums[ $f ]))
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
@@ -1727,8 +1728,8 @@ $(function(){
 						$color='black';
 						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
-				if(isset($v['options']['forums']))
-					foreach($v['options']['forums'] as $f)
+				if(isset($v['settings']['forums']))
+					foreach($v['settings']['forums'] as $f)
 						if(isset($forums[ $f ]))
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
 				$last.='<li style="color:'.$color.'">'.rtrim($date,', ').'</li>';
@@ -1810,8 +1811,8 @@ $(function(){
 						$color='black';
 						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
-				if(isset($v['options']['forums']))
-					foreach($v['options']['forums'] as $f)
+				if(isset($v['settings']['forums']))
+					foreach($v['settings']['forums'] as $f)
 						if(isset($forums[ $f ]))
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
 				$last.='<li style="color:'.$color.'">'.rtrim($date,', ').'</li>';
@@ -1854,8 +1855,8 @@ $(function(){
 						$color='black';
 						$date='<span title="Дата начала">'.Eleanor::$Language->Date($v['start'],'fdt').'</span> ';
 				}
-				if($v['options']['forums'])
-					foreach($v['options']['forums'] as $f)
+				if($v['settings']['forums'])
+					foreach($v['settings']['forums'] as $f)
 					{
 						if(isset($forums[ $f ]))
 							$date.='<a href="'.$forums[ $f ]['_aedit'].'">'.$forums[ $f ]['title'].'</a>, ';
@@ -1940,8 +1941,8 @@ $(function(){
 						$color='black';
 						$date='<span title="'.static::$lang['begindate'].'">'.Eleanor::$Language->Date($v['start'],'fdt').'</span>';
 				}
-				if(isset($v['options']['date']))
-					$date.=', '.static::$lang['startedsync'].': '.Eleanor::$Language->Date($v['options']['date'],'fdt');
+				if(isset($v['settings']['date']))
+					$date.=', '.static::$lang['startedsync'].': '.Eleanor::$Language->Date($v['settings']['date'],'fdt');
 				$last.='<li style="color:'.$color.'">'.$date.'</li>';
 			}
 			$Lst->item(static::$lang['prevrun'],$last ? '<ul>'.$last.'</ul>' : '');
@@ -1964,7 +1965,7 @@ $(function(){
 	*/
 	public static function Options($c)
 	{
-		static::Menu('options');
+		static::Menu('settings');
 		return$c;
 	}
 }

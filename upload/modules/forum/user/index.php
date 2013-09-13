@@ -59,14 +59,14 @@ if($Eleanor->Url->is_static)
 	else
 	{
 		$turi=array_pop($furi);
-		if(count($furi)>1)
+		if(count($furi)>0)
 		{
 			$do=false;
 			$Forum->LoadUser();
 			include Forum::$root.'user/topic.php';
 			return ShowTopic($furi,$turi);
 		}
-		elseif(preg_match('#^(forum|topic|post|new\-topic|new\-post|edit|edit\-topic|answer|subscribe\-topic|subscribe\-forum|go\-new\-post|go\-last\-post|find\-post|reputation|given)\-(.+?)$#i',$turi,$m)>0)
+		elseif(preg_match('#^(forum|topic|post|new\-topic|new\-post|edit|edit\-topic|answer|subscribe\-topic|subscribe\-forum|go\-new\-post|go\-last\-post|find\-post|reputation|given|activate\-post)\-(.+?)$#i',$turi,$m)>0)
 		{
 			$do=$m[1];
 			$id=$m[2];
@@ -123,7 +123,7 @@ switch($do)
 	break;
 	case'top':#Топ пользователей по репутации
 	case'online':#Просмотр списка кто онлайн
-	case'options':#Опции на форум: всегда входить скрытым и т.п.
+	case'settings':#Настройки на форуме: всегда входить скрытым и т.п.
 	case'users':#Список пользователей
 	case'reputation':#Отображение репутации пользователя
 	case'given':#Отображение отданой репутации пользователем другим
@@ -153,7 +153,7 @@ switch($do)
 			$Forum->LoadUser();
 			SetData();
 			$c=Eleanor::$Template->ForumMain(Forums(),$stats,$Forum->GetOnline());
-			$Eleanor->origurl=PROTOCOL.Eleanor::$punycode.Eleanor::$site_path.$Eleanor->Url->Prefix(false);
+			$Eleanor->origurl=$Eleanor->Url->Prefix(false);
 			Start();
 			echo$c;
 		}
@@ -182,7 +182,7 @@ function SetData()
 			'top'=>$Links->Action('top'),
 			'moderators'=>$Links->Action('moderators'),
 			'stats'=>$Links->Action('stats'),
-			'options'=>$Eleanor->Forum->user ? $Links->Action('options') : false,
+			'settings'=>$Eleanor->Forum->user ? $Links->Action('settings') : false,
 			'rss_topics'=>Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'show'=>'topics')),
 			'rss_posts'=>Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'])),
 		),

@@ -1,15 +1,19 @@
 <?php
-/*
-    @var array Навигация со значением в виде массива array(ссылка,название)
-	@var array RSS ссылки со значением в виде массива array(ссылка,название)
-*/
+/**
+ * Шаблон "Шапки" форума. Здесь подключаются скрипты форума, rss ссылки, cron, выводится "шапочное" меню и "хлебные крошки".
+ * @var array Навигация со значением в виде массива array(ссылка,название)
+ * @var array RSS ссылки со значением в виде массива array(ссылка,название)
+ */
 defined('CMS')||die;
 
-array_push($GLOBALS['jscripts'],'modules/forum/Template/js/user-forum.js','modules/forum/Template/js/user-forum-'.Language::$main.'.js');
+$Forum = $GLOBALS['Eleanor']->Forum;
 $module=$GLOBALS['Eleanor']->module;
 $links=$module['links'];
 Eleanor::$Language->queue['forum-global']=__DIR__.'/langs/forum-user-global-*.php';
 $l=Eleanor::$Language['forum-global'];
+
+#JavaScripts
+array_push($GLOBALS['jscripts'],$Forum->language=='english' ? false : 'js/'.$Forum->language.'.js','modules/forum/Template/js/user-forum-'. $Forum->language.'.js','modules/forum/Template/js/user-forum.js');
 
 #RSS
 $Lst=Eleanor::LoadListTemplate('headfoot');
@@ -36,6 +40,8 @@ $GLOBALS['head']['rss']=$Lst;
 
 #Cron
 $cron=$module['cron'] ? '<img src="'.$module['cron'].'" style="width:1px;height1px;" />' : '';
+
+#Вывод Верхнего меню.
 echo Eleanor::$Template->Menu(array(
 		'menu'=>array(
 			$links['search'] ? array($links['search'],$l['search']) : false,
@@ -44,17 +50,18 @@ echo Eleanor::$Template->Menu(array(
 			array($links['top'],$l['top']),
 			array($links['moderators'],$l['moderators']),
 			array($links['stats'],$l['stats']),
-			$links['options'] ? array($links['options'],$l['options']) : false,
+			$links['settings'] ? array($links['settings'],$l['settings']) : false,
 		),
 		'title'=>$module['title'].$cron,#(is_array($GLOBALS['title']) ? reset($GLOBALS['title']) : $GLOBALS['title'])
 	)),
 	Eleanor::JsVars(array(
 		'name'=>$module['name'],
-		'n'=>$GLOBALS['Eleanor']->Forum->config['n'],
+		'n'=> $Forum->config['n'],
 		'cron'=>Eleanor::$services['cron']['file'],
-		'language'=>$GLOBALS['Eleanor']->Forum->language,
+		'language'=> $Forum->language,
 	),true,false,'FORUM.');
 
+#Вывод "хлебных крошек"
 if(isset($v_0))
 {
 	echo'<nav class="forums"><a href="',$links['main'],'">',$module['title'],'</a>';

@@ -5,9 +5,9 @@
 	*Pseudonym
 */
 CORE.Lang({
-	inherits:"Наследуется",
-	ginh:"Наследуется из прав группы в родительском форуме или из базовых прав групп",
-	hfrpf:"Наследуется из прав группы в родительском форуме",
-	hfbrg:"Наследуется из базовых прав групп",
-},"forum_")
+	inherits:"Inherits",
+	ginh:"Inherits from rights of groups in the parent forum, or of the basic rights groups",
+	hfrpf:"Inherits from rights of group in the parent forum",
+	hfbrg:"Inherits from the basic rights groups"
+},"forum_");
 
