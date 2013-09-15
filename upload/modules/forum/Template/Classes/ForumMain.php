@@ -136,6 +136,7 @@ class TplForumMain
 	 *   string rss_topics Ссылка на RSS поток тем форума (только для форума)
 	 *   string rss_posts Ссылка на RSS потом постов форума (только для форума)
 	 *   string first_page Ссылка на первую страницу форума (только для форума)
+	 *   string no_prefix Ссылка на первую страницу форума без префикса (опициально)
 	 *   string form_items Ссылка для формы управления темами (только для форума)
 	 *   callback pages Функция генератор страниц для пагинатора (только для форума)
 	 *   string|false new-topic Ссылка на форуму создания новой темы на форуме (только для форума)
@@ -257,9 +258,9 @@ class TplForumMain
 			$c.='<div class="prefixes">';
 			$pref=isset($forum['_filter']['prefix']) ? $forum['_filter']['prefix'] : 0;
 			if($pref>0)
-				$c.='<span><a href="'.$links['form_items'].'">'.static::$lang['all-topics'].'</a></span>';
+				$c.='<span><a href="'.$links['no_prefix'].'">'.static::$lang['all-topics'].'</a></span> ';
 			foreach($forum['prefixes'] as $k=>$v)
-				$c.=$k==$pref ? '<span>'.$v['title'].' ('.$v['_cnt'].')</span>' : '<span><a href="'.$v['_a'].'">'.$v['title'].'</a> ('.$v['_cnt'].')</span>';
+				$c.=$k==$pref ? '<span>'.$v['title'].' ('.$v['_cnt'].')</span> ' : '<span><a href="'.$v['_a'].'">'.$v['title'].'</a> ('.$v['_cnt'].')</span> ';
 			$c.='</div>';
 		}
 
@@ -368,7 +369,7 @@ class TplForumMain
 		if($rights['_status'])
 		{
 			if($forum['_statuses'][-1]>0)
-				$statuses.=Eleanor::Option(sprintf($forum['_toggle'] ? static::$lang['on_mod%'] : static::$lang['my_on_mod%'],$forum['_statuses'][-1]),-1,isset($fistatus[-1]));
+				$statuses.=Eleanor::Option(sprintf($rights['_toggle'] ? static::$lang['on_mod%'] : static::$lang['my_on_mod%'],$forum['_statuses'][-1]),-1,isset($fistatus[-1]));
 			if($forum['_statuses'][1]>0 and ($forum['_statuses'][-1]>0 or $forum['_statuses'][0]>0))
 				$statuses.=Eleanor::Option(sprintf(static::$lang['active%'],$forum['_statuses'][1]),1,isset($fistatus[1]));
 			if($forum['_statuses'][0]>0)

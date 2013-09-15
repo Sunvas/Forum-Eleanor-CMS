@@ -160,13 +160,13 @@ switch($do)
 			if($Forum->user)
 			{
 				$gp=$gt=array();
-				if(!$modposts and !$usermod)
+				if(!$modposts and !$usermod and !$Forum->ugr['supermod'])
 					$q.=' AND `author_id`='.$Forum->user['id'];
 			}
 			else
 			{
 				$gp=$Forum->GuestSign('p');
-				$gt=$Forum->GuestSign(`t`);
+				$gt=$Forum->GuestSign('t');
 				if(!$gp)
 					$q='';
 				elseif(!$modposts and !$usermod)
@@ -233,7 +233,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	$Forum = $Eleanor->Forum;
 	$config=$Forum->config;
 
-	$q='SELECT `id`,`uri`,`f`,`language`,`status`,`author_id`,`state`,`moved_to`,`title`,`description`,`posts`,`queued_posts`,`last_mod`,`pinned`>\''.date('Y-m-d H:i:s').'\' `_pin` FROM `'.$config['ft'].'` WHERE ';
+	$q='SELECT `id`,`uri`,`f`,`language`,`status`,`author_id`,`state`,`moved_to`,`title`,`description`,`posts`,`queued_posts`,`last_mod`,`voting`,`pinned`>\''.date('Y-m-d H:i:s').'\' `_pin` FROM `'.$config['ft'].'` WHERE ';
 	if(is_array($furi))
 	{
 		$forum= $Forum->Forums->GetForum($furi);
@@ -267,18 +267,19 @@ function ShowTopic($furi,$turi='',$filter=array())
 	else
 	{
 		$gp=$Forum->GuestSign('p');
-		$gt=$Forum->GuestSign(`t`);
+		$gt=$Forum->GuestSign('t');
 
 		$my=in_array($topic['id'],$gt);
 		$ingp=$gp ? Eleanor::$Db->In($gp) : false;
 	}
 
-	if($topic['status']!=1 and ($topic['status']==0 or !$my) and (!$forum['_moderator'] or !in_array(1,$forum['_moderator']['chstatust']) and !in_array(1,$forum['_moderator']['mchstatust'])))
+	if($topic['status']!=1 and ($topic['status']==0 or !$my) and !$Forum->ugr['supermod'] and (!$forum['_moderator'] or !in_array(1,$forum['_moderator']['chstatust']) and !in_array(1,$forum['_moderator']['mchstatust'])))
 		goto ExitPage;
 
 	$R=Eleanor::$Db->Query('SELECT `rules` FROM `'. $config['fl'].'` WHERE `language`IN(\'\',\''.$topic['language'].'\') AND `id`='.$forum['id'].' LIMIT 1');
 	if($R->num_rows==0)
 		goto ExitPage;
+	$active=$topic['status']==1;
 	$forum+=$R->fetch_assoc();
 
 	if($forum['rules'])
@@ -414,8 +415,15 @@ function ShowTopic($furi,$turi='',$filter=array())
 				$_REQUEST['fi']['my']=1;
 			elseif($rights['_status'])
 			{
-				$topic['_filter']['status']=$status;
-				$w_status=' AND `status`'.Eleanor::$Db->In($status);
+				$topic['_filter']['status']=$w_status=$status;
+				if(!$active)
+				{
+					if(isset($w_status[-1]))
+						$w_status[-1]=-3;
+					if(isset($w_status[1]))
+						$w_status[1]=-2;
+				}
+				$w_status=' AND `status`'.Eleanor::$Db->In($w_status);
 			}
 		}
 		else
@@ -430,8 +438,15 @@ function ShowTopic($furi,$turi='',$filter=array())
 				$topic['_filter']['status']=(int)$_REQUEST['fi']['status'];
 				if(!$rights['_toggle'])
 					unset($status[0]);
-				$topic['_filter']['status']=$status;
-				$w_status=' AND `status`'.Eleanor::$Db->In($status);
+				$topic['_filter']['status']=$w_status=$status;
+				if(!$active)
+				{
+					if(isset($w_status[-1]))
+						$w_status[-1]=-3;
+					if(isset($w_status[1]))
+						$w_status[1]=-2;
+				}
+				$w_status=' AND `status`'.Eleanor::$Db->In($w_status);
 			}
 			$where['author']= $Forum->user ? ' AND `author_id`='. $Forum->user['id'] : ' AND `id`'.$ingp;
 		}
@@ -444,15 +459,25 @@ function ShowTopic($furi,$turi='',$filter=array())
 
 	if($rights['_toggle'])
 	{
-		$R=Eleanor::$Db->Query('SELECT `status`,COUNT(`status`)'.$where.' GROUP BY `status`');
+		$R=Eleanor::$Db->Query('SELECT `status`,COUNT(`status`) `cnt`'.$where.' GROUP BY `status`');
 		while($a=$R->fetch_row())
+		{
+			switch($a[0])
+			{
+				case -3;
+					$a[0]=-1;
+				break;
+				case -2:
+					$a[0]=1;
+			}
 			$topic['_statuses'][$a[0]]+=$a[1];
+		}
 	}
 	else
 	{
-		$R=Eleanor::$Db->Query('SELECT COUNT(`status`) `cnt`'.$where.' AND `status`=1');
-		if($a=$R->fetch_assoc())
-			$topic['_statuses'][1]=$a['cnt'];
+		$R=Eleanor::$Db->Query('SELECT COUNT(`status`) `cnt`'.$where.' AND `status`='.($active ? 1 : -2));
+		if($a=$R->fetch_row())
+			$topic['_statuses'][1]=$a[0];
 
 		if($topic['queued_posts']>0)
 		{
@@ -470,7 +495,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	}
 
 	#Теперь к условию можно добавить и условие отбора по статусу
-	$where.=$w_status ? $w_status : ' AND `status`=1';
+	$where.=$w_status ? $w_status : ' AND `status`='.($active ? 1 : -2);
 
 	#Подсчет количества постов
 	if($status)
@@ -609,7 +634,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 			$a['_delete']=$mod || $mdelete;
 			if((!$a['_edit'] or !$a['_delete']) and $a['_my'])
 			{
-				$mined=min($forum['_rights']['editlimit']);
+				$mined=min($rights['editlimit']);
 				if($mined==0 or $t-strtotime($a['created'])<=$mined)
 				{
 					$a['_edit']|=$edit;
@@ -757,7 +782,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	Eleanor::$Template->queue[]=$config['topictpl'];
 	unset(OwnBB::$replace['quote']);
 
-	if($a['voting'])
+	if($topic['voting'])
 	{
 		$Eleanor->Voting=new Voting($topic['voting']);
 		$Eleanor->Voting->mid=$Eleanor->module['id'];
@@ -827,7 +852,7 @@ function ShowPost($id,$ajax=false)
 	else
 	{
 		$gp=$Forum->GuestSign('p');
-		$gt=$Forum->GuestSign(`t`);
+		$gt=$Forum->GuestSign('t');
 
 		$mytopic=in_array($topic['id'],$gt);
 		$mypost=in_array($id,$gp);
@@ -956,7 +981,7 @@ function ShowPost($id,$ajax=false)
 
 	if((!$post['_edit'] or !$post['_delete']) and $mypost)
 	{
-		$mined=min($forum['_rights']['editlimit']);
+		$mined=min($rights['editlimit']);
 		if($mined==0 or time()-strtotime($post['created'])<=$mined)
 		{
 			$post['_edit']|=in_array(1,$rights['edit']);

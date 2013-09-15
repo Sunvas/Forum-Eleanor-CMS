@@ -52,7 +52,7 @@ function NewTopic($forum,$rights,$errors=array())
 		$values['closed']=isset($_POST['closed']);
 		$values['pinned']=isset($_POST['pinned']) ? (string)$_POST['pinned'] : '';
 		$values['status']=isset($_POST['status']) ? (int)$_POST['status'] : 1;
-		$values['_name']=$Forum->user && isset($_POST['name']) ? (string)$_POST['name'] : '';
+		$values['name']=!$Forum->user && isset($_POST['name']) ? (string)$_POST['name'] : '';
 		$values['extra']=isset($_POST['extra']) ? (array)$_POST['extra'] : array();
 	}
 	else
@@ -317,7 +317,7 @@ switch($do)
 					$values['uri']='';
 
 				if(mb_strlen($values['title'])<5)
-					$errors['EMPTY_TITLE']=sprintf('Минимальная длина названия темы составляет %s символов. Исправьте, пожалуйста, для языка %s.',5);
+					$errors['EMPTY_TITLE']=sprintf('Минимальная длина названия темы составляет %s символов. Исправьте, пожалуйста.',5);
 
 				if(mb_strlen($values['text'])<5)
 					$errors['EMPTY_TEXT']=sprintf('Минимальная длина поста составляет %s символов.',5);
@@ -345,10 +345,12 @@ switch($do)
 			elseif(!$errors)
 				$values['voting']=$voting;
 
-			$cach=$Eleanor->Captcha->Check(isset($_POST['check']) ? (string)$_POST['check'] : '');
-			$Eleanor->Captcha->Destroy();
-			if(!$cach)
-				$errors[]='WRONG_CAPTCHA';
+			if(isset($_POST['prefix']))
+			{
+				$prefix=(int)$_POST['prefix'];
+				if(in_array($prefix,$forum['prefixes']))
+					$values['prefix']=$prefix;
+			}
 
 			if($errors)
 			{

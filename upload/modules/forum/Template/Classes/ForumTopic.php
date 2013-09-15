@@ -95,14 +95,14 @@ class TplForumTopic
 		if($links['wait-posts'] and !isset($fistatus[-1]))
 		{
 			$lang=$rights['_toggle'] ? static::$lang['wait-moder'] : static::$lang['wait-my'];
-			$Header->Message($lang($links['wait-posts'],$forum['_statuses'][-1]),'info');
+			$Header->Message($lang($links['wait-posts'],$topic['_statuses'][-1]),'info');
 		}
 
 		switch($topic['status'])
 		{
 			case -1:
 				$Header->Message(static::$lang['mess-1'],'info');
-				break;
+			break;
 			case 0:
 				$Header->Message(static::$lang['mess0'],'info');
 		}
@@ -195,6 +195,7 @@ class TplForumTopic
 			{
 				case -1:
 					$Header->Message(sprintf(static::$lang['psmess-1'],$links['topic']),'info');
+				break;
 				case 0:
 					$Header->Message(sprintf(static::$lang['psmess0'],$links['topic']),'info');
 			}
@@ -324,7 +325,7 @@ class TplForumTopic
 		if($rights['_status'])
 		{
 			if($topic['_statuses'][-1]>0)
-				$statuses.=Eleanor::Option(sprintf($topic['_toggle'] ? static::$lang['on_mod%'] : static::$lang['my_on_mod%'],$topic['_statuses'][-1]),-1,isset($fistatus[-1]));
+				$statuses.=Eleanor::Option(sprintf($rights['_toggle'] ? static::$lang['on_mod%'] : static::$lang['my_on_mod%'],$topic['_statuses'][-1]),-1,isset($fistatus[-1]));
 			if($topic['_statuses'][1]>0 and ($topic['_statuses'][-1]>0 or $topic['_statuses'][0]>0))
 				$statuses.=Eleanor::Option(sprintf(static::$lang['active%'],$topic['_statuses'][1]),1,isset($fistatus[1]));
 			if($topic['_statuses'][0]>0)
@@ -581,7 +582,7 @@ $(function(){
 					.'</span></li>';
 		}
 
-		$name=htmlspecialchars($author ? $author['name'] : $post['author_name'],ELENT,CHARSET);
+		$name=htmlspecialchars($author ? $author['name'] : $post['author'],ELENT,CHARSET);
 		$group=$author && isset($ag[1][ $author['_group'] ]) ? $ag[1][ $author['_group'] ] : false;
 		$pref=$group ? $group['html_pref'] : '';
 		$end=$group ? $group['html_end'] : '';

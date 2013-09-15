@@ -435,8 +435,9 @@ function ShowForum($id)
 
 		$links['rss_topics']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] ? $forum['language'] : false,'show'=>'topics'));
 		$links['rss_posts']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] ? $forum['language'] : false));
-		$links['first_page']= $Forum->Links->Forum($forum['id'],array('fi'=>$forum['_filter']));
-		$links['form_items']= $Forum->Links->Forum($forum['id'],array(
+		$links['first_page']=$Forum->Links->Forum($forum['id'],array('fi'=>$forum['_filter']));
+		$links['no_prefix']=$forum['prefixes'] ? $Forum->Links->Forum($forum['id'],array('fi'=>array('prefix'=>false)+$forum['_filter'])) : $links['first_page'];
+		$links['form_items']=$Forum->Links->Forum($forum['id'],array(
 			'fi'=>$forum['_filter'],
 			'page'=>$forum['_page']<$forum['_pages'] ? $forum['_page'] : false,
 		));

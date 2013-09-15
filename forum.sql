@@ -1,4 +1,4 @@
-﻿SET FOREIGN_KEY_CHECKS=0;
+SET FOREIGN_KEY_CHECKS=0;
 
 CREATE TABLE `el_forums` (
 	`id` smallint unsigned NOT NULL auto_increment,
@@ -242,7 +242,7 @@ CREATE TABLE `el_forum_topics` (
 	`id` mediumint unsigned NOT NULL auto_increment,
 	`uri` varchar(50) default NULL,
 	`f` smallint unsigned NOT NULL,
-	`prefix` smallint(5) unsigned NOT NULL,
+	`prefix` smallint(5) unsigned default NULL,
 	`status` tinyint NOT NULL,
 	`language` enum('russian','english','ukrainian') NOT NULL,
 	`lrelated` varchar(30) NOT NULL,
@@ -278,6 +278,7 @@ CREATE TABLE `el_forum_topics` (
 	KEY `send_subscription` (`f`,`language`,`status`,`created`),
 	KEY `author` (`author_id`,`status`,`f`),
 	FOREIGN KEY (`f`) REFERENCES `el_forums` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+	FOREIGN KEY (`prefix`) REFERENCES `el_forum_prefixes` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
 	FOREIGN KEY (`lp_author_id`) REFERENCES `el_users_site` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
 

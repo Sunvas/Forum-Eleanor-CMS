@@ -11,6 +11,7 @@ return array(
 	'on_mod%'=>'Pending moderation (%s)',
 	'active%'=>'Active (%s)',
 	'blocked%'=>'Blocked (%s)',
+	'all%'=>'All (%s)',
 	'wait-my'=>function($href,$cnt)
 	{
 		$pl=$cnt>1;

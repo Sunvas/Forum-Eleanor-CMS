@@ -178,44 +178,47 @@ class ForumPost extends Forum
 			$forum=$this->Forums->GetForum($values['f']);
 			$topic+=array(
 				'f'=>$values['f'],
-				'prefix'=>isset($values['prefix']) ? $values['prefix'] : 0,
 				'status'=>isset($values['status']) ? $values['status'] : 1,
 				'created'=>$created,
 				'state'=>isset($values['state']) ? $values['state'] : 'open',
 				'sortdate'=>isset($values['pinned']) ? $values['pinned'] : $created,
 				'pinned'=>isset($values['pinned']) ? $values['pinned'] : '0000-00-00 00:00:00',
 				'lp_date'=>$created,
-				'lp_author'=>$values['author'],
-				'lp_author_id'=>isset($values['author_id']) ? $values['author_id'] : null,
 				'voting'=>isset($values['voting']) ? $values['voting'] : 0,
 				'last_mod'=>$created,
 			);
+
+			#Префикс
+			if(!isset($topic['prefix']) and isset($values['prefix']))
+				$topic['prefix']=$values['prefix'];
 
 			#Авторство темы
 			if(!isset($topic['author']) or !array_key_exists('author_id',$topic))
 			{
 				if(isset($values['author']) and array_key_exists('author_id',$values))
-					$topic['author']=$values['author'];
+					$topic+=array(
+						'author'=>$values['author'],
+						'author_id'=>$values['author_id'],
+						'lp_author'=>$values['author'],
+						'lp_author_id'=>$values['author_id'],
+					);
 				else
 				{
-					$me=$this->Forum->user ? Eleanor::$Login->GetUserValue(array('name','id')) : array('name'=>'Guest','id'=>null);
+					$me=$this->Core->user ? Eleanor::$Login->GetUserValue(array('name','id')) : array('name'=>'Guest','id'=>null);
 					$topic+=array(
 						'author'=>$me['name'],
 						'author_id'=>$me['id'],
+						'lp_author'=>$me['name'],
+						'lp_author_id'=>$me['id'],
 					);
 				}
 			}
 
-			if(isset($values['status']) and $values['status']!=1)
-				$status=$values['status']==-1 ? -3 : -2;
-			else
-				$status=1;
-
 			$post+=array(
 				'f'=>$values['f'],
-				'status'=>$status,
+				'status'=>$topic['status']==1 ? 1 : -2,
 				'author'=>$topic['author'],
-				'author_id'=>isset($topic['author_id']) ? $values['author_id'] : null,
+				'author_id'=>$topic['author_id'],
 				'ip'=>isset($values['ip']) ? $values['ip'] : Eleanor::$ip,
 				'created'=>$created,
 				'sortdate'=>$created,
@@ -379,16 +382,19 @@ class ForumPost extends Forum
 	protected function SaveAttach(&$text,$dirpath,$data,$hide)
 	{
 		$files=glob(rtrim($dirpath,'/\\').'/*',GLOB_MARK);
-		natsort($files);
-		foreach($files as $k=>&$v)
-			if(substr($v,-1)==DIRECTORY_SEPARATOR)
-				unset($files[$k]);
-			else
-				$v=array(
-					'size'=>Files::BytesToSize(filesize($v)),
-					'hash'=>md5_file($v),
-					'file'=>basename($v),
-				);
+		if($files)
+		{
+			natsort($files);
+			foreach($files as $k=>&$v)
+				if(substr($v,-1)==DIRECTORY_SEPARATOR)
+					unset($files[$k]);
+				else
+					$v=array(
+						'size'=>Files::BytesToSize(filesize($v)),
+						'hash'=>md5_file($v),
+						'file'=>basename($v),
+					);
+		}
 		if(!$files)
 			return false;
 
@@ -483,8 +489,8 @@ class ForumPost extends Forum
 	 */
 	public function IncUserPosts($cnt,$uid=false)
 	{
-		$Forum = $this->Forum;
-		$config = $Forum->config;
+		$Forum = $this->Core;
+		$config = $this->Forum->config;
 
 		if(!$uid)
 			if($Forum->user)
@@ -513,7 +519,7 @@ class ForumPost extends Forum
 		$group=reset($groups);
 
 		#Продвижение в другую группу
-		$R=Eleanor::$Db->Query('SELECT `parents` FROM `'.$config['fg'].'` WHERE `id`='.$group.' LIMIT 1');
+		$R=Eleanor::$Db->Query('SELECT `parents` FROM `'.P.'groups` WHERE `id`='.$group.' LIMIT 1');
 		if(list($parents)=$R->fetch_row())
 		{
 			$grows=array();

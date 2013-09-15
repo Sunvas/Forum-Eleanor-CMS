@@ -116,7 +116,7 @@ class TplForumPost
 		}
 
 		if($captcha)
-			$Lst->item('Введите код',Eleanor::Input('check','',array('tabindex'=>$ti++)).$captcha);
+			$Lst->item('Введите код',$captcha.'<br />'.Eleanor::Input('check','',array('tabindex'=>$ti++)));
 
 		if($Forum->user)
 			$Lst->item('Подписка на тему',Eleanor::Select('subscription',Eleanor::Option('Подписка отсутствует',0,!$values['subscription']).Eleanor::OptGroup('Подписка с уведомлением',Eleanor::Option('Немедленным','i',$values['subscription']=='i').Eleanor::Option('Ежедневным','d',$values['subscription']=='d').Eleanor::Option('Еженедельным','w',$values['subscription']=='w').Eleanor::Option('Ежемесячным','m',$values['subscription']=='m')),array('tabindex'=>$ti++)));
@@ -129,9 +129,6 @@ class TplForumPost
 
 		if($Forum->ugr['supermod'] or $forum['_moderator'] and in_array(1,$forum['_moderator']['opcl']) or in_array(1,$rights['close']))
 			$Lst->item('Закрыть тему',Eleanor::Check('closed',$values['closed'],array('tabindex'=>$ti++)));
-
-		if(!$GLOBALS['Eleanor']->Captcha->disabled)
-			$Lst->item('Введите код',Eleanor::Input('check','',array('tabindex'=>$ti++)).$GLOBALS['Eleanor']->Captcha->GetCode());
 
 		$extra='';
 		foreach($values['extra'] as $k=>$v)
@@ -149,7 +146,7 @@ class TplForumPost
 
 	public static function AddEditPost($edit,$bypost,$values,$rights,$prights,$forum,$topic,$error,$hidden)
 	{
-
+		#ToDo!
 	}
 
 	public static function AjaxEditPost($values,$hidden)

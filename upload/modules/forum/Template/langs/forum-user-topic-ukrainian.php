@@ -11,6 +11,7 @@ return array(
 	'on_mod%'=>'На модерації (%s)',
 	'active%'=>'Активні (%s)',
 	'blocked%'=>'Заблоковані (%s)',
+	'all%'=>'Будь-яким (%s)',
 	'wait-my'=>function($href,$cnt)
 	{
 		$pl=$cnt>1;
