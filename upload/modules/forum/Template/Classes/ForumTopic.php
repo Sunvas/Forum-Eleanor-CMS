@@ -80,7 +80,7 @@ class TplForumTopic
 				$nav[]=array($Forum->Links->Forum($p), $Forum->Forums->dump[$p]['title']);
 		array_push($nav,array($Forum->Links->Forum($forum['id']),$forum['title']),array(false,$topic['title']));
 
-		$Header=Eleanor::$Template->ForumMenu($nav,array($links['rss'],'RSS '.$topic['title']));
+		$Header=Eleanor::$Template->ForumMenu($nav,array(array($links['rss'],'RSS '.$topic['title'])));
 
 		if($errors)
 		{
@@ -106,6 +106,14 @@ class TplForumTopic
 			case 0:
 				$Header->Message(static::$lang['mess0'],'info');
 		}
+
+		#Сообщение о доступных языковых версиях
+		if($topic['_related'])
+		{
+			$lang=static::$lang['related'];
+			$Header->Message($lang($topic['_related']),'info');
+		}
+
 		#[E] Шапка
 
 		#Модераторские опции
@@ -206,9 +214,13 @@ class TplForumTopic
 				$posthtml.='<div class="noposts">'.Eleanor::$Template->Message(static::$lang['noposts'],'info').'</div>';
 		}
 
-		$posthtml.='</div><div class="status" id="status"></div><div style="text-align:center">'
-			.Eleanor::Button(static::$lang['lnp'],'button',array('class'=>'fb-lnp'))
-			.'</div>';
+		$posthtml.='</div>';
+
+		$lastpage=$post && $post['_n']==$topic['_cnt'];
+		if($lastpage)
+			$posthtml.='<div id="topic-status"></div><div style="text-align:center">'
+				.Eleanor::Button(static::$lang['lnp'],'button',array('class'=>'fb-lnp'))
+				.'</div>';
 		#[E] Генерация списка постов
 
 
@@ -293,7 +305,7 @@ class TplForumTopic
 		{
 			$ti=1;
 			$Lst=Eleanor::LoadListTemplate('table-form')
-				->form($links['new-post'])
+				->form(array('action'=>$links['new-post'],'id'=>'quick-reply'))
 				->begin();
 
 			if(!$Forum->user)
@@ -302,22 +314,22 @@ class TplForumTopic
 			$Lst->item(static::$lang['text'],$GLOBALS['Eleanor']->Editor->Area('text',$values['text'],array('bb'=>array('tabindex'=>$ti++))));
 
 			if($captcha)
-				$Lst->item(static::$lang['enter-captcha'],Eleanor::Input('check','',array('tabindex'=>$ti++)).$captcha);
+				$Lst->item(static::$lang['enter-captcha'],$captcha.'<br />'.Eleanor::Input('check','',array('tabindex'=>$ti++)));
 
-			$Lst->button(Eleanor::Button(static::$lang['post'],'submit',array('tabindex'=>$ti++)).' '.Eleanor::Button(static::$lang['tofull'],'submit',array('name'=>'tofull','tabindex'=>$ti++)))
+			$Lst->button(Eleanor::Button(static::$lang['post'],'submit',array('tabindex'=>$ti++)).' '.Eleanor::Button(static::$lang['tofull'],'submit',array('name'=>'_to-full','tabindex'=>$ti++,'class'=>'fb-to-full')))
 				->end()
 				->endform();
 
 			$c.=Eleanor::$Template->OpenTable()
 				.$Lst
 				.Eleanor::$Template->CloseTable()
-				.Eleanor::JsVars(array(
+				.($lastpage ? Eleanor::JsVars(array(
 					't'=>$topic['id'],
-					'lp'=>$post ? $post['sortdate'] : 0,
-					'postn'=>$topic['_cnt'],
-					'lastpage'=>$post && $post['_n']==$topic['_cnt'],
+					'ld'=>$post ? $post['sortdate'] : 0,
+					'ln'=>$topic['_cnt'],
+					'lp'=>true,
 					'filter'=>$topic['_filter']
-				),true,false,'FORUM.');
+				),true,false,'FORUM.') : '');
 		}
 		#[E] Форма быстро написания поста
 
@@ -393,9 +405,10 @@ class TplForumTopic
 		foreach($forum['parents'] as $p)
 			if(isset($Forum->Forums->dump[$p]))
 				$nav[]=array($Forum->Links->Forum($p), $Forum->Forums->dump[$p]['title']);
-		array_push($nav,array($Forum->Links->Forum($forum['id']),$forum['title']),array(false,$topic['title']));
+		array_push($nav,array($Forum->Links->Forum($forum['id']),$forum['title']),array($topic['_a'],$topic['title']));
 
-		$Header=Eleanor::$Template->ForumMenu($nav,array($links['rss'],'RSS '.$topic['title']));
+		$Header=Eleanor::$Template->ForumMenu($nav,array(array($links['rss'],'RSS '.$topic['title'])));
+
 		switch($post['status'])
 		{
 			case -1:
@@ -404,7 +417,7 @@ class TplForumTopic
 			case 0:
 				$Header->Message(static::$lang['pmess0'],'info');
 		}
-		#Шапка
+		#[E]Шапка
 
 		$c=(string)$Header;
 
@@ -516,6 +529,11 @@ class TplForumTopic
 			$editor=$post['edited_by_id'] && isset($ag[0][ $post['edited_by_id'] ]) ? $ag[0][ $post['edited_by_id'] ] : false;
 			$edited=$edlang($post['edited'],$editor ? $editor['name'] : $post['edited_by'],$editor ? Eleanor::$Login->UserLink($editor['name'],$post['edited_by_id']) : false,$post['edit_reason']);
 		}
+		elseif((int)$post['updated']>0)
+		{
+			$edlang=static::$lang['updated'];
+			$edited=$edlang($post['updated']);
+		}
 		else
 			$edited=false;
 
@@ -587,7 +605,8 @@ $(function(){
 		$pref=$group ? $group['html_pref'] : '';
 		$end=$group ? $group['html_end'] : '';
 
-		return'<table class="tabstyle post" id="post'.$id.'"><tr><th><a href="#" class="fb-insert-nick"'
+		#Важно! У каждого контейнера поста должен быть id=postID, .post и data-id=ID
+		return'<table class="tabstyle post" id="post'.$id.'" data-id="'.$id.'"><tr><th><a href="#" class="fb-insert-nick"'
 			.($author ? ' data-id="'.$post['author_id'].'">'.$name.'</a>'.($author['_online'] ? ' <span style="color:green">'.static::$lang['online'].'</span>' : '') : '>'.$name.'</a>').'</th><td>'
 			.($info['ltp'] ? '#<a href="'.$post['_ap'].'">'.$post['_n'].'</a> ' : '')
 			.'<span class="small">'.static::$lang['from'].'</span> '.Eleanor::$Language->Date($post['created'],'fdt')
@@ -612,8 +631,8 @@ $(function(){
 			.'<div class="small edited"'.($edited ? '' : ' style="display:none"').'>'.$edited.'</div>'
 			.($attsi ? '<div class="images clr">'.static::$lang['attached-images'].'<ul>'.$attsi.'</ul></div>' : '')
 			.($atts ? '<div class="files clr">'.static::$lang['attached-files'].'<ul>'.$atts.'</ul></div>' : '')
-			.'<div class="approved"'.($approve ? '' : ' style="display:none"').'><span style="color:green">'.static::$lang['approved'].'</span>'.rtrim($approve,', ').'</div>'
-			.'<div class="rejected"'.($approve ? '' : ' style="display:none"').'><span style="color:red">'.static::$lang['rejected'].'</span>'.rtrim($reject,', ')
+			.'<div class="approved"'.($approve ? '><span style="color:green">'.static::$lang['approved'].'</span>'.rtrim($approve,', ') : ' style="display:none">').'</div>'
+			.'<div class="rejected"'.($approve ? '><span style="color:red">'.static::$lang['rejected'].'</span>'.rtrim($reject,', ') : ' style="display:none">')
 			.'</div></td></tr><tr><td>'.($post['_r+'] ? '<a href="#" class="fb-thanks" data-id="'.$id.'">'.static::$lang['thanks'].'</a>' : '')
 			.'</td><td'.($info['multi'] ? ' colspan="2"' : '').'><span style="float:right">'.rtrim($buttons,'| ').'</span></td></tr>
 		</table>';

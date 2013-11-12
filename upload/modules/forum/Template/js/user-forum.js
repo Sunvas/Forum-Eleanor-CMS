@@ -10,13 +10,15 @@ var FORUM={
 	name:"forum",//Значение ключа module в ссылке на форум
 	n:"forum",//Имя модуля, имя секции
 	cron:"cron.php",//Имя cron файла системы
-    language:CORE.language,//Язык форума
+	language:CORE.language,//Язык форума
 
 	//Для загрузчика новых постов
-	lp:0,
-	t:0,
-	n:0,
-	lastpage:false,
+	autoupdate:10000,//Автообновление темы
+	t:0,//ID темы
+	ld:0,//Last Date - Дата последнего поста на странице
+	ln:0,//Last Number - Номер последнего поста на странице
+	lp:false,//Last Page - флаг нахождения на последней странице темы
+	filter:{},//Фильтр постов для дозагрузки постов с нужными параметрами
 
 	/**
 	 * Запуск крона
@@ -43,6 +45,7 @@ var FORUM={
 		return CORE.Ajax(
 			{
 				module:this.name,
+				language:this.language,
 				event:"all-read"
 			},
 			F
@@ -59,6 +62,7 @@ var FORUM={
 		return CORE.Ajax(
 			{
 				module:this.name,
+				language:this.language,
 				f:f,
 				event:"forum-read"
 			},
@@ -76,6 +80,7 @@ var FORUM={
 		return CORE.Ajax(
 			{
 				module:this.name,
+				language:this.language,
 				t:t,
 				event:"topic-read"
 			},
@@ -95,6 +100,7 @@ var FORUM={
 		CORE.Ajax(
 			{
 				module:this.name,
+				language:this.language,
 				f:f,
 				language:lang,
 				type:type,
@@ -115,6 +121,7 @@ var FORUM={
 		CORE.Ajax(
 			{
 				module:this.name,
+				language:this.language,
 				t:t,
 				type:type,
 				event:"subscribe-topic"
@@ -126,6 +133,7 @@ var FORUM={
 
 //Шаблонозависимые скрипты
 $(function(){
+	//Выделение постов, которые будут процитированы при ответе
 	var qp=CORE.GetCookie(FORUM.n+"-qp"),
 		qF=function(){
 			var id=$(this).data("id").toString();
@@ -134,6 +142,20 @@ $(function(){
 		};
 	qp=qp ? $.unique(qp.split(",")) : [];
 	$(".fb-quote").each(qF);
+
+	var posts=$("#posts"),//Контейнер постов
+		//Преобразование последнего fb-merged в id="mergedID"
+		Merged=function()
+		{
+			$("#posts .post:has(.fb-merged)").each(function(){
+				var th=$(this),
+					id=th.data("id");
+				th.find(".fb-merged").prop("id",false).filter(":last").prop("id","merged"+id);
+			});
+		};
+	Merged();
+	
+	
 
 	$(document)
 		.on("click",".fb-thanks",function(e){
@@ -157,7 +179,6 @@ $(function(){
 			qp.splice(k,1);
 			$(this).removeClass("active");
 		}
-		alert(qp.join(","));
 		CORE.SetCookie(FORUM.n+"-qp",qp.join(","));
 	})
 
@@ -168,21 +189,66 @@ $(function(){
 			$(this).prop("href","#post"+id);
 	})
 
-	.on("click","a.fb-ltp",function(e){
+	//Окно копирования ссылки на пост
+	.on("click",".fb-ltp",function(e){
 		e.preventDefault();
-		prompt("Скопируйте ссылку:",$(this).prop("href"));
+		prompt(CORE.Lang("forum_copy_link"),$(this).prop("href"));
 	})
 
-	.on("click","a.fb-insert-nick",function(e){
+	//Вставка имени пользователя (ника) в редактор
+	.on("click",".fb-insert-nick",function(e){
 		e.preventDefault();
 		EDITOR.Embed("nick",{name:$(this).text()});
+	});
+
+	//Переходы между постами при просмотре поста
+	var postscache={};
+	$(document).on("click",".fb-prev-post,.fb-next-post",function(e){
+		e.preventDefault();
+
+		var th=$(this),
+			F=function(id,url){
+				var post=$("#posts .post:first"),
+					current=post.data("id");
+
+				if(id in postscache)
+				{
+					postscache[current]=posts.html();
+					posts.html( postscache[id] );
+					if(url)
+						CORE.HistoryPush(url,F,id);
+				}
+				else
+					CORE.Ajax(
+						{
+							module:FORUM.name,
+							language:FORUM.language,
+							event:"show-post",
+							id:id
+						},
+						function(r)
+						{
+							postscache[current]=posts.html();
+							posts.html( r );
+							$("#posts .post .fb-quote").each(qF);
+
+							if(url)
+								CORE.HistoryPush(url,F,id);
+						}
+					);
+			};
+
+		if(CORE.history===false)
+			CORE.HistoryInit(F,$("#posts .post:first").data("id"));
+		F(th.data("id"),th.prop("href"));
 	})
 
-	/*.on("click",".fb-quick-quote",function(){
+	//Быстрая цитата
+	.on("click",".fb-quick-quote",function(){
 		var o=$(this),
 			name=o.data("name"),
 			text=o.closest(".post").find(".text:first").html(),
-			sel,m;
+			sel,sele,m;
 
 		if(!o.data("id") || !o.data("date") || !name)
 			return true;
@@ -215,11 +281,70 @@ $(function(){
 			EDITOR.Insert("[quote name=\""+name+"\" date=\""+o.data("date")+"\" p="+o.data("id")+"]\r\n"+sel+"\r\n[/quote]\r\n");
 		}
 		else
-			alert("Пользователь "+name+" не писал этого!");
+			alert(CORE.Lang("forum_qqe",[name]));
 		return false;
 	})
 
-	.on("click",".fb-delete-post",function(){
+	//Быстрая правка поста
+	.on("click",".fb-quick-edit",function(e){
+		e.preventDefault();
+
+		var th=$(this),
+			id=th.data("id");
+
+		CORE.Ajax(
+			{
+				module:FORUM.name,
+				language:FORUM.language,
+				event:"edit",
+				id:id
+			},
+			function(r)
+			{
+				var tofull=false,
+					post=th.closest(".post");
+
+				post
+					.find("form").remove().end()
+					.find(".text,.edited,.signature,.approved,.rejected").hide().filter(":first").after(r).end().end()
+
+				.on("submit","form",function(e2){
+					if(tofull)
+						return true;
+
+					CORE.Ajax(
+						$.extend(
+							CORE.Inputs2object( $(":input",this) ),
+							{
+								module:FORUM.name,
+								language:FORUM.language,
+								event:"save",
+								id:id
+							}),
+						function(r2)
+						{
+							post.find("form").remove();
+							$.each(r2,function(i,v){
+								post.find("."+i).html(v).not(":empty").show();
+							});
+						}
+					);
+					e2.preventDefault();
+				}).on("click",".fb-cancel",function(e2){
+					e2.preventDefault();
+					post
+						.find("form").remove().end()
+						.find(".text,.edited,.signature,.approved,.rejected").not(":empty").show();
+				}).on("click",".fb-to-full",function(){
+					tofull=true;
+				});
+			}
+		);
+	});
+
+	/*
+		Подумать: эта кнопка расположена и в интерфейсе редактирования поста
+		.on("click",".fb-delete-post",function(){
 		if(confirm("Вы действительно хотите удалить этот пост?"))
 		{
 			var id=$(this).data("id");
@@ -246,58 +371,6 @@ $(function(){
 		return false;
 	})
 
-	//Быстрая правка поста
-	.on("click",".fb-quick-edit",function(){
-		var id=$(this);
-		CORE.Ajax(
-			{
-				module:FORUM.name,
-				language:FORUM.language,
-				event:"edit",
-				id:th.data("id")
-			},
-			function(r)
-			{
-				var tofull=false,
-					post=th.closest(".post");
-				post.find("form").remove().end().find(".text,.edited,.signature").hide().after(r).end()
-				.on("submit","form",function(){
-					if(tofull)
-						return true;
-					var params={};
-					$.each($(this).serializeArray(),function(i,n){
-						params[n.name]=n.value;
-					});
-					CORE.Ajax(
-						$.extend(
-							params,
-							{
-								module:FORUM.name,
-								language:FORUM.language,
-								event:"save",
-								id:id
-							}),
-						function(rs)
-						{
-							if(rs.edited)
-								post.find(".edited").html(rs.edited);
-							post.find("form").remove().end().find(".text").html(rs.text).end()
-								.find(".text,.edited").not(":empty").show();
-						}
-					);
-					return false;
-				}).on("click",".fb-cancel",function(){
-					post.find("form").remove().end().find(".text,.edited,.signature").not(":empty").show();
-					return false;
-				}).on("click",".fb-tofull",function(){
-					tofull=true;
-					return false;
-				});
-			}
-		);
-		return false;
-	})
-
 	//Кнопка изменения закрепленности темы
 	.on("click",".changepin",function(){
 		var d=$("input[name=\"_pin\"]"),
@@ -309,192 +382,187 @@ $(function(){
 			$("span",this).text(n);
 		}
 		return false;
-	});
-//ToDo! Container
+	});*/
+
 	//Загрузка новых постов
 	var to,
+		autoupdate=FORUM.autoupdate,
+		status=$("#topic-status"),
+		aui,//AutoUpdateInterval
+		NewHash=function(h)
+		{
+			with(window.location)
+			{
+				if(hash.replace(/#/g,"")==h)
+					hash="";
+				hash=h;
+			}
+		},
 		Finish=function(tl)
 		{
 			clearTimeout(to);
 			to=setTimeout(function(){
-				container.children(".status").fadeOut("slow",function(){
+				status.fadeOut("slow",function(){
 					$(this).removeClass("load ok error")
 				});
-			},tl||3000);
+			},tl||5000);
 		},
 		LoadNewPosts=function(r)
 		{
-			if(r)
+			if(r.userposts)
+				$.each(r.userposts,function(i,v){
+					$(".user-posts-"+i).text(v);
+				});
+
+			if(r.posts)
 			{
-				for(var i in r.uposts)
-					$(".uposts"+i).text(r.uposts[i]);
-
-				$("#nphere").show().append(r.posts);
-				FORUM.postn=r.n;
-				FORUM.lp=r.lp;
-
-				window.location.hash="#post"+r.first;
-				if(FORUM.postschecks)
-				{
-					FORUM.postschecks.Rescan();
-					FORUM.postschecks.DoModerPosts();
-				}
+				posts.append(r.posts);
+				FORUM.ln=r.ln;
+				FORUM.ld=r.lp;
 			}
-			$("#lnp-status").toggleClass("load ok").text(r ? "Посты успешно загружены" : "Новых постов нет");
-			Finish();
+
+			if(r.first)
+				NewHash("post"+r.first);
+
+			if(r.runtask)
+				FORUM.RunTask();
+		},
+		DoLoadNewPosts=function(auto)
+		{
+			CORE.QAjax(
+				{
+					module:FORUM.name,
+					language:FORUM.language,
+					event:"lnp",
+					t:FORUM.t,
+					ld:FORUM.ld,
+					ln:FORUM.ln,
+					filter:FORUM.lp
+				},
+				{
+					OnBegin:function()
+					{
+						if(!auto)
+						{
+							clearTimeout(to);
+							autoupdate=false;
+							status.removeClass("ok error").addClass("load").text(CORE.Lang("forum_lnp")).show();
+						}
+					},
+					OnSuccess:function(r)
+					{
+						LoadNewPosts(r);
+						if(!auto)
+						{
+							status.removeClass("load error").addClass("ok").text(CORE.Lang(r.posts ? "forum_posts_loaded" : "forum_no_new_posts")).show();
+							Finish();
+						}
+					},
+					OnFail:function(s)
+					{
+						if(auto)
+							autoupdate=false;
+						else
+						{
+							status.removeClass("load ok").addClass("error").text(s);
+							Finish(10000);
+						}
+					}
+				}
+			);
 		};
-	$(document).on("click",".fb-lnp",function(){
-		CORE.Ajax(
-			{
-				module:FORUM.name,
-				language:FORUM.language,
-				event:"lnp",
-				t:FORUM.t,
-				lp:FORUM.lp,
-				n:FORUM.postn
-			},
+
+	$(document).on("click",".fb-lnp",function(e){
+		e.preventDefault();
+		DoLoadNewPosts(false);
+	});
+
+	if(autoupdate)
+		aui=setInterval(function(){
+			if(autoupdate)
+				DoLoadNewPosts(true);
+		},autoupdate);
+
+	//Quick post form - форма быстрого ответа
+	var tofull=false;
+	$("#quick-reply").submit(function(e){
+		if(tofull || !FORUM.lp || !$.isEmptyObject(FORUM.filter))
+			return true;
+
+		CORE.QAjax(
+			$.extend(
+				CORE.Inputs2object( $(":input",this) ),
+				{
+					module:FORUM.name,
+					language:FORUM.language,
+					event:"new-post",
+					text:EDITOR.Get("text"),
+					t:FORUM.t,
+					ld:FORUM.ld,
+					ln:FORUM.ln
+				}
+			),
 			{
 				OnBegin:function()
 				{
 					clearTimeout(to);
-					$("#lnp-status").removeClass("ok error").addClass("load").text("Загрузка новых постов...").show();
+					autoupdate=false;
+					status.removeClass("ok error").addClass("load").text(CORE.Lang("forum_waitpost")).show();
 				},
-				OnEnd:Finish,
-				OnSuccess:LoadNewPosts,
-				OnFail:function(s)
-				{
-					$("#lnp-status").toggleClass("load error").text(s);
-					Finish(5000);
-				}
-			}
-		);
-		return false;
-	});*/
-
-	//Quick post form - форма быстрого ответа
-	/*var tofull=false;
-	$("#qpf").submit(function(e){
-		if(tofull)
-			return true;
-		var params={},
-			th=this;
-		$.each($(this).serializeArray(),function(i,n){
-			params[n.name]=n.value;
-		});
-		CORE.Ajax(
-			$.extend(
-				params,
-				{
-					module:FORUM.name,
-					language:FORUM.language,
-					event:"newpost",
-					t:FORUM.t,
-					lp:FORUM.lp,
-					n:FORUM.postn,
-					redirect:FORUM.lastpage ? 0 : 1
-				}
-			),
-			{
-				OnBegin:function(){
-					clearTimeout(to);
-					$("#lnp-status").removeClass("ok error").addClass("load").text("Подождите, идет отправка сообщения...").show();
-				},
-				OnEnd:Finish,
 				OnSuccess:function(r){
-					if(typeof r=="string")
-						with(window.location)
-						{
-							href=protocol+"//"+hostname+(port ? ":"+port : "")+CORE.site_path+r;
-						}
+					if(r.merged && $("#post"+r.merged+" .text:first").append(r.text).size()>0)
+					{
+						status.removeClass("load error").addClass("ok").text(CORE.Lang("forum_merged"));
+						Merged();
+						setTimeout(function(){
+							NewHash("merged"+r.merged);
+						},200);
+					}
 					else
-					{
-						if(r.posts)
-						{
-							LoadNewPosts(r);
-							if(r.post.subs)
-								FORUM.RunTask();
-							if(r.post.info)
-								$("#postinfo").html(r.post.info).show();
-							else
-								$("#postinfo").hide();
-						}
-						else if(r.merged)
-						{
-							$("#post"+r.merged+" .text:first").html(r.text);
-							$("#lnp-status").toggleClass("load ok").text("Ваше сообщение успешно склеено с предыдущим...");
-							window.location.hash='post'+r.merged;
-						}
-						$("#captcha_img").click();
-						$("textarea,input[name=\"_check\"]").val("");
-					}
+						r.merged=false;
+
+					LoadNewPosts(r);
+					if(!r.merged)
+						status.removeClass("load error").addClass("ok").text(CORE.Lang(r.posts ? "forum_posts_loaded" : "forum_no_new_posts")).show();
+
+					Finish();
+					$("#captcha").click();
+					EDITOR.Set("","text");
+					$("#quick-reply input[name=check]").val("");
+					autoupdate=true;
 				},
-				OnFail:function(s){
-					if(typeof s!="string")
+				OnFail:function(r){
+					if(typeof r!="string")
 					{
-						if(s.captcha)
-							$("#captcha_img").click();
-						s=s.error;
+						if(r.captcha)
+							$("#captcha").click();
+						r=r.error;
 					}
-					$("#lnp-status").toggleClass("load error").text(s);
-					Finish(3000);
+					var s="";
+					if(typeof r=="string")
+						s=r;
+					else
+						$.each(r,function(i,v){
+							s+=(s ? "<br />" : "")+(CORE.Lang("forum_"+v)||v);
+						});
+					status.removeClass("load ok").addClass("error").html(s);
+					NewHash("topic-status");
+					Finish(10000);
 				}
 			}
 		);
-		return false;
-	}).find("input[type=\"submit\"][name=\"_tofull\"]").click(function(){
+		e.preventDefault();
+	}).on("click",".fb-to-full",function(){
 		tofull=true;
-	});*/
-
-	//Переходы между постами при просмотре поста
-	/*var pm=$("#post");//Post mark
-	if(pm.is("a[name=post]"))
-	{
-		var posts=[],
-			oldid=pm.data("id"),
-			oldsp=pm.next(),//old showpost
-			FSP=function(id)
-			{
-				if(typeof posts[id]=="undefined")
-					CORE.Ajax(
-						{
-							module:FORUM.name,
-							language:FORUM.language,
-							event:"showpost",
-							id:id
-						},
-						function(r)
-						{
-							posts[oldid]=oldsp.detach();
-							oldid=id;
-							pm.after(r);
-							oldsp=pm.next();
-							$(".fb-quote",oldsp).each(qF);
-						}
-					);
-				else
-				{
-					posts[oldid]=oldsp.detach();
-					posts[id].insertAfter(pm);
-					oldid=id;
-					oldsp=posts[id];
-				}
-			};
-		CORE.HistoryInit(FSP,oldid);
-		$(document).on("click","a.pnpost",function(){
-			var id=$(this).data("id");
-			FSP(id);
-			CORE.HistoryPush($(this).prop("href"),FSP,id);
-			return false;
-		});
-	};*/
+	});
 
 	//Мультимодерирование постов
 	var pmm_merge=$("#posts-mm-panel .merge [name=\"mm[author]\"]"),
 		pmm_do=$("#posts-mm-panel [name=\"mm[do]\"]"),
 		pmm_omerge=$("#posts-mm-panel [value=merge]"),
-		pmm_old_n=0,
-		pmm_posts=$("#posts [name=\"mm[p][]\"]:checkbox").change(function(){
-			var checked=pmm_posts.filter(":checked"),
+		pmm_old_n=0;
+		$("#posts").on("change","[name=\"mm[p][]\"]:checkbox").change(function(){
+			var checked=$("#posts [name=\"mm[p][]\"]:checked"),
 				mv=pmm_merge.val(),
 				n=checked.size();
 			$("#with-selected").text( (CORE.Lang("forum_pws"))(n) );
@@ -753,4 +821,4 @@ $(function(){
 	}).each(function(){
 		$(this).trigger("load");
 	});
-})
+});

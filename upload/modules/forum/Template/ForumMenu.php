@@ -33,8 +33,8 @@ $Lst->link(array(
 ))->link(array(
 	'rel'=>'alternate',
 	'type'=>'application/rss+xml',
-	'href'=>$links['rss_topics'],
-	'title'=>$l['rss_topics'],
+	'href'=>$links['rss_posts'],
+	'title'=>$l['rss_posts'],
 ));
 $GLOBALS['head']['rss']=$Lst;
 

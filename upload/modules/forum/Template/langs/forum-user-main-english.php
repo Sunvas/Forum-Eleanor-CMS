@@ -26,8 +26,8 @@ return array(
 				$r.=', ';
 			$r.=$b.' search engine bot'.($b>1 ? 's' : '');
 		}
-		#Replace last comma with "and"
-		$r=preg_replace('#,([^,]+)$#',' and\1',$r);
+		#Replace last comma with ""
+		$r=preg_replace('#,([^,]+)$#',' и\1',$r);
 		return$r;
 	},
 	'quantity'=>'Quantity indicators:',

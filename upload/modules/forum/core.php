@@ -40,6 +40,7 @@ class ForumCore extends Forum
 	 * Определение прав группы в конкретном форуме
 	 * @param int $f Идентификатор форума
 	 * @param int $g Идентификатор группы
+	 * @return array
 	 */
 	public function GroupPerms($f,$g)
 	{
@@ -95,7 +96,7 @@ class ForumCore extends Forum
 		if($grs===false)
 		{
 			$ps=Eleanor::Permissions($g,'parents');
-			foreach($ps as $k=>&$v)
+			foreach($ps as &$v)
 				if($v)
 					$g=array_merge($g,$v);
 			$grs=array();
@@ -150,6 +151,7 @@ class ForumCore extends Forum
 	 * Получение значений прав для определенного форума (для текущего пользователя)
 	 * @param int $f Идентификатор форума
 	 * @param array|null $groups Переопределение групп пользователя
+	 * @return array
 	 */
 	public function ForumRights($f,$groups=null)
 	{
@@ -170,6 +172,7 @@ class ForumCore extends Forum
 	 * Проверка возможности доступа текущего пользователя к определенной теме (учитывая права на форуме). Статус темы не учитывается.
 	 * @param array $t Массив темы, обязательно наличие ключей: id - идентификатор темы, f - идентификатор форума, author_id - идентификатор автора
 	 * @param array|null $user Пользователя
+	 * @return bool
 	 */
 	public function CheckTopicAccess(array$t,$user=null)
 	{
@@ -189,9 +192,9 @@ class ForumCore extends Forum
 			$rt[]=$r['topics'];
 			$rta[]=$r['atopics'];
 		}
-		if(!$user)
-			$gt=$this->GuestSign('t');
-		if(in_array(1,$ra) and in_array(1,$rt) and (in_array(1,$rta) or $user and $user['id']==$t['author_id'] or !$user and in_array($t['id'],$gt)))
+
+		$gt=$this->GuestSign('t');
+		if(in_array(1,$ra) and in_array(1,$rt) and (in_array(1,$rta) or $user and $user['id']==$t['author_id'] or in_array($t['id'],$gt)))
 			return true;
 	}
 
@@ -199,6 +202,7 @@ class ForumCore extends Forum
 	 * Проверка возможности доступа к форуму
 	 * @param int $f ID форума
 	 * @param array|null $groups Переопределение групп пользователя
+	 * @return bool
 	 */
 	public function CheckForumAccess($f,$groups=null)
 	{
@@ -217,6 +221,7 @@ class ForumCore extends Forum
 	/**
 	 * Получение списка пользователей, читающих тему, форум, пост...
 	 * @param string $s Строка поискаЖ -fID для форума, -fID-tID для темы, -pID для поста
+	 * @return array
 	 */
 	public function GetOnline($s='')
 	{
@@ -233,16 +238,19 @@ class ForumCore extends Forum
 				Eleanor::$sessextra.='-h';
 		}
 		else
-			$uid=-1;
+		{
+			$uid=0;
+			$online[]=array('user_id'=>0,'enter'=>time(),'name'=>'','group'=>0,'_hidden'=>false);
+		}
 
-		$R=Eleanor::$Db->Query('SELECT `s`.`type`,`s`.`user_id`,`s`.`enter`,`s`.`name` `botname`,`s`.`extra`,`us`.`groups` `group`,`us`.`name` FROM `'.P.'sessions` `s` INNER JOIN `'.P.'users_site` `us` ON `s`.`user_id`=`us`.`id` WHERE `s`.`extra` LIKE \''.$this->Forum->config['n'].$s.'-%\' AND `s`.`expire`>\''.date('Y-m-d H:i:s').'\' AND `s`.`service`=\''.Eleanor::$service.'\' ORDER BY `s`.`expire` DESC');
+		$R=Eleanor::$Db->Query('SELECT `s`.`type`,`s`.`user_id`,`s`.`enter`,`s`.`ip_guest`,`s`.`name` `botname`,`s`.`extra`,`us`.`groups` `group`,`us`.`name` FROM `'.P.'sessions` `s` INNER JOIN `'.P.'users_site` `us` ON `s`.`user_id`=`us`.`id` WHERE `s`.`extra` LIKE \''.$this->Forum->config['n'].$s.'-%\' AND `s`.`expire`>\''.date('Y-m-d H:i:s').'\' AND `s`.`service`=\''.Eleanor::$service.'\' ORDER BY `s`.`expire` DESC');
 		while($a=$R->fetch_assoc())
 		{
 			$a['enter']=strtotime($a['enter']);
 			if($a['type']=='user' and $a['group'])
 				$a['group']=(int)ltrim($a['group'],',');
 
-			if($a['user_id']!=$uid)
+			if($a['user_id']!=$uid or $a['user_id']==0 or Eleanor::$ip!=$a['ip_guest'])
 			{
 				if($a['type']=='user')
 					$a['_a']=Eleanor::$Login->UserLink($a['name'],$a['user_id']);
@@ -256,6 +264,7 @@ class ForumCore extends Forum
 	 * Метод для "подписи" тем и постов гостя
 	 * @param string $t Идентификатор подписи: p для поста, t для темы
 	 * @param array|int|FALSE $add Идентификатор темы или поста, который нужно добавить в подпись
+	 * @return string
 	 */
 	public function GuestSign($t='p',$add=false)
 	{

@@ -12,6 +12,7 @@
  */
 function ShowForum($id)
 {global$Eleanor,$title;
+	/** @var ForumCore $Forum */
 	$Forum = $Eleanor->Forum;
 	$forum = $Forum->Forums->GetForum($id);
 	if(!$forum)
@@ -44,11 +45,12 @@ function ShowForum($id)
 
 	if(!$Forum->user)
 	{
-		$gt= $Forum->GuestSign('t');
+		$gp=$Forum->GuestSign('p');
+		$gt=$Forum->GuestSign('t');
 		$ingt=$gt ? Eleanor::$Db->In($gt) : false;
-
-		$gp= $Forum->GuestSign('p');
 	}
+
+	$online=$Forum->GetOnline(($forum['parents'] ? '-f'.str_replace(',','-f',$forum['parents']) : '').'-f'.$forum['id']);
 
 	$errors=$links=$info=array();
 	if(!$forum['is_category'] and in_array(1,$rights['topics']))
@@ -305,7 +307,7 @@ function ShowForum($id)
 				$forum['_read']=false;
 
 			#Ссылка на ожидающие посты темы (topic wait posts)
-			$twp= $Forum->ugr['supermod'] || $forum['_moderator'] && (in_array(1,$forum['_moderator']['chstatus']) || in_array(1,$forum['_moderator']['mchstatus']));
+			$twp=$Forum->ugr['supermod'] || $forum['_moderator'] && (in_array(1,$forum['_moderator']['chstatus']) || in_array(1,$forum['_moderator']['mchstatus']));
 			$R=Eleanor::$Db->Query('SELECT `id`,`uri`,`prefix`,`status`,`created`,`author`,`author_id`,`state`,`moved_to`,`moved_to_forum`,`who_moved`,`who_moved_id`,`when_moved`,`title`,`description`,`posts`,`queued_posts`,`views`,`pinned`>\''.date('Y-m-d H:i:s').'\' `_pin`,`lp_date`,`lp_id`,`lp_author`,`lp_author_id`,`voting`,`last_mod`'.$where.' ORDER BY `sortdate` DESC LIMIT '.$offset.','.$limit);
 			while($a=$R->fetch_assoc())
 			{
@@ -397,6 +399,11 @@ function ShowForum($id)
 
 			if(Eleanor::$caching)
 			{
+				#От читанности тем зависит браузерный кэш
+				if(!$Forum->user)
+					foreach($forum['_topics'] as $k=>$v)
+						$where.=$k.$v['_read'];
+
 				Eleanor::$last_mod=$lastmod;
 				$etag=Eleanor::$etag;
 				$uid= $Forum->user ? $Forum->user['id'] : 0;
@@ -433,8 +440,8 @@ function ShowForum($id)
 		if($forum['meta_descr'])
 			$forum['meta_descr']=Eleanor::ExecBBLogic($forum['meta_descr'],array('page'=>$forum['_pages']==$forum['_page'] ? false : $forum['_page']));
 
-		$links['rss_topics']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] ? $forum['language'] : false,'show'=>'topics'));
-		$links['rss_posts']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] ? $forum['language'] : false));
+		$links['rss_topics']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] && $forum['language']!=LANGUAGE ? $forum['language'] : false,'show'=>'topics'));
+		$links['rss_posts']=Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'f'=>$forum['id'],'l'=>$forum['language'] && $forum['language']!=LANGUAGE ? $forum['language'] : false));
 		$links['first_page']=$Forum->Links->Forum($forum['id'],array('fi'=>$forum['_filter']));
 		$links['no_prefix']=$forum['prefixes'] ? $Forum->Links->Forum($forum['id'],array('fi'=>array('prefix'=>false)+$forum['_filter'])) : $links['first_page'];
 		$links['form_items']=$Forum->Links->Forum($forum['id'],array(
@@ -459,7 +466,7 @@ function ShowForum($id)
 
 	SetData();
 	Eleanor::$Template->queue[]=$config['maintpl'];
-	$c=Eleanor::$Template->ShowForum($forum,$rights,$forums, $Forum->GetOnline(($forum['parents'] ? '-f'.str_replace(',','-f',$forum['parents']) : '').'-f'.$forum['id']),$errors,$info,$links);
+	$c=Eleanor::$Template->ShowForum($forum,$rights,$forums,$online,$errors,$info,$links);
 	Start();
 	echo$c;
 }
@@ -470,6 +477,7 @@ function ShowForum($id)
  */
 function Forums($parent=0)
 {global$Eleanor;
+	/** @var ForumCore $Forum */
 	$Forum = $Eleanor->Forum;
 	$Forums = $Forum->Forums;
 	if($parent>0)
@@ -529,7 +537,7 @@ function Forums($parent=0)
 		$a=$t=$at=array();
 		foreach($Forum->ug as $g)
 		{
-			$gp= $Forum->GroupPerms($k,$g);
+			$gp=$Forum->GroupPerms($k,$g);
 			$a[]=$gp['access'];
 			$t[]=$gp['topics'];
 			$at[]=$gp['atopics'];
@@ -557,7 +565,7 @@ function Forums($parent=0)
 	else
 	{
 		$allread=(int)Eleanor::GetCookie($Forum->config['n'].'-ar');
-		$gt= $Forum->GuestSign('t');
+		$gt=$Forum->GuestSign('t');
 		$ingt=$gt ? Eleanor::$Db->In($gt) : false;
 	}
 
@@ -690,8 +698,8 @@ function Forums($parent=0)
 		if(isset($lp['_alpa']))
 		{
 			$lp+=array(
-				'_anp'=> $Forum->Links->Action('go-new-post',$a['id']),#Ссылка на новые посты с момента последнего просмотра темы
-				'_alp'=> $Forum->Links->Action('go-last-post',$a['id']),#Ссылка на последний пост темы
+				'_anp'=> $Forum->Links->Action('go-new-post',$a['lp_id']),#Ссылка на новые посты с момента последнего просмотра темы
+				'_alp'=> $Forum->Links->Action('go-last-post',$a['lp_id']),#Ссылка на последний пост темы
 			);
 
 			if($a['queued_topics']>0)
@@ -728,11 +736,14 @@ function Forums($parent=0)
 		{
 			$a['users']=$a['users'] ? explode(',,',trim($a['users'],',')) : array();
 			$a['groups']=$a['groups'] ? explode(',,',trim($a['groups'],',')) : array();
+
 			foreach($a['users'] as $v)
 				$users[$v][]=$a['id'];
+
 			foreach($a['groups'] as $v)
 				$groups[$v][]=$a['id'];
 		}
+
 		if($users)
 		{
 			$R=Eleanor::$Db->Query('SELECT `id`,`groups` `_group`,`full_name`,`name` FROM `'.P.'users_site` WHERE `id`'.Eleanor::$Db->In(array_keys($users)));
@@ -747,6 +758,7 @@ function Forums($parent=0)
 						$preforums[ $mv ]['moderators'][]=$a;
 			}
 		}
+
 		if($groups)
 		{
 			#Ссылки на модуль групп

@@ -42,21 +42,23 @@ if(($qtopic or $qpost) and $forum['moderators'])
 
 if($qtopic)
 {
-	if(!$Forum->user)
-		$gt=$Forum->GuestSign('t');
+	$gt=$Forum->GuestSign('t');
 
-	if(($data['tstatus']==0 or $Forum->user and $Forum->user['id']!=$data['author_id'] or !$Forum->user and !in_array($data['t'],$gt)) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+	if(($data['tstatus']==0 or $data['tstatus']==-1 and !($Forum->user and $Forum->user['id']==$data['author_id'] or in_array($data['t'],$gt))) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 		goto Exit403;
 }
 
 if($qpost)
 {
-	if(!$Forum->user)
-		$gp=$Forum->GuestSign('p');
+	$gp=$Forum->GuestSign('p');
 
-	if(($data['status']==0 or $Forum->user and $Forum->user['id']!=$data['paid'] or !$Forum->user and !in_array($data['p'],$gp)) and (!$moder or !in_array(1,$moder['chstatus']) and !in_array(1,$moder['mchstatus'])))
+	if(($data['status']==0 or in_array($data['status'],array(-1,-3)) and !($Forum->user and $Forum->user['id']==$data['paid'] or in_array($data['p'],$gp))) and (!$moder or !in_array(1,$moder['chstatus']) and !in_array(1,$moder['mchstatus'])))
 		goto Exit403;
 }
+
+$rights=$Forum->ForumRights($forum['id']);
+if(!in_array(1,$rights['attach']))
+	goto Exit403;
 
 $file=$config['attachroot'].'p'.$data['p'].DIRECTORY_SEPARATOR.$data['file'];
 if(!is_file($file))

@@ -49,7 +49,7 @@ class ForumAttach extends Forum
 
 					return$file;
 				}
-				return'';
+				return$config['download'].$m[1];
 			};
 
 			if($single)

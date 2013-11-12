@@ -66,7 +66,7 @@ if($Eleanor->Url->is_static)
 			include Forum::$root.'user/topic.php';
 			return ShowTopic($furi,$turi);
 		}
-		elseif(preg_match('#^(forum|topic|post|new\-topic|new\-post|edit|edit\-topic|answer|subscribe\-topic|subscribe\-forum|go\-new\-post|go\-last\-post|find\-post|reputation|given|activate\-post)\-(.+?)$#i',$turi,$m)>0)
+		elseif(preg_match('#^(forum|topic|post|new\-topic|new\-post|edit\-topic|edit|answer|subscribe\-topic|subscribe\-forum|go\-new\-post|go\-last\-post|find\-post|reputation|given|activate\-post)\-(.+?)$#i',$turi,$m)>0)
 		{
 			$do=$m[1];
 			$id=$m[2];
@@ -171,6 +171,7 @@ function SetData()
 	else
 		$cron=false;
 
+	/** @var ForumLinks $Links */
 	$Links=$Eleanor->Forum->Links;
 	$Eleanor->module+=array(
 		'cron'=>$cron,

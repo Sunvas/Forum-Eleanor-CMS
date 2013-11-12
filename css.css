@@ -1,4 +1,4 @@
-﻿/*FORUM*/
+/*FORUM*/
 table.forums { margin-bottom: 15px; }
 nav.forums { margin: 0 0 10px 10px; }
 fieldset.forums, fieldset.moderator  { margin: 0 10px 10px; padding:5px; }
@@ -27,10 +27,10 @@ th.lastpost { width:32%; }
 #posts .images > ul > li { float:left; margin:10px; text-align:center; }
 #posts .images > ul > li img { max-width:200px; }
 
-#posts div.status { text-align:center; padding:7px;margin:7px 0; display:none; border:1px gray dotted; }
-#posts div.ok { background-color:lightgreen; }
-#posts div.error { background-color:#f88; }
-#posts div.load { background-color:lightblue; }
+#topic-status { text-align:center; padding:7px;margin:7px 0; display:none; border:1px gray dotted; }
+#topic-status.ok { background-color:lightgreen; }
+#topic-status.error { background-color:#f88; }
+#topic-status.load { background-color:lightblue; }
 
 #posts .post { margin:10px 0 10px; }
 #posts .post .text img { max-width:500px; }
@@ -41,6 +41,7 @@ th.lastpost { width:32%; }
 #posts .post tr > td.author { vertical-align:top; }
 #posts .post tr > td.author div { text-align:center; }
 #posts .post tr > td.author div img { max-width:100px;max-height:100px; }
+#posts .post .text .fb-merged { display:block; margin:10px 0 10px; clear: both; }
 
 #posts-mm-panel,#topics-mm-panel { float:right; text-align:right; }
 #topic-mm-panel { float:left; }

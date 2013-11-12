@@ -6,9 +6,10 @@
 	*Pseudonym
 */
 defined('CMS')||die;
+/** @var ForumCore $Forum */
 $Forum = $Eleanor->Forum;
 if($Forum->user)
-	switch($ev)
+	switch($event)
 	{
 		case'subscribe-forum':#Подписка на форум
 			$f=isset($_POST['f']) ? (int)$_POST['f'] : 0;
@@ -39,10 +40,9 @@ if($Forum->user)
 				else
 					$moder=false;
 
-				if(!$Forum->user)
-					$gt=$Forum->GuestSign('t');
+				$gt=$Forum->GuestSign('t');
 
-				if(($topic['status']==0 or $Forum->user['id']!=$topic['author_id']) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+				if(($topic['status']==0 or $topic['status']==-1 and $Forum->user['id']!=$topic['author_id'] and !in_array($t,$gt)) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 					return Error();
 			}
 			$Forum->Subscriptions->SubscribeTopic($t, $Forum->user['id'],$type,$topic['status']);

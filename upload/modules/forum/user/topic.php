@@ -5,6 +5,12 @@
 	a@eleanor-cms.ru
 	*Pseudonym
 */
+
+/**
+ * @var ForumCore $Forum
+ * @var string $do
+ * @var int $id
+ */
 defined('CMS')||die;
 $config = $Forum->config;
 
@@ -13,19 +19,27 @@ switch($do)
 	case'activate-post':#Активировать пост
 		#ToDo!
 	break;
+	case'my-post':#Стать автором поста
+		$gp=$Forum->GuestSign('p');
+		#ToDo! Если пользователь гостем создал пост, то пользователем он может стать автором этого поста
+	break;
+	case'my-topic':
+		$gt=$Forum->GuestSign('t');
+		#ToDo!
+	break;
 	case'find-post':#Найти пост
-		$R=Eleanor::$Db->Query('SELECT `p`.`f`,`p`.`status` `pstatus`,`p`.`author_id` `paid`,`p`.`sortdate`,`t`.`id`,`t`.`uri`,`t`.`status`,`t`.`author_id` FROM `'. $config['fp'].'` `p` INNER JOIN `'. $config['ft'].'` `t` ON `t`.`id`=`p`.`t` WHERE `p`.`id`='.(int)$id.' LIMIT 1');
+		$event=isset($_GET['event']) ? (string)$_GET['event'] : false;
+		$tomerged=$event==='merged';
+
+		$R=Eleanor::$Db->Query('SELECT `p`.`f`,`p`.`status` `pstatus`,`p`.`author_id` `paid`,`p`.`sortdate`'.($tomerged ? ',LOCATE(\'fb-merged\',`text`) `_merged`' : '').',`t`.`id`,`t`.`uri`,`t`.`status`,`t`.`author_id` FROM `'. $config['fp'].'` `p` INNER JOIN `'. $config['ft'].'` `t` ON `t`.`id`=`p`.`t` WHERE `p`.`id`='.(int)$id.' LIMIT 1');
 		if(!$topic=$R->fetch_assoc() or !$Forum->CheckTopicAccess($topic))
 		{
 			ExitPage:
 			return ExitPage();
 		}
 
-		if(!$Forum->user)
-		{
-			$gp=$Forum->GuestSign('p');
-			$gt=$Forum->GuestSign('t');
-		}
+		$gp=$Forum->GuestSign('p');
+		$gt=$Forum->GuestSign('t');
 
 		$forum=$Forum->Forums->GetForum($topic['f']);
 		if($forum['moderators'])
@@ -34,12 +48,12 @@ switch($do)
 			$moder=false;
 
 		#Проверка доступа к теме (не уникальная сторка, в других файлах она тоже имеется: ajax/markread.php, ajax/subscribe.php, user/subscribe.php)
-		if(($topic['status']==0 or $Forum->user and $Forum->user['id']!=$topic['author_id'] or !$Forum->user and !in_array($t,$gt)) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+		if(($topic['status']==0 or $topic['status']==-1 and !($Forum->user and $Forum->user['id']==$topic['author_id'] or in_array($topic['id'],$gt))) and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 			goto ExitPage;
 
 		#Проверка доступа к посту
 		$modposts=$moder && (in_array(1,$moder['chstatus']) or in_array(1,$moder['mchstatus']));
-		if(($topic['pstatus']==0 or $Forum->user and $Forum->user['id']!=$topic['paid'] or !$Forum->user and !in_array($t,$gp)) and !$modposts)
+		if(($topic['pstatus']==0 or in_array($topic['pstatus'],array(-1,-3)) and !($Forum->user and $Forum->user['id']==$topic['paid'] or in_array($id,$gp))) and !$modposts)
 			goto ExitPage;
 
 		if(!$modposts)
@@ -65,8 +79,18 @@ switch($do)
 		list($cnt)=$R->fetch_row();
 		$cnt+=$qq;
 
+		if($tomerged)
+		{
+			$event=false;
+			if($topic['_merged']==0)
+				$tomerged=false;
+		}
+
 		$page=(int)($cnt/$Forum->vars['ppp'])+1;
-		return GoAway($Forum->Links->Topic($topic['f'],$topic['id'],$topic['uri'],array('page'=>$page>1 ? $page : false)),301,'post'.$id);
+		return GoAway($Forum->Links->Topic($topic['f'],$topic['id'],$topic['uri'],array(
+					'page'=>$page>1 ? $page : false,
+					'event'=>$event,
+				)),301,($tomerged ? 'merged' : 'post').$id);
 	case'go-new-post':#Переход к последнему непрочитанному сообщению в теме
 		if($Forum->user)
 		{
@@ -157,21 +181,17 @@ switch($do)
 		{
 			$q='SELECT `id`,`status`,`author_id`,`sortdate`,UNIX_TIMESTAMP(`sortdate`) `_sd` FROM `'.$config['fp'].'` WHERE `t`='.$topic['id'].' AND `status`='.($active ? -1 : -3);
 
+			$gp=$Forum->GuestSign('p');
+			$gt=$Forum->GuestSign('t');
 			if($Forum->user)
 			{
-				$gp=$gt=array();
 				if(!$modposts and !$usermod and !$Forum->ugr['supermod'])
 					$q.=' AND `author_id`='.$Forum->user['id'];
 			}
-			else
-			{
-				$gp=$Forum->GuestSign('p');
-				$gt=$Forum->GuestSign('t');
-				if(!$gp)
+			elseif(!$gp)
 					$q='';
-				elseif(!$modposts and !$usermod)
+			elseif(!$modposts and !$usermod)
 					$q.=' AND `id`'.Eleanor::$Db->In($gp);
-			}
 
 			if($q)
 			{
@@ -214,7 +234,10 @@ switch($do)
 		list($cnt)=$R->fetch_row();
 
 		$page=(int)($cnt/$Forum->vars['ppp'])+1;
-		return GoAway($Forum->Links->Topic($topic['f'],$topic['id'],$topic['uri'],array('page'=>$page>1 ? $page : false)),301,'post'.$id);
+		return GoAway($Forum->Links->Topic($topic['f'],$topic['id'],$topic['uri'],array(
+				'page'=>$page>1 ? $page : false,
+				'event'=>isset($_GET['event']) ? (string)$_GET['event'] : false,
+			)),301,'post'.$post['id']);
 	case'topic':
 		ShowTopic((int)$id);
 	break;
@@ -230,10 +253,11 @@ switch($do)
  */
 function ShowTopic($furi,$turi='',$filter=array())
 {global$Eleanor,$title;
+	/** @var ForumCore $Forum */
 	$Forum = $Eleanor->Forum;
 	$config=$Forum->config;
 
-	$q='SELECT `id`,`uri`,`f`,`language`,`status`,`author_id`,`state`,`moved_to`,`title`,`description`,`posts`,`queued_posts`,`last_mod`,`voting`,`pinned`>\''.date('Y-m-d H:i:s').'\' `_pin` FROM `'.$config['ft'].'` WHERE ';
+	$q='SELECT `id`,`uri`,`f`,`language`,`lrelated`,`status`,`author_id`,`state`,`moved_to`,`title`,`description`,`posts`,`queued_posts`,`last_mod`,`voting`,`pinned`>\''.date('Y-m-d H:i:s').'\' `_pin` FROM `'.$config['ft'].'` WHERE ';
 	if(is_array($furi))
 	{
 		$forum= $Forum->Forums->GetForum($furi);
@@ -243,11 +267,17 @@ function ShowTopic($furi,$turi='',$filter=array())
 			return ExitPage();
 		}
 		$q.='`f`='.$forum['id'].' AND `language`=\''.$forum['language'].'\' AND `uri`='.Eleanor::$Db->Escape($turi);
+
+		$checklang=false;
 	}
 	else
+	{
 		$q.='`id`='.$furi;
+		$checklang=true;
+	}
+
 	$R=Eleanor::$Db->Query($q.' LIMIT 1');
-	if(!$topic=$R->fetch_assoc() or !$Forum->CheckTopicAccess($topic))
+	if(!$topic=$R->fetch_assoc() or !$Forum->CheckTopicAccess($topic) or $checklang and $topic['language'] and $topic['language']!=$Forum->language)
 		goto ExitPage;
 
 	if(in_array($topic['state'],array('moved','merged')))
@@ -258,17 +288,17 @@ function ShowTopic($furi,$turi='',$filter=array())
 
 	#модераторы форума + наши права, как модератора
 	if($forum['moderators'])
-		list($forum['moderators'],$forum['_moderator'])= $Forum->Moderator->ByIds($forum['moderators'],array('movet','move','deletet','delete','editt','edit','chstatust','chstatus','pin','mmove','mdelete','user_warn','viewip','opcl','merge','editq','mchstatus'),$Eleanor->mconfig['n'].'_moders_t'.$forum['id']);
+		list($forum['moderators'],$forum['_moderator'])= $Forum->Moderator->ByIds($forum['moderators'],array('movet','move','deletet','delete','editt','edit','chstatust','chstatus','pin','mmove','mdelete','user_warn','viewip','opcl','merge','editq','mchstatus'),$config['n'].'_moders_t'.$forum['id']);
 	else
 		$forum['moderators']=$forum['_moderator']=array();
 
+	$gp=$Forum->GuestSign('p');
+	$gt=$Forum->GuestSign('t');
+
 	if($Forum->user)
-		$my=$Forum->user['id']==$topic['author_id'];
+		$my=$Forum->user['id']==$topic['author_id'] || in_array($topic['id'],$gt);
 	else
 	{
-		$gp=$Forum->GuestSign('p');
-		$gt=$Forum->GuestSign('t');
-
 		$my=in_array($topic['id'],$gt);
 		$ingp=$gp ? Eleanor::$Db->In($gp) : false;
 	}
@@ -290,7 +320,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 		#Возможность "модерировать" свою тему: править / удалять / перемещать сообщения в своей теме
 		'_mod'=>in_array(1,$rights['mod']) and $my,
 		#Возможность просматривать свои посты с разными статусами
-		'_status'=> $Forum->user or $gp,
+		'_status'=>$Forum->user or $gp,
 		#Возможность просматривать чужие посты с разными статусами и менять эти статусы (модератор)
 		'_toggle'=>$Forum->ugr['supermod'] || ($forum['_moderator'] ? in_array(1,$forum['_moderator']['chstatus']) || in_array(1,$forum['_moderator']['mchstatus']) : false),
 
@@ -319,6 +349,8 @@ function ShowTopic($furi,$turi='',$filter=array())
 		'_filter'=>array(),
 		#Инофрмация о статусах постов в данной теме
 		'_statuses'=>array(-1=>0,0,0),
+		#Другие языковые версии темы
+		'_related'=>array()
 	);
 
 	$forum+=array(
@@ -334,7 +366,6 @@ function ShowTopic($furi,$turi='',$filter=array())
 	$errors=$checked=$authors=$attaches=$posts=$where=$info=array();
 	if(isset($_POST['mm']) and ($forum['_moderator'] or $Forum->ugr['supermod']))
 	{
-		isset($_POST['mm']['p']) ? (array)$_POST['mm']['p'] : array();
 		include_once __DIR__.'/topic-moderate.php';
 		try
 		{
@@ -378,11 +409,8 @@ function ShowTopic($furi,$turi='',$filter=array())
 		#Первая страница темы
 		'first-page'=>$Forum->Links->Topic($topic['f'],$topic['id'],$topic['uri']),
 		#Новый пост
-		'new-post'=>$topic['_open'] && !$forum['_trash'] && (!$Forum->user or !$Forum->user['restrict_post']) && ($my && in_array(1,$rights['post']) || !$my && in_array(1,$rights['apost'])) ? $Forum->Links->Action('new-post',$forum['id']) : false,
+		'new-post'=>$topic['_open'] && !$forum['_trash'] && (!$Forum->user or !$Forum->user['restrict_post']) && ($my && in_array(1,$rights['post']) || !$my && in_array(1,$rights['apost'])) ? $Forum->Links->Action('new-post',$topic['id']) : false,
 	);
-
-	#Remove
-	$links['new-post']=false;
 
 	if(!Eleanor::$is_bot and !$my)
 	{
@@ -504,6 +532,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	else
 		$topic['_cnt']=$topic['_statuses'][1];
 
+	$online=$Forum->GetOnline('-f'.$forum['id'].'-t'.$topic['id']);
 	if($topic['_cnt']>0)
 	{
 		$offset=($topic['_page']-1)*$Forum->vars['ppp'];
@@ -525,7 +554,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 			{
 				$a['topics']=$a['topics'] ? (array)unserialize($a['topics']) : array();
 				if($forum['_read']<$a['allread'])
-					$forum['_read']=$forum['_read'];
+					$forum['_read']=$a['allread'];
 				$topic['_read']=max($forum['_read'],isset($a['topics'][ $topic['id'] ]) ? $a['topics'][ $topic['id'] ] : 0);
 			}
 
@@ -581,24 +610,23 @@ function ShowTopic($furi,$turi='',$filter=array())
 
 		$lastmod=strtotime($topic['last_mod']);
 		$t=time();
-		$mod=$Forum->ugr['supermod'] || $rights['_mod'];
 
 		if($forum['_moderator'])
 		{
 			$medit=in_array(1,$forum['_moderator']['edit']);
-			$mdelete=in_array(1,$forum['_moderator']['edit']);
+			$mdelete=in_array(1,$forum['_moderator']['delete']);
 		}
 		else
 			$medit=$mdelete=false;
 
 		$edit=in_array(1,$rights['edit']);
 		$delete=in_array(1,$rights['delete']);
+		$deletet=in_array(1,$rights['deletet']);
 
 		$tread=$topic['_read'];
 		$hasquote=false;
 
-		#ToDo! Пользователи смогут удалять свои темы. Если эта опция отключена, то удалить первое сообщение пользователи не смогут.
-		$R=Eleanor::$Db->Query('SELECT `id`,`status`,`author`,`author_id`,`ip`,`created`,`sortdate`,`edited`,`edited_by`,`edited_by_id`,`edit_reason`,`approved`,`approved_by`,`approved_by_id`,`text`,`last_mod`'.$where.' ORDER BY `sortdate` ASC LIMIT '.$offset.','.$Forum->vars['ppp']);
+		$R=Eleanor::$Db->Query('SELECT `id`,`status`,`author`,`author_id`,`ip`,`created`,`sortdate`,`updated`,`edited`,`edited_by`,`edited_by_id`,`edit_reason`,`approved`,`approved_by`,`approved_by_id`,`text`,`last_mod`'.$where.' ORDER BY `sortdate` ASC LIMIT '.$offset.','.$Forum->vars['ppp']);
 		while($a=$R->fetch_assoc())
 		{
 			switch($a['status'])
@@ -611,7 +639,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 			}
 
 			$a['_approved']=$a['_rejected']=array();#Одобрено и отвергнуто
-			$a['_my']=$Forum->user && $a['author_id']== $Forum->user['id'] || !$Forum->user && in_array($a['id'],$gp);
+			$a['_my']=$Forum->user && $a['author_id']==$Forum->user['id'] || in_array($a['id'],$gp);
 			if($a['_my'])
 				$a['_r+']=$a['_r-']=false;
 			else
@@ -630,17 +658,22 @@ function ShowTopic($furi,$turi='',$filter=array())
 				$attaches=array_merge($attaches,$a['_attaches']);
 
 			$a['_answer']=$links['new-post'] ? $Forum->Links->Action('answer',$a['id']) : false;
-			$a['_edit']=$mod || $medit;
-			$a['_delete']=$mod || $mdelete;
+			$a['_edit']=$Forum->ugr['supermod'] || $rights['_mod'] || $medit;
+			$a['_delete']=$Forum->ugr['supermod'] || $mdelete;
+
+			if($rights['_mod'] and !$a['_delete'] and ($deletet or $a['_n']>1))
+				$a['_delete']=true;
+
 			if((!$a['_edit'] or !$a['_delete']) and $a['_my'])
 			{
 				$mined=min($rights['editlimit']);
 				if($mined==0 or $t-strtotime($a['created'])<=$mined)
 				{
 					$a['_edit']|=$edit;
-					$a['_delete']|=$delete;
+					$a['_delete']|=$a['_n']==1 && !$deletet ? false : $delete;
 				}
 			}
+
 			if($a['_edit'])
 				$a['_edit']=$Forum->Links->Action('edit',$a['id']);
 
@@ -655,7 +688,9 @@ function ShowTopic($furi,$turi='',$filter=array())
 
 			$topic['_read']=max($topic['_read'],strtotime($a['created']));
 			$lastmod=max($lastmod,strtotime($a['last_mod']));
-			$hasquote|=strpos($a['text'],'[quote')!==false;
+
+			if(!$hasquote and strpos($a['text'],'[quote')!==false)
+				$hasquote=true;
 		}
 
 		#Пометим тему прочтенной
@@ -700,22 +735,28 @@ function ShowTopic($furi,$turi='',$filter=array())
 					$posts[ $a['p'] ]['_r+']=$posts[ $a['p'] ]['_r-']=false;
 			}
 
-			#ToDo! право доступа к вложениям attach
-			$q='SELECT `id`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE ';
-			$q1=$q.'`p`'.$inp;
-			$q2=$attaches ? $q.'`id`'.Eleanor::$Db->In($attaches) : false;
-			$R=Eleanor::$Db->Query($q2 ? '('.$q1.')UNION('.$q2.')' : $q1);
-			$attaches=array();
-			while($a=$R->fetch_assoc())
+			#Вложения (аттачи)
+			if(in_array(1,$rights['attach']))
 			{
-				if(isset($posts[ $a['p'] ]))
-					$posts[ $a['p'] ]['_attached'][]=$a['id'];
+				$q='SELECT `id`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE ';
+				$q1=$q.'`p`'.$inp;
+				$q2=$attaches ? $q.'`id`'.Eleanor::$Db->In($attaches) : false;
+				$R=Eleanor::$Db->Query($q2 ? '('.$q1.')UNION('.$q2.')' : $q1);
+				$attaches=array();
+				while($a=$R->fetch_assoc())
+				{
+					if(isset($posts[ $a['p'] ]))
+						$posts[ $a['p'] ]['_attached'][]=$a['id'];
 
-				$a['_a']=$config['download'].$a['id'];
-				$a['_path']=$config['attachpath'].'p'.$a['p'].'/'.$a['file'];
+					$a['_a']=$config['download'].$a['id'];
+					#Чтобы тема оформления могла создать превьюшку в случае надобности
+					$a['_path']=$config['attachroot'].'p'.$a['p'].'/'.$a['file'];
 
-				$attaches[ $a['id'] ]=array_slice($a,1);
+					$attaches[ $a['id'] ]=array_slice($a,1);
+				}
 			}
+			else
+				$attaches=array();
 
 			$replace=$Forum->Attach->DecodePosts($posts,$attaches);
 			if(!isset(OwnBB::$replace['quote']) and $hasquote)
@@ -731,6 +772,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 					$v['text']=str_replace($replace['from'],$replace['to'],$v['text']);
 			}
 
+			#Репутация
 			$R=Eleanor::$Db->Query('SELECT `id`,`p`,`from`,`from_name`,`value` FROM `'.$config['fr'].'` WHERE `p`'.$inp);
 			while($a=$R->fetch_assoc())
 			{
@@ -778,6 +820,16 @@ function ShowTopic($furi,$turi='',$filter=array())
 	if(!$topic['_filter'])
 		$Eleanor->origurl=$links['form_items'];
 
+	#Выявление альтернативных языковых версий
+	if($topic['lrelated'] and $topic['language']!='')
+	{
+		$R=Eleanor::$Db->Query('SELECT `id`,`uri`,`f`,`status`,`language`,`author_id` FROM `'.$Forum->config['ft'].'` WHERE `id`'.Eleanor::$Db->In(explode(',,',trim($topic['lrelated'],','))).' AND `f`='.$forum['id'].' AND `language` NOT IN(\'\',\''.$topic['language'].'\')');
+		while($a=$R->fetch_assoc())
+			if($Forum->CheckTopicAccess($a) and ($a['status']==1 or $a['status']==-1 and !$Forum->ugr['supermod'] and !($Forum->user and $a['author_id']==$Forum->user['id'] or in_array($a['id'],$gt))))
+				#Ради экономии производительности, я не делал поддержку status=0 или status=-1 для случая модератора.
+				$topic['_related'][ $a['id'] ]=array_slice($a,1);
+	}
+
 	SetData();
 	Eleanor::$Template->queue[]=$config['topictpl'];
 	unset(OwnBB::$replace['quote']);
@@ -800,7 +852,7 @@ function ShowTopic($furi,$turi='',$filter=array())
 	);
 
 	$Eleanor->Editor->preview=array('module'=>$Eleanor->module['name'],'event'=>'preview');
-	$c=Eleanor::$Template->ShowTopic($forum,$rights,$topic,$posts,$attaches,$authors ? GetAuthors($authors,$forum) : array(),$errors,$info,$Forum->GetOnline('-f'.$forum['id'].'-t'.$topic['id']),$links,$voting,$values,$captcha);
+	$c=Eleanor::$Template->ShowTopic($forum,$rights,$topic,$posts,$attaches,$authors ? GetAuthors($authors,$forum) : array(),$errors,$info,$online,$links,$voting,$values,$captcha);
 	Start();
 	echo$c;
 }
@@ -812,17 +864,18 @@ function ShowTopic($furi,$turi='',$filter=array())
  */
 function ShowPost($id,$ajax=false)
 {global$Eleanor,$title;
+	/**@var ForumCore $Forum */
 	$Forum = $Eleanor->Forum;
 	$config=$Forum->config;
 
-	$R=Eleanor::$Db->Query('SELECT `id`,`t`,`status`,`author`,`author_id`,`ip`,`created`,`sortdate`,`edited`,`edited_by`,`edited_by_id`,`edit_reason`,`approved`,`approved_by`,`approved_by_id`,`text`,UNIX_TIMESTAMP(`last_mod`) `last_mod` FROM '.$config['fp'].' WHERE `id`='.$id.' LIMIT 1');
+	$R=Eleanor::$Db->Query('SELECT `id`,`t`,`status`,`author`,`author_id`,`ip`,`created`,`sortdate`,`updated`,`edited`,`edited_by`,`edited_by_id`,`edit_reason`,`approved`,`approved_by`,`approved_by_id`,`text`,UNIX_TIMESTAMP(`last_mod`) `last_mod` FROM '.$config['fp'].' WHERE `id`='.$id.' LIMIT 1');
 	if(!$post=$R->fetch_assoc())
 	{
 		ExitPage:
 		return $ajax ? false : ExitPage();
 	}
 
-	$R=Eleanor::$Db->Query('SELECT `uri`,`f`,`status`,`state`,`author_id`,`title`,`description` FROM `'.$config['ft'].'` WHERE `id`='.$post['t'].' LIMIT 1');
+	$R=Eleanor::$Db->Query('SELECT `uri`,`f`,`status`,`language`,`lrelated`,`state`,`author_id`,`title`,`description` FROM `'.$config['ft'].'` WHERE `id`='.$post['t'].' LIMIT 1');
 	if(!$topic=$R->fetch_assoc() or !$Forum->CheckTopicAccess($topic))
 		goto ExitPage;
 
@@ -840,20 +893,20 @@ function ShowPost($id,$ajax=false)
 
 	#модераторы форума + наши права, как модератора
 	if($forum['moderators'])
-		list($forum['moderators'],$forum['_moderator'])= $Forum->Moderator->ByIds($forum['moderators'],array('movet','move','deletet','delete','editt','edit','chstatust','chstatus','pin','mmove','mdelete','user_warn','viewip','opcl','merge','editq','mchstatus'),$Eleanor->mconfig['n'].'_moders_t'.$forum['id']);
+		list($forum['moderators'],$forum['_moderator'])= $Forum->Moderator->ByIds($forum['moderators'],array('movet','move','deletet','delete','editt','edit','chstatust','chstatus','pin','mmove','mdelete','user_warn','viewip','opcl','merge','editq','mchstatus'),$config['n'].'_moders_t'.$forum['id']);
 	else
 		$forum['moderators']=$forum['_moderator']=array();
 
+	$gp=$Forum->GuestSign('p');
+	$gt=$Forum->GuestSign('t');
+
 	if($Forum->user)
 	{
-		$mytopic=$Forum->user['id']==$topic['author_id'];
-		$mypost=$Forum->user['id']==$post['author_id'];;
+		$mytopic=$Forum->user['id']==$topic['author_id'] || in_array($topic['id'],$gt);
+		$mypost=$Forum->user['id']==$post['author_id'] || in_array($id,$gp);
 	}
 	else
 	{
-		$gp=$Forum->GuestSign('p');
-		$gt=$Forum->GuestSign('t');
-
 		$mytopic=in_array($topic['id'],$gt);
 		$mypost=in_array($id,$gp);
 	}
@@ -868,7 +921,8 @@ function ShowPost($id,$ajax=false)
 	if($Forum->user)
 		Eleanor::$Db->Update($config['ts'],array('sent'=>0,'lastview'=>$post['created']),'`uid`='.$Forum->user['id'].' AND `t`='.$post['t'].' AND `lastview`<\''.$post['created'].'\'');
 
-	if(Eleanor::$caching)
+	$online=$Forum->GetOnline('-f'.$forum['id'].'-t'.$post['t'].'-p'.$id);
+	if(Eleanor::$caching and !$ajax)
 	{
 		Eleanor::$last_mod=$post['last_mod'];
 		$etag=Eleanor::$etag;
@@ -886,12 +940,16 @@ function ShowPost($id,$ajax=false)
 	);
 
 	$topic+=array(
+		#Ссылка на тему
+		'_a'=>$Forum->Links->Topic($forum['id'],$post['t'],$topic['uri']),
 		#Количество постов в теме
 		'_cnt'=>0,
 		#Эту тему создал я?
 		'_my'=>$mytopic,
 		#По-факту тема для нас открыта?
 		'_open'=>$topic['state']=='open' || $Forum->ugr['supermod'] || in_array(1,$rights['canclose']),
+		#Другие языковые версии темы
+		'_related'=>array(),
 	);
 
 	$forum+=array(
@@ -899,7 +957,9 @@ function ShowPost($id,$ajax=false)
 		'_trash'=>$Forum->vars['trash']==$forum['id'],
 	);
 
-	$mod=$Forum->ugr['supermod'] || $rights['_mod'];
+	#Пользователи смогут удалять свои темы. Если эта опция отключена, то удалить первое сообщение пользователи не смогут.
+	$deletet=in_array(1,$rights['deletet']);
+
 	if($forum['_moderator'])
 	{
 		$medit=in_array(1,$forum['_moderator']['edit']);
@@ -908,7 +968,6 @@ function ShowPost($id,$ajax=false)
 	else
 		$medit=$mdelete=false;
 
-	#ToDo! Пользователи смогут удалять свои темы. Если эта опция отключена, то удалить первое сообщение пользователи не смогут.
 	$post+=array(
 		#Одобрено и отвергнуто
 		'_rejected'=>array(),
@@ -925,9 +984,9 @@ function ShowPost($id,$ajax=false)
 		#Этот пост написал я?
 		'_my'=>$mypost,
 		#Флаг возможности редактировать пост
-		'_edit'=>$mod || $medit ? $Forum->Links->Action('edit',$post['id']) : false,
+		'_edit'=>$Forum->ugr['supermod'] || $rights['_mod'] || $medit ? $Forum->Links->Action('edit',$post['id'],array('return'=>'post')) : false,
 		#Флаг возможности удалить пост
-		'_delete'=>$mod || $mdelete,
+		'_delete'=>$Forum->ugr['supermod'] || $mdelete,
 		#Ссылка на ответ
 		'_answer'=>false,
 		#Прикрепленные аттачи
@@ -946,25 +1005,22 @@ function ShowPost($id,$ajax=false)
 	}
 
 	$attaches=array();
-	$q='SELECT `id`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE ';
-	$q1=$q.'`p`='.$id.' LIMIT 1';
-	$q2=$post['_attaches'] ? $q.'`id`'.Eleanor::$Db->In($post['_attaches']) : false;
-	$R=Eleanor::$Db->Query($q2 ? '('.$q1.')UNION('.$q2.')' : $q1);
-	while($a=$R->fetch_assoc())
+	#Вложения (аттачи)
+	if(in_array(1,$rights['attach']))
 	{
-		$a['_a']=$config['download'].$a['id'];
-		$a['_path']=$config['attachpath'].'p'.$a['p'].'/'.$a['file'];
+		$q='SELECT `id`,`p`,`downloads`,`size`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE ';
+		$q1=$q.'`p`='.$id.' LIMIT 1';
+		$q2=$post['_attaches'] ? $q.'`id`'.Eleanor::$Db->In($post['_attaches']) : false;
+		$R=Eleanor::$Db->Query($q2 ? '('.$q1.')UNION('.$q2.')' : $q1);
+		while($a=$R->fetch_assoc())
+		{
+			$a['_a']=$config['download'].$a['id'];
+			#Чтобы тема оформления могла создать превьюшку в случае надобности
+			$a['_path']=$config['attachroot'].'p'.$a['p'].'/'.$a['file'];
 
-		$attaches[ $a['id'] ]=array_slice($a,1);
-		$post['_attached'][]=$a['id'];
-	}
-
-	$R=Eleanor::$Db->Query('SELECT `id`,`p`,`from`,`from_name`,`value` FROM `'.$config['fr'].'` WHERE `p`='.$id.' LIMIT 1');
-	if($a=$R->fetch_assoc())
-	{
-		if($a['from'])
-			$authors[]=$a['from'];
-		$post[$a['value']>0 ? '_approved' : '_rejected'][ $a['id'] ]=array_slice($a,2);
+			$attaches[ $a['id'] ]=array_slice($a,1);
+			$post['_attached'][]=$a['id'];
+		}
 	}
 
 	$replace=$Forum->Attach->DecodePosts($post,$attaches,true);
@@ -979,14 +1035,13 @@ function ShowPost($id,$ajax=false)
 	if($replace)
 		$post['text']=str_replace($replace['from'],$replace['to'],$post['text']);
 
-	if((!$post['_edit'] or !$post['_delete']) and $mypost)
+	#Репутация
+	$R=Eleanor::$Db->Query('SELECT `id`,`p`,`from`,`from_name`,`value` FROM `'.$config['fr'].'` WHERE `p`='.$id.' LIMIT 1');
+	if($a=$R->fetch_assoc())
 	{
-		$mined=min($rights['editlimit']);
-		if($mined==0 or time()-strtotime($post['created'])<=$mined)
-		{
-			$post['_edit']|=in_array(1,$rights['edit']);
-			$post['_delete']|=in_array(1,$rights['delete']);
-		}
+		if($a['from'])
+			$authors[]=$a['from'];
+		$post[$a['value']>0 ? '_approved' : '_rejected'][ $a['id'] ]=array_slice($a,2);
 	}
 
 	#Author filter
@@ -1004,6 +1059,19 @@ UNION ALL (SELECT COUNT(`t`) `data` FROM `'.$config['fp'].'` WHERE `t`='.$post['
 	list($post['_n'])=$R->fetch_row();
 	list($topic['_cnt'])=$R->fetch_row();
 
+	if((!$post['_edit'] or !$post['_delete']) and $mypost)
+	{
+		$mined=min($rights['editlimit']);
+		if($mined==0 or time()-strtotime($post['created'])<=$mined)
+		{
+			$post['_edit']|=in_array(1,$rights['edit']);
+			$post['_delete']|=$post['_n']==1 && !$deletet ? false : in_array(1,$rights['delete']);
+		}
+	}
+
+	if($rights['_mod'] and !$post['_delete'] and ($deletet or $post['_n']>1))
+		$post['_delete']=true;
+
 	$links=array(
 		#Ссылка на RSS постов темы
 		'rss'=>Eleanor::$services['rss']['file'].'?'.Url::Query(array('module'=>$Eleanor->module['name'],'t'=>$post['t'])),
@@ -1019,17 +1087,14 @@ UNION ALL (SELECT COUNT(`t`) `data` FROM `'.$config['fp'].'` WHERE `t`='.$post['
 		'new-topic'=>!$forum['_trash'] && in_array(1,$rights['new']) && (!$Forum->user or !$Forum->user['restrict_post']) ? $Forum->Links->Action('new-topic',$forum['id']) : false,
 	);
 
-	#Remove
-	$links['new-post']=false;
-
-	$post['_answer']=$links['new-post'] ? $Forum->Links->Action('answer',$a['id']) : false;
+	$post['_answer']=$links['new-post'] ? $Forum->Links->Action('answer',$post['id']) : false;
 
 	if($post['_n']>1)
 	{
 		$R=Eleanor::$Db->Query('SELECT `id` FROM `'.$config['fp'].'` WHERE `t`='.$post['t'].' AND `status`='.$status.$af.' AND `sortdate`<\''.$post['sortdate'].'\' ORDER BY `sortdate` DESC LIMIT 1');
 		list($post['_prev'])=$R->fetch_row();
 		if($post['_prev'])
-			$links['prev']=$Forum->Links->Action('show-post',$post['_prev']);
+			$links['prev']=$Forum->Links->Action('post',$post['_prev']);
 	}
 
 	if($post['_n']<$topic['_cnt'])
@@ -1037,7 +1102,7 @@ UNION ALL (SELECT COUNT(`t`) `data` FROM `'.$config['fp'].'` WHERE `t`='.$post['
 		$R=Eleanor::$Db->Query('SELECT `id` FROM `'.$config['fp'].'` WHERE `t`='.$post['t'].' AND `status`='.$status.$af.' AND `sortdate`>\''.$post['sortdate'].'\' ORDER BY `sortdate` ASC LIMIT 1');
 		list($post['_next'])=$R->fetch_row();
 		if($post['_next'])
-			$links['next']=$Forum->Links->Action('show-post',$post['_next']);
+			$links['next']=$Forum->Links->Action('post',$post['_next']);
 	}
 
 	if(!$ajax)
@@ -1058,9 +1123,21 @@ UNION ALL (SELECT COUNT(`t`) `data` FROM `'.$config['fp'].'` WHERE `t`='.$post['
 	if($a['approved_by_id'])
 		$authors[]=$post['approved_by_id'];
 
-	$c=Eleanor::$Template->ShowPost($forum,$rights,$topic,$post,$attaches,$authors ? GetAuthors($authors,$forum) : array(),$Forum->GetOnline('-f'.$forum['id'].'-t'.$post['t'].'-p'.$id),$links,$ajax);
+	$c=Eleanor::$Template->ShowPost($forum,$rights,$topic,$post,$attaches,$authors ? GetAuthors($authors,$forum) : array(),$online,$links,$ajax);
 	if($ajax)
 		return$c;
+
+	#Выявление альтернативных языковых версий
+	if($topic['lrelated'] and $topic['language']!='')
+	{
+		$R=Eleanor::$Db->Query('SELECT `id`,`uri`,`f`,`status`,`language`,`author_id` FROM `'.$Forum->config['ft'].'` WHERE `id`'.Eleanor::$Db->In(explode(',,',trim($topic['lrelated'],','))).' AND `language` NOT IN(\'\',\''.$topic['language'].'\')');
+		while($a=$R->fetch_assoc())
+			if($Forum->CheckTopicAccess($a) and ($a['status']==1 or $a['status']==-1 and !$Forum->ugr['supermod'] and !($Forum->user and $a['author_id']==$Forum->user['id'] or in_array($a['id'],$gt))))
+				#Ради экономии производительности, я не делал поддержку status=0 или status=-1 для случая модератора.
+			$topic['_related'][ $a['id'] ]=array_slice($a,1);
+	}
+
+	$Eleanor->origurl=$Forum->Links->Action('post',$post['id']);
 	Start();
 	echo$c;
 }

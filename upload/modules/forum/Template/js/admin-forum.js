@@ -69,7 +69,7 @@ function MassRights()
 			ch.end().css("text-decoration","line-through").prop("title",CORE.Lang("forum_ginh")).next().children("div").hide();
 		else
 			ch.end().css("text-decoration","").prop("title","").next().children("div").show();
-		ch.prop("checked",state)
+		ch.prop("checked",state);
 	};
 
 	$("#fg tr").find("td:first")
@@ -94,12 +94,12 @@ function AddEditModer()
 			$(this).closest("li").find(":input").val("");
 		return false;
 	});
-	$("#add-moder").click(function(){
+	$("#add-moder").click(function(e){
 		$("#moders li:first").clone(true)
 			.find(":input").val("").end()
 			.appendTo("#moders")
 			.find(".cloneable").trigger("clone");
-		return false;
+		e.preventDefault();
 	});
 }
 
@@ -156,7 +156,7 @@ function ForumGroupRights(parent)
 			ftd.css("text-decoration","line-through").prop("title",CORE.Lang(parent>0 ? "forum_hfrpf" : "forum_hfbrg")).next().children("div").hide();
 		else
 			ftd.css("text-decoration","").prop("title","").next().children("div").show();
-		ch.prop("checked",state)
+		ch.prop("checked",state);
 	};
 
 	$("#fg tr").find("td:first").filter(function(){

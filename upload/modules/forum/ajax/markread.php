@@ -6,7 +6,7 @@
 	*Pseudonym
 */
 defined('CMS')||die;
-switch($ev)
+switch($event)
 {
 	case'all-read':#Пометка всего прочитанным
 		if($Forum->user)
@@ -46,10 +46,9 @@ switch($ev)
 			else
 				$moder=false;
 
-			if(!$Forum->user)
-				$gt=$Forum->GuestSign('t');
+			$gt=$Forum->GuestSign('t');
 
-			if(($topic['status']==0 or $Forum->user and $Forum->user['id']!=$topic['author_id'] or !$Forum->user and !in_array($t,$gt)) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
+			if(($topic['status']==0 or $topic['status']==-1 and !($Forum->user and $Forum->user['id']==$topic['author_id'] or in_array($t,$gt))) and !$Forum->ugr['supermod'] and (!$moder or !in_array(1,$moder['chstatust']) and !in_array(1,$moder['mchstatust'])))
 				return Error();
 		}
 		$Forum->Topic->MarkRead($t,$topic['f']);

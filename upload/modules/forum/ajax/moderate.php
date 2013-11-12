@@ -8,7 +8,7 @@
 defined('CMS')||die;
 if($Eleanor->Forum->user)
 {
-	switch($ev)
+	switch($event)
 	{
 		case'pin-topic':#Закрепление темы из темы
 			#ToDo!

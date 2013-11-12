@@ -24,14 +24,17 @@ class ForumModerator extends Forum
 				'users'=>array(),
 				'groups'=>array(),
 			);
+
 			$users=$groups=array();
 			$R=Eleanor::$Db->Query('SELECT `id`,`groups`,`users`'.($fields ? ',`'.join('`,`',$fields).'`' : '').' FROM `'.$this->Forum->config['fm'].'` WHERE `id`'.Eleanor::$Db->In($ids));
 			while($a=$R->fetch_assoc())
 			{
 				$a['users']=$a['users'] ? explode(',,',trim($a['users'],',')) : array();
 				$a['groups']=$a['groups'] ? explode(',,',trim($a['groups'],',')) : array();
+
 				foreach($a['users'] as &$v)
 					$users[$v][]=$a['id'];
+
 				foreach($a['groups'] as &$v)
 					$groups[$v][]=$a['id'];
 				$moders['rights'][ $a['id'] ]=array_slice($a,3);
@@ -39,11 +42,12 @@ class ForumModerator extends Forum
 
 			if($users)
 			{
-				$R=Eleanor::$Db->Query('SELECT `id`,`name`,`groups` `_group` FROM `'.P.'users_site` WHERE `id`'.Eleanor::$Db->In(array_keys($users)));
+				$R=Eleanor::$Db->Query('SELECT `id`,`name`,`full_name`,`groups` `_group` FROM `'.P.'users_site` WHERE `id`'.Eleanor::$Db->In(array_keys($users)));
 				while($a=$R->fetch_assoc())
 				{
 					$a['_group']=(int)ltrim($a['_group'],',');
 					$a['_rights']=$users[ $a['id'] ];
+					$a['_a']=Eleanor::$Login->UserLink($a['name'],$a['id']);
 					$moders['users'][ $a['id'] ]=array_slice($a,1);
 				}
 			}
@@ -55,6 +59,7 @@ class ForumModerator extends Forum
 				{
 					$a['title']=$a['title'] ? Eleanor::FilterLangValues((array)unserialize($a['title'])) : '';
 					$a['_rights']=$groups[ $a['id'] ];
+					$a['_a']=$this->Links->Action('users',false,array('fi'=>array('group'=>$a['id'])));
 					$moders['groups'][ $a['id'] ]=array_slice($a,1);
 				}
 			}

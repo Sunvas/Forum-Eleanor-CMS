@@ -67,6 +67,7 @@ switch($do)
 		echo$c;
 	break;
 	case'users':#Список пользователей
+		#[fi][group] = фильтр по группе
 		#ToDo!
 		$title[]=$lang['fusers'];
 		$Eleanor->Forum->LoadUser();

@@ -5,6 +5,18 @@
 	a@eleanor-cms.ru
 	*Pseudonym
 */
+
+/**
+ * @property ForumSubscriptions $Subscriptions
+ * @property ForumModerator $Moderator
+ * @property ForumService $Service
+ * @property ForumAttach $Attach
+ * @property ForumForums $Forums
+ * @property ForumTopic $Topic
+ * @property ForumLinks $Links
+ * @property ForumPost $Post
+ * @property Forum $Forum
+ */
 class Forum extends BaseClass
 {
 	#ToDo! PHP 5.4 trait Chain
@@ -20,6 +32,7 @@ class Forum extends BaseClass
 		{
 			$this->good=false;
 			$isb=isset($this->Base);
+			/**@var Forum $v*/
 			foreach($this->held as $k=>&$v)
 			{
 				if(!$isb or $this->Base!==$v and (!isset($this->Base->held[$k]) or $this->Base->held[$k]!==$v))
@@ -73,16 +86,18 @@ class Forum extends BaseClass
 	/**
 	 * Реализация метода Create трэйта Chain
 	 * @param string $name Имя класса для загрузки
-	 * @param obj $Base Объект базового класса
+	 * @param object $Base Объект базового класса
+	 * @return object
+	 * @throws EE
 	 */
 	protected function Create($name,$Base)
 	{
-		if($name==__class__)
+		if($name==__CLASS__)
 			return new self;
 		$c='Forum'.$name;
 		if(class_exists($c,false) or include self::$root.strtolower($name).'.php')
 			return new$c(false,$Base);
-		throw new EE('Class not found: '.$name,EE::DEV,array('file'=>__file__,'line'=>__line__));
+		throw new EE('Class not found: '.$name,EE::DEV,array('file'=>__FILE__,'line'=>__FILE__));
 	}
 }
 Forum::$root=__DIR__.DIRECTORY_SEPARATOR;

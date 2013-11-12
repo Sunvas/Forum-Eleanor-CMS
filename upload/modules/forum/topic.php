@@ -146,7 +146,7 @@ class ForumTopic extends Forum
 		$r['read']=$r['post']=$r['edit']=$r['delete']=$r['editt']=$r['deletet']=$r['close']=$Core->ugr['supermod'];
 		if(!$r['read'] and in_array(1,$rights['read']))
 		{
-			$my=$Core->user ? $topic['author_id']==$Core->user['id'] : in_array($topic['id'],$Core->GuestSign('t'));
+			$my=$Core->user && $topic['author_id']==$Core->user['id'] || in_array($topic['id'],$Core->GuestSign('t'));
 			if($topic['status']==1 or $topic['status']==-1 and $my or in_array(1,$moder['chstatust']))
 			{
 				if($topic['state']=='open' || $topic['state']=='close' && in_array(1,$rights['canclose']))

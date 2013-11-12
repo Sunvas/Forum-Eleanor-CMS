@@ -64,7 +64,7 @@ return array(
 	'rules'=>'Правила форуму',
 	'edited'=>function($date,$who,$whohref,$reason)
 	{
-		return Eleanor::$Language->Date($date,'fdt').' цей пост відредагував '
+		return Ukrainian::Date($date,'fdt').' цей пост відредагував '
 		.($whohref ? '<a href="'.$whohref.'">'.$who.'</a>' : $who)
 		.'. Причина: '
 		.($reason ? $reason : '<i>не вказано</i>');
@@ -136,4 +136,27 @@ return array(
 	'apply-filter'=>'Застосувати фільтр',
 	'post'=>'Опублікувати пост',
 	'main-author'=>'Автор посту:',
+
+	#Підтримка мовних версій
+	'related-text'=>'Ця тема також доступна українською мовою.',
+	'related'=>function(array$related)
+	{
+		$res='';
+		foreach($related as $id=>$topic)
+		{
+			$lang=__DIR__.'/forum-user-topic-'.$topic['language'].'.php';
+			if(is_file($lang))
+			{
+				$lang=include$lang;
+				$res.=$lang['related-text'].'<a href="index.php?language='.$topic['language'].'">&gt;&gt;</a><br />';
+			}
+		}
+		return substr($res,0,-6);
+	},
+	#[E] Підтримка мовних версій
+
+	'updated'=>function($date)
+	{
+		return'Останнє оновлення '.mb_strtolower(Ukrainian::Date($date,'fdt'));
+	},
 );

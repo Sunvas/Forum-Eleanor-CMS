@@ -479,7 +479,7 @@ if(isset($_GET['do']))
 			else
 				$table=P.'users_site';
 
-			$R=Eleanor::$Db->Query('SELECT COUNT(`id`) FROM `'.$table.'` `u` INNER JOIN `'.P.'users_extra` USING(`id`)'.$where);
+			$R=Eleanor::$Db->Query('SELECT COUNT(`id`) FROM `'.$table.'` `u` INNER JOIN `'.P.'users_extra` USING(`id`) INNER JOIN `'.$mc['fu'].'` USING(`id`)'.$where);
 			list($cnt)=$R->fetch_row();
 			if($page<=0)
 				$page=1;
@@ -2861,7 +2861,43 @@ function GroupsControls(&$post,$ti=13)
 			'title'=>$lang['ccanclose'],
 			'descr'=>$lang['ccanclose_'],
 			'type'=>'check',
-			'default'=>ForumForums::$rights['complaint'],
+			'default'=>ForumForums::$rights['canclose'],
+			'bypost'=>&$post,
+			'options'=>array(
+				'extra'=>array(
+					'tabindex'=>$ti++,
+				),
+			),
+		),
+		'createvoting'=>array(
+			'title'=>$lang['ccreatevoting'],
+			'descr'=>$lang['ccreatevoting_'],
+			'type'=>'check',
+			'default'=>ForumForums::$rights['createvoting'],
+			'bypost'=>&$post,
+			'options'=>array(
+				'extra'=>array(
+					'tabindex'=>$ti++,
+				),
+			),
+		),
+		'editvoting'=>array(
+			'title'=>$lang['ceditvoting'],
+			'descr'=>$lang['ceditvoting_'],
+			'type'=>'check',
+			'default'=>ForumForums::$rights['editvoting'],
+			'bypost'=>&$post,
+			'options'=>array(
+				'extra'=>array(
+					'tabindex'=>$ti++,
+				),
+			),
+		),
+		'vote'=>array(
+			'title'=>$lang['cvote'],
+			'descr'=>$lang['cvote_'],
+			'type'=>'check',
+			'default'=>ForumForums::$rights['vote'],
 			'bypost'=>&$post,
 			'options'=>array(
 				'extra'=>array(
@@ -3303,7 +3339,7 @@ function ModerPermissions(&$post,$ti=1)
 	if(!class_exists('ForumForums',false))
 		include$Eleanor->module['path'].'forums.php';
 	$mc=$Eleanor->module['config'];
-	$lang=Eleanor::$Language[$mc['n']];
+	$lang=Eleanor::$Language[ $mc['n'] ];
 	return array(
 		$lang['mcsingle'],
 		'movet'=>array(
@@ -3588,6 +3624,18 @@ function ModerPermissions(&$post,$ti=1)
 			'descr'=>'',
 			'type'=>'check',
 			'default'=>ForumForums::$moder['editrep'],
+			'bypost'=>&$post,
+			'options'=>array(
+				'addon'=>array(
+					'tabindex'=>$ti++,
+				),
+			),
+		),
+		'voting'=>array(
+			'title'=>$lang['mcvoting'],
+			'descr'=>'',
+			'type'=>'check',
+			'default'=>ForumForums::$moder['voting'],
 			'bypost'=>&$post,
 			'options'=>array(
 				'addon'=>array(

@@ -5,6 +5,7 @@
 	a@eleanor-cms.ru
 	*Pseudonym
 */
+defined('CMS')||die;
 class TplAdminForum
 {
 	public static

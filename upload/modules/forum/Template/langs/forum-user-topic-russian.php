@@ -64,7 +64,7 @@ return array(
 	'rules'=>'Правила форума',
 	'edited'=>function($date,$who,$whohref,$reason)
 	{
-		return Eleanor::$Language->Date($date,'fdt').' этот пост отредактировал '
+		return Russian::Date($date,'fdt').' этот пост отредактировал '
 			.($whohref ? '<a href="'.$whohref.'">'.$who.'</a>' : $who)
 			.'. Причина: '
 			.($reason ? $reason : '<i>не указана</i>');
@@ -136,4 +136,27 @@ return array(
 	'apply-filter'=>'Применить фильтр',
 	'post'=>'Опубликовать пост',
 	'main-author'=>'Автор поста:',
+
+	#Поддержка языковых версий
+	'related-text'=>'Эта тема доступна также и на русском языке.',
+	'related'=>function(array$related)
+	{
+		$res='';
+		foreach($related as $id=>$topic)
+		{
+			$lang=__DIR__.'/forum-user-topic-'.$topic['language'].'.php';
+			if(is_file($lang))
+			{
+				$lang=include$lang;
+				$res.=$lang['related-text'].'<a href="index.php?language='.$topic['language'].'">&gt;&gt;</a><br />';
+			}
+		}
+		return substr($res,0,-6);
+	},
+	#[E] Поддержка языковых версий
+
+	'updated'=>function($date)
+	{
+		return'Последнее обновление '.mb_strtolower(Russian::Date($date,'fdt'));
+	},
 );

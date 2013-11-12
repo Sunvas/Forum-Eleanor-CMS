@@ -51,12 +51,16 @@ class ForumPost extends Forum
 		return$errors;
 	}
 
-	#ToDo!
-	public function AddFloodLimit()
+	/**
+	 * Учет публикации поста с целью избежания флуда
+	 * @param int $uid Идентификатор пользователя
+	 */
+	public function AddFloodLimit($uid=0)
 	{
 		if($fl=Eleanor::$Permissions->FloodLimit())
 		{
 			$TC=new TimeCheck;
+			$TC->uid=$uid;
 			$TC->Add($this->Forum->config['n'],1,true,$fl);
 		}
 	}
@@ -68,25 +72,30 @@ class ForumPost extends Forum
 	 *  int author_id ID автора поста
 	 *  int id ID поста
 	 *  string created Дата создания темы
+	 *  int status Статус поста
 	 * @param array $rights Права пользователя на форуме, массив с ключами:
 	 *  array of boolean edit Возможность правки поста
 	 *  array of boolean delete Возможность удаления поста
 	 *  array of int Временное ограничение (число секунд с момента создания поста) когда можно править / удалять пост
 	 * @param $moder Права модератора на форуме, массив с ключами:
+	 *  array of boolean chstatus Возможность увидеть неактивный пост
+	 *  array of boolean mchstatus Возможность увидеть неактивный пост
 	 *  array of boolean edit Возможность правки постов
 	 *  array of boolean delete Возможность удаления постов
 	 * @return array:
+	 *  bool show Возможность отобразить пост
 	 *  bool edit Возможность править пост
 	 *  bool delete Возможность удалить пост
 	 */
 	public function Rights(array$post,array$rights,array$moder=array())
 	{
 		$Forum=$this->Core;
-		$r['edit']=$r['delete']=$Forum->ugr['supermod'];
+		$r['edit']=$r['delete']=$r['show']=$Forum->ugr['supermod'];
 		if(!$r['edit'])
 		{
-			$my=$Forum->user ? $post['author_id']==$Forum->user['id'] : in_array($post['id'],$Forum->GuestSign('p'));
+			$my=$Forum->user && $post['author_id']==$Forum->user['id'] || in_array($post['id'],$Forum->GuestSign('p'));
 
+			$r['show']=$my && $post['status']!=0 || in_array($post['status'],array(1,-2));
 			if($my and $post['status']!=0 and (in_array(0,$rights['editlimit']) or time()-strtotime($post['created'])<=max($rights['editlimit'])))
 			{
 				$r['edit']=in_array(1,$rights['edit']);
@@ -95,6 +104,7 @@ class ForumPost extends Forum
 
 			if($moder)
 			{
+				$r['show']|=in_array(1,$moder['chstatus']) || in_array(1,$moder['mchstatus']);
 				$r['edit']|=in_array(1,$moder['edit']);
 				$r['delete']|=in_array(1,$moder['delete']);
 			}
@@ -103,11 +113,209 @@ class ForumPost extends Forum
 	}
 
 	/**
-	 * Непосредственная публикация / правка поста в теме. Никаких проверок не осуществляется.
+	 * Непосредственная публикация / правка поста в теме. Никаких проверок не осуществляется
+	 * @params array $values Значения поста
 	 */
-	public function Post()
+	public function Post(array$values,$topic=false)
 	{
-		#ToDo! Необходимо учесть возможность смены автора, статуса сообщения
+		$config=$this->Forum->config;
+		if(isset($values['id']))
+		{#Правка поста
+			$p=(int)$values['id'];
+			$R=Eleanor::$Db->Query('SELECT `` FROM `'.$config['fp'].'` WHERE `id`='.$p.' LIMIT 1');
+			if(!$oldpost=$R->fetch_assoc())
+				throw new EE('INCORRECT_TOPIC',EE::USER);
+
+			#ToDo! Необходимо учесть возможность смены автора, статуса сообщения
+		}
+		elseif(isset($values['t'],$values['text']))
+		{#Создание поста
+			$t=(int)$values['t'];
+			$R=Eleanor::$Db->Query('SELECT `uri`,`f`,`language`,`status`,`title` FROM `'.$config['ft'].'` WHERE `id`='.$t.' LIMIT 1');
+			if(!$topic=$R->fetch_assoc())
+				throw new EE('INCORRECT_TOPIC',EE::USER);
+
+			$created=isset($values['created']) ? $values['created'] : date('Y-m-d H:i:s');
+			$post=array(
+				'f'=>$topic['f'],
+				'language'=>$topic['language'],
+				't'=>$values['t'],
+				'ip'=>isset($values['ip']) ? $values['ip'] : Eleanor::$ip,
+				'created'=>$created,
+				'sortdate'=>$created,
+				'last_mod'=>$created,
+				'text'=>$values['text'],
+				'edit_reason'=>isset($values['edit_reason']) ? (string)$values['edit_reason'] : '',
+			);
+
+			#Статус поста
+			if(isset($values['status']) and in_array($values['status'],array(-1,0,1)))
+			{
+				$status=$values['status'];
+				if($topic['status']==1)
+					$post['status']=$status;
+				else
+					switch($status)
+					{
+						case -1:#Ожидающие посты неактивной темы
+							$post['status']=-3;
+						break;
+						case 1:#Активные посты неактивной темы
+							$post['status']=-2;
+						break;
+						default:
+							$post['status']=0;
+					}
+			}
+			else
+			{
+				$status=1;
+				$post['status']=$topic['status']==1 ? 1 : -2;
+			}
+
+			#Авторство поста
+			if(isset($values['author']) and array_key_exists('author_id',$values))
+				$post+=array(
+					'author'=>$values['author'],
+					'author_id'=>$values['author_id'],
+				);
+			else
+			{
+				$me=$this->Core->user ? Eleanor::$Login->GetUserValue(array('name','id')) : array('name'=>'Guest','id'=>null);
+				$post+=array(
+					'author'=>$me['name'],
+					'author_id'=>$me['id'],
+				);
+			}
+
+			#Редактор поста
+			if(isset($values['edited_by']) and array_key_exists('edited_by_id',$values))
+				$post+=array(
+					'edited_by'=>$values['edited_by'],
+					'edited_by_id'=>$values['edited_by_id'],
+				);
+
+			#Информация одобрения поста
+			if(isset($values['approved_by']) and array_key_exists('approved_by_id',$values))
+				$post+=array(
+					'approved_by'=>$values['approved_by'],
+					'approved_by_id'=>$values['approved_by_id'],
+				);
+
+			$merge=false;
+			if(!isset($values['merge']) or $values['merge'])
+			{
+				$R=Eleanor::$Db->Query('SELECT `id`,`author_id`,IF(`updated`>`created`,`updated`,`created`) `updated` FROM `'.$this->Forum->config['fp'].'` WHERE `t`='.$post['t'].' AND `status`='.$post['status'].' ORDER BY `sortdate` DESC LIMIT 1');
+				if($a=$R->fetch_assoc())
+					if($post['author_id'])
+					{
+						if($a['author_id']==$post['author_id'])
+							$merge=$a;
+					}
+					elseif(in_array($a['id'],isset($values['merge_ids']) ? $values['merge_ids'] : $this->Core->GuestSign('p')))
+						$merge=$a;
+			}
+
+			$forum=$this->Forums->GetForum($topic['f']);
+			if($merge)
+			{
+				$diff=strtotime($created)-strtotime($merge['updated']);
+				if($diff>0)
+				{
+					$days=floor($diff/86400);
+					$diff-=$days*86400;
+
+					$hours=floor($diff/3600);
+					$diff-=$hours*3600;
+
+					$mins=floor($diff/60);
+					$secs=$mins>0 ? $diff % $mins : $diff;
+				}
+				else
+					$days=$hours=$mins=$secs=0;
+
+				$lang=$this->Core->Language['post'];
+				$post['text']=$lang['merged']($days,$hours,$mins,$secs).$post['text'];
+
+				if(isset($values['files']))
+					static::SaveAttach($post['text'],$values['files'],array('f'=>$topic['f'],'language'=>$topic['language'],'t'=>$t,'p'=>$merge['id']),$forum['hide_attach'],false);
+
+				Eleanor::$Db->Update($config['fp'],
+					array(
+						'updated'=>$created,
+						'!text'=>'CONCAT(`text`,'.Eleanor::$Db->Escape($post['text']).')',
+					),
+					'`id`='.$merge['id'].' LIMIT 1');
+
+				$this->AddFloodLimit($post['author_id']);
+				return array('id'=>$merge['id'],'merged'=>true,'text'=>$post['text']);
+			}
+
+			if(isset($values['updated']))
+				$post['updated']=$values['updated'];
+
+			$p=Eleanor::$Db->Insert($config['fp'],$post);
+
+			if(isset($values['files']))
+			{
+				$update=static::SaveAttach($post['text'],$values['files'],array('f'=>$topic['f'],'language'=>$topic['language'],'t'=>$t,'p'=>$p),$forum['hide_attach']);
+				if($update)
+					Eleanor::$Db->Update($config['fp'],array('text'=>$post['text']),'`id`='.$p.' LIMIT 1');
+			}
+
+			switch($status)
+			{
+				case 1:
+					#Обновление темы
+					Eleanor::$Db->Update($config['ft'],array(
+							'!posts'=>'`posts`+1',
+							'lp_date'=>$created,
+							'lp_id'=>$p,
+							'lp_author'=>$post['author'],
+							'lp_author_id'=>$post['author_id']),
+						'`id`='.$t.' LIMIT 1');
+
+					#Обновление форума
+					Eleanor::$Db->Update($config['fl'],array(
+							'!posts'=>'`posts`+1',
+							'lp_date'=>$created,
+							'lp_id'=>$t,
+							'lp_title'=>$topic['title'],
+							'lp_uri'=>$topic['uri'],
+							'lp_author'=>$post['author'],
+							'lp_author_id'=>$post['author_id']),
+						'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
+
+					Eleanor::$Db->Update($config['lp'],array(
+							'lp_date'=>$created,
+							'lp_id'=>$t,
+							'lp_title'=>$topic['title'],
+							'lp_uri'=>$topic['uri'],
+							'lp_author'=>$post['author'],
+							'lp_author_id'=>$post['author_id']
+						),
+						'`lp_id`='.$t);
+
+					if($forum['inc_posts'] and $post['author_id'])
+						$this->IncUserPosts(1,$post['author_id']);
+				break;
+				case -1:
+					#Обновление темы
+					Eleanor::$Db->Update($config['ft'],array('!queued_posts'=>'`queued_posts`+1'),'`id`='.$t.' LIMIT 1');
+
+					#Обновление форума
+					Eleanor::$Db->Update(
+						$config['fl'],
+						array('!queued_posts'=>'`queued_posts`+1'),
+						'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1'
+					);
+			}
+
+			$this->AddFloodLimit($post['author_id']);
+			return array('id'=>$p,'merged'=>false);
+		}
+		else
+			throw new EE('MISSING_ARGUMENTS',EE::USER);
 	}
 
 	/**
@@ -122,6 +330,11 @@ class ForumPost extends Forum
 
 		if(isset($values['id']))
 		{
+			$t=(int)$values['id'];
+			$R=Eleanor::$Db->Query('SELECT `id` FROM `'.$config['ft'].'` WHERE `id`='.$t.' LIMIT 1');
+			if(!$oldtopic=$R->fetch_assoc())
+				throw new EE('INCORRECT_TOPIC',EE::USER);
+
 			#ToDo! Необходимо учесть возможность смены автора, статуса темы
 			#Topic
 /*`uri` varchar(50) default NULL,
@@ -231,7 +444,7 @@ class ForumPost extends Forum
 				foreach($values['title'] as $lang=>$title)
 					$result[$lang]=static::NewTopic(
 						$topic+array(
-							'uri'=>isset($values['uri'][$lang]) ? $values['uri'][$lang] : '',
+							'uri'=>isset($values['uri']) && array_key_exists($lang,$values['uri']) ? $values['uri'][$lang] : null,
 							'title'=>$title,
 							'description'=>isset($values['description'][$lang]) ? $values['description'][$lang] : '',
 							'language'=>$lang,
@@ -264,7 +477,7 @@ class ForumPost extends Forum
 			{
 				$topic=static::NewTopic(
 					$topic+array(
-						'uri'=>isset($values['uri']) ? $values['uri'] : '',
+						'uri'=>array_key_exists('uri',$values) ? $values['uri'] : null,
 						'title'=>$values['title'],
 						'description'=>isset($values['description']) ? $values['description'] : '',
 						'language'=>$values['language'],
@@ -281,8 +494,13 @@ class ForumPost extends Forum
 			else
 				throw new EE('MISSING_LANGUAGE',EE::USER);
 
-			if($cnt>0 and $forum['inc_posts'] and $post['status']==1 and $post['author_id'])
-				$this->IncUserPosts($cnt,$post['author_id']);
+			if($cnt>0 and $post['author_id'])
+			{
+				$this->AddFloodLimit($post['author_id']);
+
+				if($forum['inc_posts'] and $post['status']==1)
+					$this->IncUserPosts($cnt,$post['author_id']);
+			}
 
 			return$topic;
 		}
@@ -297,14 +515,14 @@ class ForumPost extends Forum
 	 * @param array $dirpath Путь к каталогу, в котором хранятся аттачи
 	 * @param bool $hide Флаг сокрытия аттачей для форума, в котором создается тема
 	 * @return array Ключи:
-	 * string uri URI темы
-	 * int t ИД темы
-	 * int p ИД поста
+	 *   string uri URI темы
+	 *   int t ИД темы
+	 *   int p ИД поста
 	 */
 	protected function NewTopic($topic,$post,$dirpath,$forum)
 	{
 		$config=$this->Forum->config;
-		if($topic['uri'])
+		if(isset($topic['uri']))
 		{
 			$R=Eleanor::$Db->Query('SELECT `uri` FROM `'.$config['ft'].'` WHERE `f`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' AND `uri`='.Eleanor::$Db->Escape($topic['uri']).' LIMIT 1');
 			if($R->num_rows>0)
@@ -325,33 +543,42 @@ class ForumPost extends Forum
 		{
 			$post['t']=$t;
 			$p=Eleanor::$Db->Insert($config['fp'],$post);
-			if($p)
+			Eleanor::$Db->Update($config['ft'],array('lp_id'=>$p),'`id`='.$t.' LIMIT 1');
+			if($dirpath)
 			{
-				Eleanor::$Db->Update($config['ft'],array('lp_id'=>$p),'`id`='.$t.' LIMIT 1');
 				$update=static::SaveAttach($post['text'],$dirpath,array('f'=>$forum['id'],'language'=>$topic['language'],'t'=>$t,'p'=>$p),$forum['hide_attach']);
 				if($update)
 					Eleanor::$Db->Update($config['fp'],array('text'=>$post['text']),'`id`='.$p.' LIMIT 1');
-				switch($topic['status'])
-				{
-					case 1:
-						Eleanor::$Db->Update($config['fl'],array('lp_date'=>$topic['lp_date'],'lp_id'=>$t,'lp_title'=>$topic['title'],'lp_uri'=>$topic['uri'],'lp_author'=>$post['author'],'lp_author_id'=>$post['author_id'],'!topics'=>'`topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
-					break;
-					case -1:
-						Eleanor::$Db->Update($config['fl'],array('!queued_topics'=>'`queued_topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
-					break;
-				}
-				Eleanor::$Db->Commit();
-				return array(
-					'uri'=>$topic['uri'],
-					't'=>$t,
-					'p'=>$p,
-				);
 			}
-			else
+			switch($topic['status'])
 			{
-				Eleanor::$Db->RollBack();
-				throw new EE('UNABLE_TO_CREATE_POST',EE::UNIT);
+				case 1:
+					Eleanor::$Db->Update($config['fl'],array('lp_date'=>$topic['lp_date'],'lp_id'=>$t,'lp_title'=>$topic['title'],'lp_uri'=>$topic['uri'],'lp_author'=>$post['author'],'lp_author_id'=>$post['author_id'],'!topics'=>'`topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
+				break;
+				case -1:
+					Eleanor::$Db->Update($config['fl'],array('!queued_topics'=>'`queued_topics`+1'),'`id`='.$topic['f'].' AND `language`=\''.$topic['language'].'\' LIMIT 1');
+				break;
 			}
+			Eleanor::$Db->Commit();
+
+			if($topic['author_id'])
+				Eleanor::$Db->Insert($config['lp'],array(
+						'uid'=>$topic['author_id'],
+						'f'=>$forum['id'],
+						'language'=>$topic['language'],
+						'lp_date'=>$topic['created'],
+						'lp_id'=>$t,
+						'lp_title'=>$topic['title'],
+						'lp_uri'=>$topic['uri'],
+						'lp_author'=>$post['author'],
+						'lp_author_id'=>$post['author_id']
+					));
+
+			return array(
+				'uri'=>$topic['uri'],
+				't'=>$t,
+				'p'=>$p,
+			);
 		}
 		Eleanor::$Db->RollBack();
 		throw new EE('UNABLE_TO_CREATE_TOPIC',EE::UNIT);
@@ -375,13 +602,19 @@ class ForumPost extends Forum
 	 * Сохранение аттачей
 	 * @param string &$text Текст поста, в котором будет заменены все ссылки на аттачи на [file=ID]
 	 * @param string $dirpath Путь к каталогу, в котором хранятся аттачи
-	 * @param $data array('f','language','t','p')
-	 * @param $hide Флаг сокрытия аттачей для форума, в котором находится пост
+	 * @param array $data array('f','language','t','p')
+	 * @param bool $hide Флаг сокрытия аттачей для форума, в котором находится пост
+	 * @param bool $replace Флаг замещения файлов (если false файлы будут совмещены с текущими - в случае склейки)
 	 * @return array|bool Флаг необходимости пересохранения текста поста
 	 */
-	protected function SaveAttach(&$text,$dirpath,$data,$hide)
+	protected function SaveAttach(&$text,$dirpath,$data,$hide,$replace=true)
 	{
-		$files=glob(rtrim($dirpath,'/\\').'/*',GLOB_MARK);
+		if(!$dirpath)
+			return false;
+
+		$dirpath=rtrim($dirpath,'/\\').'/';
+		$files=glob($dirpath.'*',GLOB_MARK);
+
 		if($files)
 		{
 			natsort($files);
@@ -392,20 +625,33 @@ class ForumPost extends Forum
 					$v=array(
 						'size'=>Files::BytesToSize(filesize($v)),
 						'hash'=>md5_file($v),
-						'file'=>basename($v),
+						'file'=>$replace ? basename($v) : $v,
 					);
 		}
+
 		if(!$files)
 			return false;
 
-		$dest=$this->Forum->config['attachroot'];
-		if(!is_dir($dest))
-			Files::MkDir($dest);
-		$dest.='p'.$data['p'].'/';
+		$dest=$this->Forum->config['attachroot'].'p'.$data['p'].'/';
 		if(is_dir($dest))
-			Files::Delete($dest);
-		if(!rename($dirpath,$dest))
-			return false;
+			if($replace)
+			{
+				Files::Delete($dest);
+				goto Rename;
+			}
+			else
+			{
+				foreach($files as $k=>&$v)
+					if(!rename($v['file'],$dest.($v['file']=basename($v['file']))))
+						unset($files[$k]);
+			}
+		else
+		{
+			Rename:
+			if(!rename($dirpath,$dest))
+				return false;
+		}
+		unset($v);
 		$data['!date']='NOW()';
 
 		$from=rtrim(substr(Eleanor::$os=='w' ? str_replace('\\','/',$dirpath) : $dirpath,strlen(Eleanor::$root)),'/').'/';
@@ -468,7 +714,7 @@ class ForumPost extends Forum
 			foreach($todb as &$v)
 			{
 				$rfrom[]=$from.($v['name'] ? $v['name'] : $v['file']);
-				$rto[]='['.$this->config['abb'].'='.$id++.']';
+				$rto[]='['.$config['abb'].'='.$id++.']';
 			}
 		}
 
@@ -549,6 +795,28 @@ class ForumPost extends Forum
 				array_splice($groups,0,1,$growto);
 				UserManager::Update(array('groups'=>$groups),$uid);
 			}
+		}
+	}
+
+	/**
+	 * Метод нужно вызывать перед редактированием поста, для того, чтобы в процессе правки поста, можно было нормально
+	 * работать с аттачами.
+	 * @param int $id ID поста
+	 * @param string $text Текст поста
+	 * @param string $rootpath Путь на сервере для аттачей. Обязательно должен оканчиваться на /
+	 * @param string $sitepath Путь на сайте для аттачей. Обязательно должен оканчиваться на /
+	 * @return string
+	 */
+	public function EditPost($id,&$text,$rootpath,$sitepath)
+	{
+		$config=$this->Forum->config;
+		$origpath=$config['attachroot'].'p'.$id.DIRECTORY_SEPARATOR;
+		if(is_dir($origpath))
+		{
+			$R=Eleanor::$Db->Query('SELECT `id`,IF(`name`=\'\',`file`,`name`) `name`,`file` FROM `'.$config['fa'].'` WHERE `p`='.$id);
+			while($a=$R->fetch_assoc())
+				if(Files::Copy($origpath.$a['file'],$rootpath.$a['name']))
+					$text=str_replace('['.$config['abb'].'='.$a['id'].']',$sitepath.$a['name'],$text);
 		}
 	}
 }

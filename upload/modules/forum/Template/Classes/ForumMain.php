@@ -88,6 +88,10 @@ class TplForumMain
 	 *     _cnt Число тем с этим префиксом с учетом фильтров
 	 *     _a Ссылка на фильтр тем по префиксу
 	 *     title Название фильтра
+	 *   array moderators Модераторы этого форума: пользователи, группы и права.
+	 *     array rigths Права модератора
+	 *     array users Пользователи модератора
+	 *     array groups Группы модератора
 	 *   array _topics Список тем, формат: id=>array. Ключи внутреннего массива:
 	 *     string lp_date Дата последнего поста
 	 *     string lp_author Имя автора последнего поста
@@ -228,22 +232,24 @@ class TplForumMain
 		}
 
 		$moders='';
-		foreach($forum['moderators'] as $fm)
+		if($forum['moderators'])
 		{
-			if(isset($fm['title']))
-				$moders.=sprintf(static::$lang['group:'],'<a href="'.$fm['_a'].'">'.$fm['html_pref'].$fm['title_l'].$fm['html_end'].'</a>, ');
-			else
+			foreach($forum['moderators']['groups'] as $group)
+				$moders.=sprintf(static::$lang['group:'],'<a href="'.$group['_a'].'">'.$group['html_pref'].$group['title'].$group['html_end'].'</a>, ');
+
+			foreach($forum['moderators']['users'] as $user)
 			{
-				if(!$fm['_group'])
+				if(!$user['_group'])
 					$pr=$en='';
 				else
 				{
-					$pr=join(Eleanor::Permissions(array($fm['_group']),'html_pref'));
-					$en=join(Eleanor::Permissions(array($fm['_group']),'html_end'));
+					$pr=join(Eleanor::Permissions(array($user['_group']),'html_pref'));
+					$en=join(Eleanor::Permissions(array($user['_group']),'html_end'));
 				}
-				$moders.='<a href="'.$fm['_a'].'" title="'.$fm['full_name'].'">'.$pr.htmlspecialchars($fm['name'],ELENT,CHARSET).$en.'</a>, ';
+				$moders.='<a href="'.$user['_a'].'" title="'.$user['full_name'].'">'.$pr.htmlspecialchars($user['name'],ELENT,CHARSET).$en.'</a>, ';
 			}
 		}
+
 		if($moders)
 			$c.='<div class="moderators">'.sprintf(static::$lang['moders:'],rtrim($moders,', ')).'</div>';
 
@@ -429,44 +435,44 @@ class TplForumMain
 	<th class="lastpost">'.static::$lang['lastpost'].'</th>
 </tr>';
 
-		foreach($forums as $k=>&$v)
+		foreach($forums as $id=>$forum)
 		{
 			$c.='<tr>
-	<td class="img"><img'.($v['_read'] ? ' class="forumimg read" title="'.static::$lang['nonewposts'].'"' : ' class="forumimg new" title="'.static::$lang['hasnp'].'" data-f="'.$k.'"').'src="'.$GLOBALS['Eleanor']->Forum->config['logos'].($v['image'] ? $v['image'] : 'none.png').'" /></td>
-	<td class="ftitle"><a href="'.$v['_a'].'" style="font-weight:bold">'.$v['title'].'</a><br /><span>'.$v['description'].'</span>';
+	<td class="img"><img'.($forum['_read'] ? ' class="forumimg read" title="'.static::$lang['nonewposts'].'"' : ' class="forumimg new" title="'.static::$lang['hasnp'].'" data-f="'.$id.'"').'src="'.$GLOBALS['Eleanor']->Forum->config['logos'].($forum['image'] ? $forum['image'] : 'none.png').'" /></td>
+	<td class="ftitle"><a href="'.$forum['_a'].'" style="font-weight:bold">'.$forum['title'].'</a><br /><span>'.$forum['description'].'</span>';
 
 			$ism=$GLOBALS['Eleanor']->Forum->ugr['supermod'];
 			$moders='';
-			if(isset($v['moderators']))
-				foreach($v['moderators'] as $fm)
+			if(isset($forum['moderators']))
+				foreach($forum['moderators'] as $moderator)
 				{
-					if($fm['_me'])
+					if($moderator['_me'])
 						$ism=true;
-					if(isset($fm['title']))
-						$moders.=sprintf(static::$lang['group:'],'<a href="'.$fm['_a'].'">'.$fm['html_pref'].$fm['title_l'].$fm['html_end'].'</a>, ');
+					if(isset($moderator['title']))
+						$moders.=sprintf(static::$lang['group:'],'<a href="'.$moderator['_a'].'">'.$moderator['html_pref'].$moderator['title_l'].$moderator['html_end'].'</a>, ');
 					else
 					{
-						if(!$fm['_group'])
+						if(!$moderator['_group'])
 							$pr=$en='';
 						else
 						{
-							$pr=join(Eleanor::Permissions(array($fm['_group']),'html_pref'));
-							$en=join(Eleanor::Permissions(array($fm['_group']),'html_end'));
+							$pr=join(Eleanor::Permissions(array($moderator['_group']),'html_pref'));
+							$en=join(Eleanor::Permissions(array($moderator['_group']),'html_end'));
 						}
-						$moders.='<a href="'.$fm['_a'].'" title="'.$fm['full_name'].'">'.$pr.htmlspecialchars($fm['name'],ELENT,CHARSET).$en.'</a>, ';
+						$moders.='<a href="'.$moderator['_a'].'" title="'.$moderator['full_name'].'">'.$pr.htmlspecialchars($moderator['name'],ELENT,CHARSET).$en.'</a>, ';
 					}
 				}
 			if($moders)
 				$c.='<br />'.sprintf(static::$lang['moders:'],rtrim($moders,', '));
 
-			if(isset($v['_alp']))
+			if(isset($forum['_alp']))
 			{
-				$lpt=strtotime($v['lp_date']);
+				$lpt=strtotime($forum['lp_date']);
 				$lp=array(
-					'date'=>$v['lp_date'],
-					'title'=>$v['lp_title'],
-					'author'=>$v['lp_author'],
-					'_alpa'=>$v['_alpa'],
+					'date'=>$forum['lp_date'],
+					'title'=>$forum['lp_title'],
+					'author'=>$forum['lp_author'],
+					'_alpa'=>$forum['_alpa'],
 				);
 			}
 			else
@@ -475,20 +481,22 @@ class TplForumMain
 				$lp=array();
 			}
 
-			if(isset($v['_subforums']))
+			if(isset($forum['_subforums']))
 			{
 				$subf='';
-				foreach($v['_subforums'] as $sf)
+				foreach($forum['_subforums'] as $subforum)
 				{
-					$subf.=' <a href="'.$sf['_a'].'">'.$sf['title'].'</a>,';
-					if(isset($sf['_alp']) and $lpt<$lptsf=strtotime($sf['lp_date']))
+					$subf.=' <a href="'.$subforum['_a'].'">'.$subforum['title'].'</a>,';
+					if(isset($subforum['_alp']) and $lpt<$lptsf=strtotime($subforum['lp_date']))
 					{
 						$lpt=$lptsf;
+						$forum['_alp']=$subforum['_alp'];
+						$forum['_anp']=$subforum['_anp'];
 						$lp=array(
-							'date'=>$sf['lp_date'],
-							'title'=>$sf['lp_title'],
-							'author'=>$sf['lp_author'],
-							'_alpa'=>$sf['_alpa'],
+							'date'=>$subforum['lp_date'],
+							'title'=>$subforum['lp_title'],
+							'author'=>$subforum['lp_author'],
+							'_alpa'=>$subforum['_alpa'],
 						);
 					}
 				}
@@ -496,17 +504,17 @@ class TplForumMain
 			}
 
 			$c.='</td>
-<td class="topics">'.$v['topics'].($ism && isset($v['_amwt']) ? ' | <a href="'.$v['_amwt'].'" title="'.static::$lang['mt'].'">'.$v['queued_topics'].'</a>' : '').'</td>
-<td class="posts">'.$v['posts'].($ism && isset($v['_amwp']) ? ' | <a href="'.$v['_amwp'].'" title="'.static::$lang['ma'].'">'.$v['queued_posts'].'</a>' : '').'</td>
+<td class="topics">'.$forum['topics'].($ism && isset($forum['_amwt']) ? ' | <a href="'.$forum['_amwt'].'" title="'.static::$lang['mt'].'">'.$forum['queued_topics'].'</a>' : '').'</td>
+<td class="posts">'.$forum['posts'].($ism && isset($forum['_amwp']) ? ' | <a href="'.$forum['_amwp'].'" title="'.static::$lang['ma'].'">'.$forum['queued_posts'].'</a>' : '').'</td>
 <td>';
 
-			if(!$v['_topics'])#Доступа к темам вообще нет
+			if(!$forum['_topics'])#Доступа к темам вообще нет
 				$c.='<b>'.static::$lang['tar'].'</b>';
 			elseif($lp)#Есть последний пост
 			{
 				$sa=htmlspecialchars($lp['author'],ELENT,CHARSET);
-				$c.='<a href="'.$v['_alp'].'" title="'.static::$lang['glp'].'"><img src="images/forum/lastpost.png" /></a> '.Eleanor::$Language->Date($lp['date'],'fdt').'
-<br /><b>'.static::$lang['topic:'].'</b> <a href="'.$v['_anp'].'" title="'.$lp['title'].'">'.Strings::CutStr($lp['title'],300).'</a>
+				$c.='<a href="'.$forum['_alp'].'" title="'.static::$lang['glp'].'"><img src="images/forum/lastpost.png" /></a> '.Eleanor::$Language->Date($lp['date'],'fdt').'
+<br /><b>'.static::$lang['topic:'].'</b> <a href="'.$forum['_anp'].'" title="'.$lp['title'].'">'.Strings::CutStr($lp['title'],300).'</a>
 <br /><b>'.static::$lang['author:'].'</b> '.($lp['_alpa'] ? '<a href="'.$lp['_alpa'].'">'.$sa.'</a>' : $sa);
 			}
 			else#Нету последнего поста

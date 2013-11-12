@@ -147,6 +147,12 @@ return array(
 	'ccomplaint'=>'Allow to use abuse button',
 	'ccanclose'=>'Allow work with a closed topic, like with the open',
 	'ccanclose_'=>'Publish / edit / delete posts.',
+	'ccreatevoting'=>'Allow to create voting',
+	'ccreatevoting_'=>'Users can attach voting to their topic',
+	'ceditvoting'=>'Allow edit voting',
+	'ceditvoting_'=>'Users will be able to change voting without affecting the results',
+	'cvote'=>'Allow vote',
+	'cvote_'=>'Users will be able to take part in voting',
 	'edituser'=>'Editing user &quot;%s&quot;',
 	'editprefix'=>'Edition prefix of topics',
 	'addprefix'=>'Add prefix',
@@ -178,4 +184,5 @@ return array(
 	'mcmopcl'=>'Multi opening / closing of topics',
 	'mcmpin'=>'Multi pinning / unpinning of topics',
 	'mceditrep'=>'Allow to edit reputation',
+	'mcvoting'=>'Voting moderation',
 );

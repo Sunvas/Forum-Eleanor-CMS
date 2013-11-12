@@ -6,32 +6,31 @@
 	*Pseudonym
 */
 defined('CMS')||die;
-
 global$Eleanor;
-$Eleanor->module['config']=$mc=include$Eleanor->module['path'].'config.php';
+
 include$Eleanor->module['path'].'forum.php';
 include$Eleanor->module['path'].'core.php';
 
-Eleanor::LoadOptions($mc['opts']);
-$Eleanor->Forum=new ForumCore($mc);
+$Eleanor->Forum=new ForumCore;
 $Forum=$Eleanor->Forum;
-$Forum->config=$config=$Forum->Forum->config;
+$Forum->config=$Forum->Forum->config;
+$Forum->vars=Eleanor::LoadOptions($Forum->config['opts'],true);
 $Forum->Language=new Language(true);
 $Forum->Language->loadfrom=dirname(__DIR__);
 $paths=Eleanor::$Template->paths;#Бэкап всех путей к шаблонам перед BeAs();
 
-$ev=isset($_POST['event']) ? (string)$_POST['event'] : '';
-switch($ev)
+$event=isset($_POST['event']) ? (string)$_POST['event'] : '';
+switch($event)
 {
 	case'progress':#Для админки: прогресс выполнения заданий
 		BeAs('admin');
-		if(!Eleanor::$Login->IsUser())
-			return Error();
+
 		$ids=isset($_POST['ids']) ? (array)$_POST['ids'] : array();
-		if(!$ids)
+		if(!Eleanor::$Login->IsUser() or !$ids)
 			return Error();
+
 		$res=array();
-		$R=Eleanor::$Db->Query('SELECT `id`,`status`,`done`,`total` FROM `'.$mc['ta'].'` WHERE `id`'.Eleanor::$Db->In($ids));
+		$R=Eleanor::$Db->Query('SELECT `id`,`status`,`done`,`total` FROM `'.$Forum->config['ta'].'` WHERE `id`'.Eleanor::$Db->In($ids));
 		while($a=$R->fetch_assoc())
 			$res[$a['id']]=array(
 				'done'=>$a['status']!='process',
@@ -66,6 +65,7 @@ switch($ev)
 
 	case'show-post':#Показ поста
 		BeAs('user');
+		Eleanor::$Template->paths+=$paths;
 		$Forum->LoadUser();
 		$do=false;
 		include$Eleanor->module['path'].'user/topic.php';

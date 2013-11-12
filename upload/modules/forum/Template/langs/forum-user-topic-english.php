@@ -64,7 +64,7 @@ return array(
 	'rules'=>'Forum rules',
 	'edited'=>function($date,$who,$whohref,$reason)
 	{
-		return Eleanor::$Language->Date($date,'fdt').' this post was edited by '
+		return English::Date($date,'fdt').' this post was edited by '
 			.($whohref ? '<a href="'.$whohref.'">'.$who.'</a>' : $who)
 			.'. Reason: '
 			.($reason ? $reason : '<i>unknown</i>');
@@ -136,4 +136,27 @@ return array(
 	'apply-filter'=>'Apply filter',
 	'post'=>'Publish',
 	'main-author'=>'Author of post:',
+
+	#Supporting of language versions of topic
+	'related-text'=>'English version of this topic is available.',
+	'related'=>function(array$related)
+	{
+		$res='';
+		foreach($related as $id=>$topic)
+		{
+			$lang=__DIR__.'/forum-user-topic-'.$topic['language'].'.php';
+			if(is_file($lang))
+			{
+				$lang=include$lang;
+				$res.=$lang['related-text'].'<a href="index.php?language='.$topic['language'].'">&gt;&gt;</a><br />';
+			}
+		}
+		return substr($res,0,-6);
+	},
+	#[E] Supporting of language versions of topic
+
+	'updated'=>function($date)
+	{
+		return'Last updated on '.strtolower(English::Date($date,'fdt'));
+	},
 );
